@@ -1,0 +1,33 @@
+# Blender 3.3.1 MTL File: 'Art direction scene.blend'
+# www.blender.org
+
+newmtl Material.001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.303150 0.303150 0.303150
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/Markus/Desktop/clay_snow1.jpg
+map_Bump -bm 1.000000 C:/Users/Markus/Desktop/clay_snow1_normal.png
+
+newmtl Material.006
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/Markus/Desktop/Seamless-Concrete-Cracked-Texture.jpg
+
+newmtl road
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/Users/Markus/Desktop/road_with_roadside_and_lanes_24_04_diffuse.png
