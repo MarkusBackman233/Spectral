@@ -1,28 +1,28 @@
 #pragma once
-#include <string>
-#include <vector>
-#include "Vector3.h"
-#include "Vector2.h"
-#include "Triangle.h"
-#include <fstream>
-#include <strstream>
+#include "pch.h"
+#include <unordered_map>
+#include <iostream>
 #include "Mesh.h"
+class shared_ptr;
 
 class ModelManager
 {
 public:
 	ModelManager();
 
-	static ModelManager& GetInstance() {
+	static ModelManager* GetInstance() {
 		static ModelManager instance;
-		return instance;
+		return &instance;
 	}
 
-	Mesh GetMesh(std::string filename);
+	std::shared_ptr<Mesh> GetMesh(const std::string& filename);
 
+	void AddMesh(const std::string& filename, std::shared_ptr<Mesh> mesh);
+
+	std::unordered_map<std::string, std::shared_ptr<Mesh>>& GetCachedMeshes() { return m_meshes; }
+	std::string GetMeshName(std::shared_ptr<Mesh> Mesh);
 private:
-	Mesh LoadObjFromFile(std::string fileName, bool hasTexture);
-
-	std::vector<Mesh> m_meshes;
+	
+	std::unordered_map<std::string, std::shared_ptr<Mesh>> m_meshes;
 };
 

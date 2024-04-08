@@ -1,5 +1,7 @@
 #pragma once
+#include "pch.h"
 #include "Vector3.h"
+#include <cmath>
 namespace Math
 {
 
@@ -70,11 +72,9 @@ namespace Math
 		{ 
 			return (x * A.y) - (y * A.x);
 		}
-		Math::Vector2 GetNormal()
+		inline Math::Vector2 GetNormal()
 		{
-
-			float lengthSquared = x * x + y * y;
-			float length = sqrt(lengthSquared);
+			float length = sqrt(x * x + y * y);
 			return Math::Vector2(x / length, y / length);
 		}
 		inline float Length() const
@@ -84,6 +84,7 @@ namespace Math
 
 		float x = 0.0f, y = 0.0f, w = 1.0f;
 	};	
+
 	class Vector2i
 	{
 	public:

@@ -19,8 +19,6 @@ Math::Vector2::Vector2(const Math::Vector3& A)
 	w = A.w;
 }
 
-
-
 Math::Vector2i::Vector2i(int _x, int _y)
 {
 	x = _x;

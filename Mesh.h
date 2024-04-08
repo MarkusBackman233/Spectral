@@ -1,24 +1,57 @@
 #pragma once
+#include "pch.h"
 #include "Vector3.h"
 #include <vector>
 #include "Triangle.h"
-#include <SDL.h>
 #include "PhysXManager.h"
+#include <string>
+#include <d3d11.h>
+#include <DirectXMath.h>
+#include <wrl/client.h>
+#include "Texture.h"
+#include <memory>
+#include "Material.h"
+
+struct aiNode;
+struct aiMesh;
+struct aiScene;
 
 class Mesh
 {
 public:
-	std::vector<Triangle> triangles;
+	typedef struct Vertex {
+		DirectX::XMFLOAT3 position;
+		DirectX::XMFLOAT2 uv;
+		DirectX::XMFLOAT3 normal;
+		DirectX::XMFLOAT3 tangent;
+	} VertexStruct;
+
+	Mesh();
+
+	void SetMaterial(std::shared_ptr<Material> material) { m_material = material; }
+	std::shared_ptr<Material> GetMaterial() { return m_material; }
+
+	void CalculateBoundingBox();
+
+	PxTriangleMesh* CreatePhysxTriangleMesh() const;
+
+	void SetName(const std::string& name);
+	std::string& GetName();
+
+	std::vector<Vertex> vertexes;
 	std::vector<uint32_t> indices32;
+	std::vector<Triangle> triangles;
 
-	int vertexCount = 0;
+	PxTriangleMesh* m_cachedTriangleMesh;
 
-	PxTriangleMesh* CreatePhysxTriangleMesh();
+	Math::Vector3 m_maxBounds;
+	Math::Vector3 m_minBounds;
 
-	PxTriangleMesh* m_physXMeshCollider = NULL;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_pVertexBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> m_pIndexBuffer;
 
-	std::string filename;
-	std::vector<Math::Vector3> vertexes;
-
+private:
+	std::shared_ptr<Material> m_material;
+	std::string m_meshName;
 };
 

@@ -1,29 +1,20 @@
 #pragma once
-#include <iostream>
-#include <SDL_image.h>
-#include <string>
-#include <vector>
+#include "pch.h"
+
+class Texture;
+
 class TextureManager
 {
 public:
 	TextureManager();
-	static TextureManager& GetInstance() {
+	std::shared_ptr<Texture> GetTexture(const std::string& filename);
+	static TextureManager* GetInstance() {
 		static TextureManager instance;
-		return instance;
+		return &instance;
 	}
-	struct Texture
-	{
-		uint16_t width;
-		uint16_t height;
-		std::string filename;
-		uint32_t* pixels;
-	};
-
-	Texture GetTexture(std::string filename);
-
+	std::string GetTextureName(std::shared_ptr<Texture> texture);
+	std::map<std::string, std::shared_ptr<Texture>>& GetCachedTextures() { return m_textures; };
 private:
-	Texture LoadTexture(std::string filename);
-
-	std::vector<Texture> m_textures;
+	std::map<std::string, std::shared_ptr<Texture>> m_textures;
 };
 

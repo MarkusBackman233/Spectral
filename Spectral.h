@@ -1,120 +1,92 @@
 #pragma once
-#include <SDL.h>
-#include <iostream>
-#include <algorithm>
-#include "Math.h"
-#include <vector>
+#include "pch.h"
 #include "Vector3.h"
-#include "Mesh.h"
-#include "Triangle.h"
+#include "Vector2.h"
 #include "Matrix.h"
 #include "Player.h"
-#include "Vector2.h"
-#include <string>
-#include "GameObject.h"
-#include "ObjectHandler.h"
-#include "RaycastManager.h"
-#include "PhysXManager.h"
+#include <list>
+#include <vector>
+#include <deque>
+#include "LightComponent.h"
+#include "unordered_map"
 
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 480
-//#define SCREEN_WIDTH 1920
-//#define SCREEN_HEIGHT 1080
-//#define SCREEN_WIDTH 1280
-//#define SCREEN_HEIGHT 720
+class LevelProperties;
+class GameObject;
+class ObjectManager;
+class Editor;
+class Triangle;
+class Texture;
+class ParticleSimulation;
 
 class Spectral
 {
 public:
-	struct Light
-	{
-		Math::Vector3 position;
-		Math::Vector3 color;
-	};
-
-	Spectral(SDL_Renderer* renderer, SDL_Window* window, SDL_Event& event);
+	Spectral();
 	~Spectral();
-	void Render();
-	void Update();
-	Uint32 GetPixel(GameObject* gameObject, Triangle* triangle, const Triangle& originalTriangle, float u, float v, uint16_t width, uint16_t height);
 
-	Player* GetPlayer() { return m_player; }
-
-	void DrawLine(Math::Vector2 p0, Math::Vector2 p1, uint32_t color);
-	void DrawCube( GameObject* gameObject);
-	void DrawTriangle(const Triangle& triangle);
-
-
-	void ProjectLine(const Math::Vector3& p0, const Math::Vector3& p1);
-
-
-	void TexturedTriangle(GameObject* gameObject, Triangle* triangle, const Triangle& originalTriangle);
-	int ComputeOutCode(Math::Vector2 point);
-	int ComputeOutCode(Math::Vector3 point);
-
-	bool CohenSutherlandLineClip(Math::Vector2& p0, Math::Vector2& p1);
-
-    uint32_t DarkenColor(uint32_t color, float darknessLevel);
-
-	uint32_t m_albedoBuffer[SCREEN_WIDTH * SCREEN_HEIGHT];
-	uint32_t m_normalBuffer[SCREEN_WIDTH * SCREEN_HEIGHT];
-
-	uint32_t m_positionBuffer[SCREEN_WIDTH * SCREEN_HEIGHT];
-	uint32_t m_compositeImage[SCREEN_WIDTH * SCREEN_HEIGHT];
-
-	SDL_Renderer* m_renderer;
-	SDL_Window* m_window;
-
-	Math::Matrix m_worldMatrix;
-
-	int currentPixel;
-
-	void SetWindowAndRenderer(SDL_Window* window, SDL_Renderer* renderer)
-	{
-		m_window = window;
-		m_renderer = renderer;
+	static Spectral* GetInstance() {
+		static Spectral instance;
+		return &instance;
 	}
 
-	float* m_depthBuffer = nullptr;
+
+	void Render();
+	void Update();
+
+	void SetAmbientLight(const ColorFLOAT& color);
+	void SetFogColor(const ColorFLOAT& color);
+	ColorFLOAT& GetAmbientLight() { return m_ambientLighting; }
+	ColorFLOAT& GetFogColor() { return m_fogColor; }
+
+	Math::Matrix& GetProjectionMatrix() { return m_projectionMatrix; }
+	const Math::Matrix& GetViewMatrix() { return m_player->GetCameraMatrixInversed(); }
+	Math::Vector2i&	GetScreenSize()	{ return m_screenSize; }
+	float GetDeltaTime() const { return m_deltaTime; }
+
+	bool m_render;
+	bool m_renderPhysX;
+	bool m_renderWireframe;
 
 private:
+	struct LightBufferLocations
+	{
+		int enabledLoc;
+		int typeLoc;
+		int positionLoc;
+		int targetLoc;
+		int colorLoc;
+	};
 
-	std::vector<Light> m_ligts;
+	void CalculateProjectionMatrix(int width, int height);
+	float CalculateDeltaTime();
 
-	bool m_hasClicked;
+	void RenderPhysX();
 
-	float fTheta;
+	float m_deltaTime;
+
+	Math::Vector2i m_screenSize;
+	Math::Vector2 m_halfScreenSize;
+
+
+	uint32_t* m_albedoBuffer;
+	float* m_depthBuffer;
 
     Player* m_player;
 
 	Math::Matrix m_projectionMatrix;
-	Math::Matrix m_invProjectionMatrix;
+	ObjectManager* m_ObjectManager;
+	Math::Vector3 m_viewOffset;
 
-	ObjectHandler* m_ObjectHandler;
+	GameObject* m_skyBox;
+
+	LevelProperties* m_levelProperties;
 
 	Math::Vector3 m_directionLighting;
-	const Math::Vector3 m_viewOffset;
-	std::vector<uint32_t> m_colorsInLine;
-
-	bool m_render = true;
-	bool m_renderPhysX = false;
-	bool m_renderWireframe = false;
 
 
+	ColorFLOAT m_ambientLighting;
+	ColorFLOAT m_fogColor;
 
-	const int xmin = 0;  
-	const int ymin = 0;
-	const int xmax = SCREEN_WIDTH;
-	const int ymax = SCREEN_HEIGHT;
-
-
-	const int INSIDE = 0; // 0000
-	const int LEFT = 1;   // 0001
-	const int RIGHT = 2;  // 0010
-	const int BOTTOM = 4; // 0100
-	const int TOP = 8;    // 1000
-	int clip3(const Math::Vector3 n, Math::Vector3& v0, Math::Vector3& v1, Math::Vector3& v2, Math::Vector3& v3);
-
-	float lerp(float a, float b, float f);
+	std::unordered_map<int,LightBufferLocations> m_lightBuffers;
 };
 

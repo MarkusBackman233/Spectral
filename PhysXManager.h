@@ -1,29 +1,43 @@
 #pragma once
+#include "pch.h"
 #include <PxPhysicsAPI.h>
 #include <foundation/PxFoundation.h>
 #include <extensions/PxDefaultErrorCallback.h>
 #include <extensions/PxDefaultAllocator.h>
 #include <PxBaseMaterial.h>
-#include <iostream>
 #include <cooking/PxCooking.h>
-
-
+#include "Vector3.h"
+#include "Matrix.h"
+class Mesh;
 using namespace physx;
 
 class PhysXManager
 {
 public:
 
-	enum CollisionGroup
+	enum PhysicsType
 	{
-		GROUP_DEFAULT = 0,
-		GROUP_DYNAMIC = 1,
-		GROUP_STATIC = 2,
+		StaticActor,
+		DynamicActor,
 	};
 
-	static PhysXManager& GetInstance() {
+	enum PhysicsShape
+	{
+		TriangleMesh,
+		Box,
+		Sphere,
+	};
+
+	enum CollisionGroup
+	{
+		GROUP_DEFAULT,
+		GROUP_DYNAMIC,
+		GROUP_STATIC,
+	};
+
+	static PhysXManager* GetInstance() {
 		static PhysXManager instance;
-		return instance;
+		return &instance;
 	}
 
 	PxScene* GetScene() { return m_scene; }
@@ -32,8 +46,15 @@ public:
 
 	void TickSimulation(float deltaTime);
 
+	PxRigidActor* CreateActor(PhysicsType type, const Math::Matrix& transform);
+	PxRigidActor* CreateActor(PxRigidActor* actor);
+	PxShape* CreateBoxShape(const Math::Vector3& boxScale);
+	PxShape* CreateSphereShape(float radius);
+	PxShape* CreateTriangleShape(const Mesh& mesh);
 
-	physx::PxRigidDynamic* m_player;
+	void DetachShapesFromActor(PxRigidActor* actor);
+
+	physx::PxTransform MatrixToPxTransform(const Math::Matrix& transform);
 
 private:
 	PhysXManager();
@@ -47,6 +68,7 @@ private:
 	PxScene* m_scene							= NULL;
 	PxDefaultCpuDispatcher* m_dispatcher		= NULL;
 	PxCooking* m_cooking;
-
-
+	physx::PxMaterial* m_defaultMaterial;
+	PxShapeFlags m_defaultShapeFlag;
+	 
 };
