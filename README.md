@@ -1,2 +1,2 @@
 # Spectral
- Software Renderer
+ Simple to use game engine
