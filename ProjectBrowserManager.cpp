@@ -165,6 +165,7 @@ bool ProjectBrowserManager::Update()
                 {
                     projectSelected = true;
                     IOManager::ProjectDirectory = projectPath.Path;
+                    IOManager::ProjectDirectoryWide = std::filesystem::path(projectPath.Path).wstring();
                     IOManager::ProjectName = projectPath.Name;
                     RemoveProjectFromOldProjects(projectPath.Path);
                     m_previousProjects.push_front(PreviousProject(IOManager::ProjectDirectory, IOManager::ProjectName));
