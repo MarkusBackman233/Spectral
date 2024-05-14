@@ -45,6 +45,8 @@ public:
 	void Render();
 	void Update();
 
+	bool UpdateProjectBrowser();
+
 	void HandleRaycastSelection();
 	void HandleDropFile(std::string filename);
 

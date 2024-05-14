@@ -42,8 +42,8 @@ void Material::SetupShader()
         { "Transform",  3, DXGI_FORMAT_R32G32B32A32_FLOAT   , 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
     };
 
-    hr = Render::CreateVertexShader("C:/Projects/Spectral/x64/Debug/VertexShader.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout);
-    hr = Render::CreatePixelShader("C:/Projects/Spectral/x64/Debug/PBRPixelShader.cso", &m_pPixelShader);
+    hr = Render::CreateVertexShader("VertexShader.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout);
+    hr = Render::CreatePixelShader("PBRPixelShader.cso", &m_pPixelShader);
 
     hr = Render::CreateConstantBuffer(sizeof(VertexConstantBuffer), m_pVertexConstantBufferData);
     hr = Render::CreateConstantBuffer(sizeof(PixelConstantBuffer), m_pPixelConstantBufferData);

@@ -11,6 +11,7 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetResourceView() { return m_textureSRV.Get(); }
 
 	void LoadTexture(const std::string& filename);
+	void LoadTexture(unsigned char* bytes, size_t size);
 
 	bool GenerateMips();
 

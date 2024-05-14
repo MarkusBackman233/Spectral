@@ -7,6 +7,9 @@
   </ProjectOutputs>
   <ContentFiles>
     <ContentFile>
+      <FullPath>C:\Projects\Spectral\x64\Debug\BillboardVertexShader.cso</FullPath>
+    </ContentFile>
+    <ContentFile>
       <FullPath>C:\Projects\Spectral\x64\Debug\LinePixelShader.cso</FullPath>
     </ContentFile>
     <ContentFile>

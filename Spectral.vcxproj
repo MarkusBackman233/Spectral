@@ -81,6 +81,7 @@
     <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\SDL2-2.26.4\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Projects\VCLIB\SDL2-2.26.4\lib\x64;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\bin\win.x86_64.vc142.mt\debug;C:\Program Files\Assimp\lib\x64;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SourcePath)</SourcePath>
+    <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -131,6 +132,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PVDRuntime_64.lib;SimulationController_static_64.lib;SceneQuery_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCharacterKinematic_static_64.lib;LowLevelDynamics_static_64.lib;LowLevelAABB_static_64.lib;LowLevel_static_64.lib;PhysXExtensions_static_64.lib;d3d11.lib;SDL2.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>$(ProjectDir)src\icon.ico %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -154,6 +158,7 @@
   <ItemGroup>
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="ComponentFactory.cpp" />
+    <ClCompile Include="DefaultAssets.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorUtils.cpp" />
@@ -178,8 +183,10 @@
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="ProfileObject.cpp" />
     <ClCompile Include="ProfilerManager.cpp" />
+    <ClCompile Include="ProjectBrowserManager.cpp" />
     <ClCompile Include="RenderManager.cpp" />
     <ClCompile Include="ShadowManager.cpp" />
+    <ClCompile Include="SkyboxManager.cpp" />
     <ClCompile Include="Spectral.cpp" />
     <ClCompile Include="src\External\DDSTextureLoader\DDSTextureLoader11.cpp" />
     <ClCompile Include="src\IMGUI\imgui.cpp" />
@@ -201,6 +208,7 @@
   <ItemGroup>
     <ClInclude Include="Component.h" />
     <ClInclude Include="ComponentFactory.h" />
+    <ClInclude Include="DefaultAssets.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="EditorUtils.h" />
@@ -226,8 +234,11 @@
     <ClInclude Include="Player.h" />
     <ClInclude Include="ProfileObject.h" />
     <ClInclude Include="ProfilerManager.h" />
+    <ClInclude Include="ProjectBrowserManager.h" />
     <ClInclude Include="RenderManager.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="ShadowManager.h" />
+    <ClInclude Include="SkyboxManager.h" />
     <ClInclude Include="Spectral.h" />
     <ClInclude Include="src\External\DDSTextureLoader\DDSTextureLoader11.h" />
     <ClInclude Include="src\External\stb_image.h" />
@@ -253,6 +264,12 @@
     <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="BillboardVertexShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+    </FxCompile>
     <FxCompile Include="LinePixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
@@ -299,6 +316,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="icon.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="src\icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

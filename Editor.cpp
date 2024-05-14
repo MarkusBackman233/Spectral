@@ -27,8 +27,8 @@
 #include "IOManager.h"
 #include "StringUtils.h"
 #include "EditorUtils.h"
-
 #include <DirectXCollision.h>
+#include <ShlObj.h>
 
 int Editor::ColorPickerMask = ImGuiColorEditFlags_NoAlpha |ImGuiColorEditFlags_NoPicker |ImGuiColorEditFlags_NoOptions |ImGuiColorEditFlags_NoSmallPreview |ImGuiColorEditFlags_NoTooltip 
 |ImGuiColorEditFlags_NoLabel |ImGuiColorEditFlags_NoSidePreview |ImGuiColorEditFlags_NoDragDrop 
@@ -91,19 +91,19 @@ void Editor::Update()
     TopMenu();
     if (!m_started)
     {
-        //int gridSize = 20;
-        //float scale = 4.0f;
-        //
-        //Math::Vector3 offset(-gridSize * 0.5f * scale, 0.0f, -gridSize * 0.5f * scale);
-        //
-        //for (int i = 0; i < gridSize + 1; i++)
-        //{
-        //    Render::DrawLine(Math::Vector3(i * scale, 0, 0) + offset, Math::Vector3(i * scale, 0, gridSize * scale) + offset,Math::Vector3(1.0f,0.0f,1.0f, 0.3f));
-        //}
-        //for (int i = 0; i < gridSize + 1; i++)
-        //{
-        //    Render::DrawLine(Math::Vector3(0, 0, i * scale) + offset, Math::Vector3(gridSize * scale, 0, i * scale) + offset, Math::Vector3(1.0f, 0.0f, 1.0f, 0.3f));
-        //}
+        int gridSize = 20;
+        float scale = 4.0f;
+        
+        Math::Vector3 offset(-gridSize * 0.5f * scale, 0.0f, -gridSize * 0.5f * scale);
+        
+        for (int i = 0; i < gridSize + 1; i++)
+        {
+            Render::DrawLine(Math::Vector3(i * scale, 0, 0) + offset, Math::Vector3(i * scale, 0, gridSize * scale) + offset,Math::Vector3(1.0f,0.0f,1.0f, 0.3f));
+        }
+        for (int i = 0; i < gridSize + 1; i++)
+        {
+            Render::DrawLine(Math::Vector3(0, 0, i * scale) + offset, Math::Vector3(gridSize * scale, 0, i * scale) + offset, Math::Vector3(1.0f, 0.0f, 1.0f, 0.3f));
+        }
         if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Z))
         {
             if (!m_undoStack.empty())
@@ -186,6 +186,8 @@ void Editor::Update()
 
     HandleMeshDrawing();
 }
+
+
 
 void Editor::HandleRaycastSelection()
 {
@@ -412,7 +414,6 @@ void Editor::GameObjectListItem(GameObject* gameObject)
         }
     }
 
-
     if (gameObject->GetChildren().empty())
     {
         node_flags |= ImGuiTreeNodeFlags_Leaf;
@@ -568,7 +569,8 @@ void Editor::TopMenu()
             }
             if (ImGui::MenuItem("Load"))
             {
-                IOManager::LoadSpectralScene("C:/Projects/Spectral/Exported/asd.sps");
+                
+                IOManager::LoadSpectralScene("asd.sps");
             }
             ImGui::Separator();
             ImGui::EndMenu();
@@ -997,7 +999,7 @@ void Editor::HandleMeshDrawing()
             if (randomYRotation)
             {
                 float circleInRad = 6.2831853f;
-                duplicateGameObject->GetMatrix() = Math::Matrix::MakeRotationY(static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * circleInRad) * duplicateGameObject->GetMatrix();
+                duplicateGameObject->GetMatrix() = Math::Matrix::MakeRotationZ(static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * circleInRad) * duplicateGameObject->GetMatrix();
             }
             duplicateGameObject->UpdateTransform();
             SetSelectedGameObject(duplicateGameObject);

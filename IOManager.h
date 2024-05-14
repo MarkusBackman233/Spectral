@@ -118,8 +118,12 @@ private:
 class IOManager
 {
 public:
+	static std::string ProjectName;
 	static std::string ProjectDirectory;
+	static std::string ExecutableDirectory;
 	static std::wstring ProjectDirectoryWide;
+	static std::wstring ExecutableDirectoryWide;
+
 	static std::string SpectralModelExtention;
 	static std::string SpectralSceneExtention;
 	static std::string SpectralMaterialExtention;

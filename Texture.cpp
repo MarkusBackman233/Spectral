@@ -13,7 +13,7 @@
 #include "src/External/DDSTextureLoader/DDSTextureLoader11.h"
 #include "Logger.h"
 #include <mutex>
-
+#include "DefaultAssets.h"
 #include "IOManager.h"
 
 
@@ -44,12 +44,23 @@ void Texture::LoadTexture(const std::string& filename)
 			LogMessage("ERROR: Could not not load texture: " + filename);
 			return;
 		}
-
 		Render::CreateTexture(imageData, Math::Vector2i(width, height), m_textureSRV, m_texture);
 		stbi_image_free(imageData);
 		GenerateMips();
 	}
 
+}
+
+void Texture::LoadTexture(unsigned char* bytes, size_t size)
+{
+	//int width, height, channels;
+	//unsigned char* imageData = stbi_load_from_memory(bytes, size, &width, &height, &channels, STBI_rgb_alpha);
+	//if (!imageData) {
+	//	LogMessage("ERROR: Could not not load texture: ");
+	//	return;
+	//}
+	Render::CreateTexture(bytes, Math::Vector2i(1024, 1024), m_textureSRV, m_texture);
+	GenerateMips();
 }
 
 bool Texture::GenerateMips()

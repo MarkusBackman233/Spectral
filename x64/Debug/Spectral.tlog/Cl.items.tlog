@@ -1,5 +1,6 @@
 C:\Projects\Spectral\Spectral\Component.cpp;C:\Projects\Spectral\Spectral\x64\Debug\Component.obj
 C:\Projects\Spectral\Spectral\ComponentFactory.cpp;C:\Projects\Spectral\Spectral\x64\Debug\ComponentFactory.obj
+C:\Projects\Spectral\Spectral\DefaultAssets.cpp;C:\Projects\Spectral\Spectral\x64\Debug\DefaultAssets.obj
 C:\Projects\Spectral\Spectral\DeviceResources.cpp;C:\Projects\Spectral\Spectral\x64\Debug\DeviceResources.obj
 C:\Projects\Spectral\Spectral\Editor.cpp;C:\Projects\Spectral\Spectral\x64\Debug\Editor.obj
 C:\Projects\Spectral\Spectral\EditorUtils.cpp;C:\Projects\Spectral\Spectral\x64\Debug\EditorUtils.obj
@@ -24,8 +25,10 @@ C:\Projects\Spectral\Spectral\PhysXManager.cpp;C:\Projects\Spectral\Spectral\x64
 C:\Projects\Spectral\Spectral\Player.cpp;C:\Projects\Spectral\Spectral\x64\Debug\Player.obj
 C:\Projects\Spectral\Spectral\ProfileObject.cpp;C:\Projects\Spectral\Spectral\x64\Debug\ProfileObject.obj
 C:\Projects\Spectral\Spectral\ProfilerManager.cpp;C:\Projects\Spectral\Spectral\x64\Debug\ProfilerManager.obj
+C:\Projects\Spectral\Spectral\ProjectBrowserManager.cpp;C:\Projects\Spectral\Spectral\x64\Debug\ProjectBrowserManager.obj
 C:\Projects\Spectral\Spectral\RenderManager.cpp;C:\Projects\Spectral\Spectral\x64\Debug\RenderManager.obj
 C:\Projects\Spectral\Spectral\ShadowManager.cpp;C:\Projects\Spectral\Spectral\x64\Debug\ShadowManager.obj
+C:\Projects\Spectral\Spectral\SkyboxManager.cpp;C:\Projects\Spectral\Spectral\x64\Debug\SkyboxManager.obj
 C:\Projects\Spectral\Spectral\Spectral.cpp;C:\Projects\Spectral\Spectral\x64\Debug\Spectral.obj
 C:\Projects\Spectral\Spectral\src\External\DDSTextureLoader\DDSTextureLoader11.cpp;C:\Projects\Spectral\Spectral\x64\Debug\DDSTextureLoader11.obj
 C:\Projects\Spectral\Spectral\src\IMGUI\imgui.cpp;C:\Projects\Spectral\Spectral\x64\Debug\imgui.obj

@@ -55,7 +55,7 @@ namespace Render
 	HRESULT CreatePixelShader(const std::string& filename, ID3D11PixelShader** pixelShader)
 	{
 		HRESULT hr = S_OK;
-		auto buffer = LoadShaderBytecode(filename);
+		auto buffer = LoadShaderBytecode(IOManager::ExecutableDirectory + filename);
 		hr = Render::GetDevice()->CreatePixelShader(buffer.data(), buffer.size(), nullptr, pixelShader);
 		ThrowIfFailed(hr);
 		return hr;
@@ -63,7 +63,7 @@ namespace Render
 	HRESULT CreateVertexShader(const std::string& filename, ID3D11VertexShader** vertexShader, D3D11_INPUT_ELEMENT_DESC* inputDesc, size_t inputSize, ID3D11InputLayout** inputLayout)
 	{
 		HRESULT hr = S_OK;
-		auto buffer = LoadShaderBytecode(filename);
+		auto buffer = LoadShaderBytecode(IOManager::ExecutableDirectory + filename);
 		hr = Render::GetDevice()->CreateVertexShader(buffer.data(), buffer.size(), nullptr, vertexShader);
 		hr = Render::GetDevice()->CreateInputLayout(inputDesc, (UINT)inputSize, buffer.data(), buffer.size(), inputLayout);
 		ThrowIfFailed(hr);

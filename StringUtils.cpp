@@ -1,6 +1,6 @@
 #include "StringUtils.h"
 #include <filesystem>
-
+#include <Windows.h>
 
 std::string StringUtils::StripPathFromFilename(const std::string& filename)
 {

@@ -27,6 +27,7 @@
 #include "iRender.h"
 #include "Spectral.h"
 #include "ProfilerManager.h"
+#include "SkyboxManager.h"
 
 RenderManager::RenderManager()
 {
@@ -328,14 +329,19 @@ void RenderManager::Render()
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         context->PSSetShaderResources(5, 1, ShadowManager::GetInstance()->GetShadowTexture().GetAddressOf()); // shadow map
     }
+    MaterialManager::GetInstance()->GetDefaultMaterial()->PrepareMaterialGlobals();
+    //{
+    //    MaterialManager::GetInstance()->GetDefaultMaterial()->PreparePerMaterial();
+    //    SkyboxManager::GetInstance()->RenderSkybox();
+    //
+    //    auto lockedContext = Render::GetContext();
+    //    ID3D11DeviceContext* context = lockedContext.GetContext();
+    //    context->DrawIndexed(36, 0, 0);
+    //}
+
     UINT stride = sizeof(Mesh::VertexStruct);
     UINT offset = 0;
-    if (!m_instancedMeshes.empty())
-    {
-        m_instancedMeshes.begin()->first->GetMaterial()->PrepareMaterialGlobals();
-    }
 
-    
     for (auto& [mesh, matrixes] : m_instancedMeshes)
     {
         mesh->GetMaterial()->PreparePerMaterial();

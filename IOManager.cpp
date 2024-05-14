@@ -14,13 +14,17 @@
 #include "StringUtils.h"
 
 #include "EditorUtils.h"
-
+#include "DefaultAssets.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp\scene.h>
 
-std::string IOManager::ProjectDirectory = "C:/Projects/Spectral/Exported/";
-std::wstring IOManager::ProjectDirectoryWide = L"C:\\Projects\\Spectral\\Exported\\";
+std::string IOManager::ProjectName = "";
+
+std::string IOManager::ProjectDirectory = "";
+std::string IOManager::ExecutableDirectory = "";
+std::wstring IOManager::ProjectDirectoryWide = L"";
+std::wstring IOManager::ExecutableDirectoryWide = L"";
 
 std::string IOManager::SpectralModelExtention = ".spm";
 std::string IOManager::SpectralSceneExtention = ".sps";
@@ -121,7 +125,7 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
 
 bool IOManager::LoadSpectralScene(const std::string& filename)
 {
-    ReadObject readObject(filename);
+    ReadObject readObject(ProjectDirectory + filename);
     if (!readObject.GetFile().is_open())
     {
         return false;
@@ -167,8 +171,14 @@ bool IOManager::LoadSpectralMaterial(const std::string& filename, std::shared_pt
 
 void IOManager::CollectProjectFiles()
 {
-    std::cout << "Loading project files" << std::endl;
+    //auto [bytes, size] = DefaultAssets::GetDefaultAlbedoBytes();
+    //auto defaultAlbedo = std::make_shared<Texture>();
+    //defaultAlbedo->LoadTexture(bytes, size);
+    ////delete[] bytes;
+    //TextureManager::GetInstance()->AddTexture("TemplateGrid_albedo.png", defaultAlbedo);
 
+    std::cout << "Loading project files" << std::endl;
+     std::filesystem::create_directories(ProjectDirectory);
     std::vector<std::filesystem::directory_entry> filesToLoad;
     for (auto& file : std::filesystem::recursive_directory_iterator(ProjectDirectory))
     {

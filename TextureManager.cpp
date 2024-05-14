@@ -41,3 +41,8 @@ std::string TextureManager::GetTextureName(std::shared_ptr<Texture> texture)
 
 	return "";
 }
+
+void TextureManager::AddTexture(const std::string& textureName, std::shared_ptr<Texture> texture)
+{
+	m_textures[textureName] = texture;
+}

@@ -44,8 +44,8 @@ ShadowManager::ShadowManager()
     { "Transform",  3, DXGI_FORMAT_R32G32B32A32_FLOAT   , 1, 48, D3D11_INPUT_PER_INSTANCE_DATA, 1 }
     };
 
-    ThrowIfFailed(Render::CreateVertexShader("C:/Projects/Spectral/x64/Debug/ShadowDepthVertexShader.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout));
-    ThrowIfFailed(Render::CreatePixelShader("C:/Projects/Spectral/x64/Debug/SimplePixelShader.cso", &m_pPixelShader));
+    ThrowIfFailed(Render::CreateVertexShader("ShadowDepthVertexShader.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout));
+    ThrowIfFailed(Render::CreatePixelShader("SimplePixelShader.cso", &m_pPixelShader));
     ThrowIfFailed(Render::CreateConstantBuffer(sizeof(VertexConstantBuffer), m_pVertexConstantBufferData));  
 
 

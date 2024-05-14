@@ -11,8 +11,8 @@ LineMaterial::LineMaterial()
         { "POSITION",   0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
-    hr = Render::CreateVertexShader("C:/Projects/Spectral/x64/Debug/LineVertexShader.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout);
-    hr = Render::CreatePixelShader("C:/Projects/Spectral/x64/Debug/LinePixelShader.cso", &m_pPixelShader);
+    hr = Render::CreateVertexShader("LineVertexShader.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout);
+    hr = Render::CreatePixelShader("LinePixelShader.cso", &m_pPixelShader);
 
     hr = Render::CreateConstantBuffer(sizeof(VertexConstantBuffer), m_pVertexConstantBufferData);
     hr = Render::CreateConstantBuffer(sizeof(PixelConstantBuffer), m_pPixelConstantBufferData);
