@@ -195,6 +195,9 @@
     <ClCompile Include="ProjectBrowserManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TerrainComponent.cpp">
+      <Filter>Source Files\Components</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vector3.h">
@@ -356,6 +359,9 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TerrainComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -396,6 +402,21 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\icon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\TemplateGrid_albedo.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\TemplateGrid_normal.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\bitmap1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\TemplateGrid_albedo.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\TemplateGrid_normal.bmp">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

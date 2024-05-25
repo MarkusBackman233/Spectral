@@ -38,6 +38,8 @@ public:
 	ColorFLOAT& GetAmbientLight() { return m_ambientLighting; }
 	ColorFLOAT& GetFogColor() { return m_fogColor; }
 
+	std::vector<std::shared_ptr<Light>>& GetLights() { return m_ligts; }
+
 	Math::Matrix& GetProjectionMatrix() { return m_projectionMatrix; }
 	const Math::Matrix& GetViewMatrix() { return m_player->GetCameraMatrixInversed(); }
 	Math::Vector2i&	GetScreenSize()	{ return m_screenSize; }
@@ -48,16 +50,7 @@ public:
 	bool m_renderWireframe;
 
 private:
-	struct LightBufferLocations
-	{
-		int enabledLoc;
-		int typeLoc;
-		int positionLoc;
-		int targetLoc;
-		int colorLoc;
-	};
 
-	void CalculateProjectionMatrix(int width, int height);
 	float CalculateDeltaTime();
 
 	void RenderPhysX();
@@ -83,10 +76,10 @@ private:
 
 	Math::Vector3 m_directionLighting;
 
+	std::vector<std::shared_ptr<Light>> m_ligts;
 
 	ColorFLOAT m_ambientLighting;
 	ColorFLOAT m_fogColor;
 
-	std::unordered_map<int,LightBufferLocations> m_lightBuffers;
 };
 

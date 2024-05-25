@@ -18,6 +18,7 @@ struct VS_OUTPUT
 {
     float4 lpos : TEXCOORD1;
     float4 position : SV_POSITION;
+    float4 worldPosition : TEXCOORD2;
     float2 TextureUV : TEXCOORD0;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
@@ -30,6 +31,7 @@ VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
     output.position = mul(float4(input.position, 1.0), input.transform);
+    output.worldPosition = output.position;
     output.viewDirection = normalize(CameraPosition.xyz - output.position.xyz);
     output.distanceToCamera = length(CameraPosition.xyz - output.position.xyz);
 

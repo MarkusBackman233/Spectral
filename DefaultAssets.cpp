@@ -1,37 +1,61 @@
 #include "DefaultAssets.h"
 #include <vector>
 #include <string>
+#include "Texture.h"
+#include "TextureManager.h"
+#include <comdef.h>
 
-std::pair<unsigned char*, size_t> DefaultAssets::GetDefaultAlbedoBytes()
+#include "RenderManager.h"
+#include "resource.h"
+#include "Vector2.h"
+#include "iRender.h"
+
+void DefaultAssets::LoadDefaults()
 {
-	
-	const unsigned int textureSize = 1024;
+    LoadBitMap("TemplateGrid_albedo.bmp", IDB_BITMAP1);
+    LoadBitMap("TemplateGrid_normal.bmp", IDB_BITMAP2);
+}
 
-	unsigned char* defaultTexture = new unsigned char [textureSize * textureSize * 4];
+void DefaultAssets::LoadBitMap(const std::string& filename, int resourceId)
+{
+    auto instance = RenderManager::GetInstance()->m_hInstance;
+    HBITMAP hBMP = (HBITMAP)LoadBitmapW(instance, MAKEINTRESOURCEW(resourceId));
+    //HRSRC hResInfo = FindResource(instance, L"IDB_PNG1", L"RT_BITMAP");
+    //
+    BITMAP bm;
+
+    GetObject(hBMP, sizeof(BITMAP), &bm);
 
 
+    BITMAPINFOHEADER bi;
+    ZeroMemory(&bi, sizeof(BITMAPINFOHEADER));
+    bi.biSize = sizeof(BITMAPINFOHEADER);
+    bi.biWidth = bm.bmWidth;
+    bi.biHeight = bm.bmHeight;
+    bi.biPlanes = 1;
+    bi.biBitCount = 32; // Assuming 32-bit bitmap
+    bi.biCompression = BI_RGB;
 
-	for (size_t x = 0; x < textureSize; x++)
-	{
-		for (size_t y = 0; y < textureSize * 4; y += 4)
-		{
-			bool odd = (x % 64 == 0) || (y % 64 == 0);
+    size_t bitmapSize = bm.bmWidth * bm.bmHeight * 4; // 4 bytes per pixel
+    std::vector<BYTE> pixels(bitmapSize);
 
-			unsigned char r = odd ? 255 : 0;
-			unsigned char g = odd ? 255 : 0;
-			unsigned char b = odd ? 255 : 0;
-			//float texelSize = 1 / textureSize;
-			//unsigned char r = x * texelSize * 255;
-			//unsigned char g = y * texelSize * 255;
-			//unsigned char b = 255;
+    HDC hdc = GetDC(NULL);
+    HDC hMemDC = CreateCompatibleDC(hdc);
+    SelectObject(hMemDC, hBMP);
+    GetDIBits(hMemDC, hBMP, 0, bm.bmHeight, pixels.data(), (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+    DeleteDC(hMemDC);
+    ReleaseDC(NULL, hdc);
 
-			unsigned char a = 255;
+    for (size_t i = 0; i < bitmapSize ; i += 4)
+    {
+        auto temp = pixels[i];
+        pixels[i] = pixels[i+2];
+        pixels[i+2] = temp;
 
-			defaultTexture[x * textureSize + y]		= r;
-			defaultTexture[x * textureSize + y + 1] = g;
-			defaultTexture[x * textureSize + y + 2] = b;
-			defaultTexture[x * textureSize + y + 3] = a;
-		}
-	}
-	return std::make_pair(defaultTexture, textureSize * textureSize);
+        pixels[i + 3] = 255;
+    }
+
+    auto defaultAlbedo = std::make_shared<Texture>();
+    defaultAlbedo->LoadTexture(pixels.data(), Math::Vector2i(bm.bmWidth, bm.bmHeight));
+    TextureManager::GetInstance()->AddTexture(filename, defaultAlbedo);
 }

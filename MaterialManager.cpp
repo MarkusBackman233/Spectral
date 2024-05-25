@@ -8,8 +8,8 @@
 MaterialManager::MaterialManager()
 {
 	m_materials["default"] = std::make_shared<Material>();
-	m_materials["default"]->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.png"));
-	m_materials["default"]->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.png"));
+	m_materials["default"]->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.bmp"));
+	m_materials["default"]->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.bmp"));
 	m_materials["default"]->SetName("default");
 
 
@@ -51,8 +51,8 @@ std::shared_ptr<Material> MaterialManager::GetMaterial(const std::string& name)
 		return m_materials[name];
 	}
 
-	m_materials[name]->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.png"));
-	m_materials[name]->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.png"));
+	m_materials[name]->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.bmp"));
+	m_materials[name]->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.bmp"));
 	m_materials[name]->SetName(name);
 	return m_materials[name];
 }

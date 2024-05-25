@@ -131,6 +131,8 @@ void Spectral::SetFogColor(const ColorFLOAT& color)
 
 void Spectral::Render()
 {
+    m_ligts.clear();
+
     for (const auto& object : ObjectManager::GetInstance()->GetGameObjects())
     {
         for (const auto& component : object->GetComponents())

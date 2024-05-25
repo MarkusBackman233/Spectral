@@ -1,5 +1,6 @@
 #include "LightComponent.h"
 #include "ModelManager.h"
+#include "Spectral.h"
 
 LightComponent::LightComponent(GameObject* owner)
 	: Component(owner)
@@ -25,6 +26,12 @@ LightComponent::LightComponent(GameObject* owner, LightComponent* LightComponent
 void LightComponent::Update(float deltaTime)
 {
 
+}
+
+void LightComponent::Render()
+{
+	m_light->position = m_owner->GetMatrix().GetPosition();
+	Spectral::GetInstance()->GetLights().push_back(m_light);
 }
 
 

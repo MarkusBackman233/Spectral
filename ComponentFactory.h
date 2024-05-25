@@ -3,6 +3,7 @@
 #include "PhysicsComponent.h"
 #include "LightComponent.h"
 #include "ParticleComponent.h"
+#include "TerrainComponent.h"
 #include <memory>
 
 class ComponentFactory

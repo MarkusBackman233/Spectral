@@ -40,6 +40,7 @@ struct Color {
 
 struct Light
 {
+	Math::Vector3 position;
 	int type;
 	bool enabled;
 	Color color;
@@ -53,6 +54,7 @@ public:
 	LightComponent(GameObject* owner, LightComponent* meshComponent);
 
 	void Update(float deltaTime) override;
+	void Render() override;
 
 	std::shared_ptr<Light> GetLight() { return m_light; }
 	void SetLight(std::shared_ptr<Light> light);

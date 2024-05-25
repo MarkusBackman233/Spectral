@@ -161,7 +161,7 @@ bool ProjectBrowserManager::Update()
             for (const auto& projectPath : m_previousProjects)
             {
                 ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding);
-                if (ImGui::Button(projectPath.Name.c_str(), projectButtonSize))
+                if (!projectPath.Name.empty() && ImGui::Button(projectPath.Name.c_str(), projectButtonSize))
                 {
                     projectSelected = true;
                     IOManager::ProjectDirectory = projectPath.Path;

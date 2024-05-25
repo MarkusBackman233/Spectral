@@ -10,7 +10,7 @@
 #include "filesystem"
 #include "ProjectBrowserManager.h"
 #include <tchar.h>
-
+#include "DefaultAssets.h"
 int main(int argc, char* args[])
 {
     RenderManager::GetInstance();
@@ -21,9 +21,12 @@ int main(int argc, char* args[])
 
     std::filesystem::path currentDir = std::wstring(path);
     std::filesystem::path parentDir = currentDir.parent_path();
-    IOManager::ExecutableDirectory = currentDir.parent_path().string() + std::string("/");
+    IOManager::ExecutableDirectory = currentDir.parent_path().string() + std::string("\\");
     IOManager::ExecutableDirectoryWide = currentDir.parent_path().wstring() + std::wstring(L"\\");
     
+    DefaultAssets::LoadDefaults();
+
+
 #ifdef EDITOR
     ProjectBrowserManager::GetInstance();
     HANDLE hIcon = LoadImage(0, _T("icon.ico"), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);

@@ -103,6 +103,19 @@ void Material::PreparePerMaterial()
 
     m_pixelConstantBuffer.ambientLighting = DirectX::XMFLOAT4(&Spectral::GetInstance()->GetAmbientLight().r);
     m_pixelConstantBuffer.fogColor = DirectX::XMFLOAT4(&Spectral::GetInstance()->GetFogColor().r);
+
+    const auto& lights = Spectral::GetInstance()->GetLights();
+    for (size_t i = 0; i < lights.size(); i++)
+    {
+        auto color = lights[i]->color.GetNormalizedColor();
+        m_pixelConstantBuffer.lights[i].position = DirectX::XMFLOAT4(lights[i]->position.x, lights[i]->position.y, lights[i]->position.z, 0.0);
+        m_pixelConstantBuffer.lights[i].color = DirectX::XMFLOAT4(color.r, color.g, color.b, color.a);
+    }
+    m_pixelConstantBuffer.data.w = (float)lights.size();
+
+
+
+
     Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 0, m_pPixelConstantBufferData, &m_pixelConstantBuffer);
 }
 

@@ -176,7 +176,6 @@ void IOManager::CollectProjectFiles()
     //defaultAlbedo->LoadTexture(bytes, size);
     ////delete[] bytes;
     //TextureManager::GetInstance()->AddTexture("TemplateGrid_albedo.png", defaultAlbedo);
-
     std::cout << "Loading project files" << std::endl;
      std::filesystem::create_directories(ProjectDirectory);
     std::vector<std::filesystem::directory_entry> filesToLoad;

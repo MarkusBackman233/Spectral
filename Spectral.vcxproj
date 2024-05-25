@@ -133,7 +133,7 @@
       <AdditionalDependencies>PhysX_64.lib;PhysXCommon_64.lib;PhysXCooking_64.lib;PhysXFoundation_64.lib;PVDRuntime_64.lib;SimulationController_static_64.lib;SceneQuery_static_64.lib;PhysXPvdSDK_static_64.lib;PhysXCharacterKinematic_static_64.lib;LowLevelDynamics_static_64.lib;LowLevelAABB_static_64.lib;LowLevel_static_64.lib;PhysXExtensions_static_64.lib;d3d11.lib;SDL2.lib;assimp-vc143-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <Manifest>
-      <AdditionalManifestFiles>$(ProjectDir)src\icon.ico %(AdditionalManifestFiles)</AdditionalManifestFiles>
+      <AdditionalManifestFiles>$(ProjectDir)src\icon.ico; $(ProjectDir)src\Assets\TemplateGrid_albedo.png; %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -198,6 +198,7 @@
     <ClCompile Include="src\IMGUI\imgui_tables.cpp" />
     <ClCompile Include="src\IMGUI\imgui_widgets.cpp" />
     <ClCompile Include="StringUtils.cpp" />
+    <ClCompile Include="TerrainComponent.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="Triangle.cpp" />
@@ -253,6 +254,7 @@
     <ClInclude Include="src\IMGUI\imstb_textedit.h" />
     <ClInclude Include="src\IMGUI\imstb_truetype.h" />
     <ClInclude Include="StringUtils.h" />
+    <ClInclude Include="TerrainComponent.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TextureManager.h" />
     <ClInclude Include="Triangle.h" />
@@ -269,14 +271,17 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="LinePixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="LineVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="PBRPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -285,42 +290,53 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.0</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.0</ShaderModel>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="PixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="ShadowDepthVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="SimplePixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="VertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
     <FxCompile Include="SimpleVertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="icon.rc" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="src\Assets\TemplateGrid_albedo.bmp" />
+    <Image Include="src\Assets\TemplateGrid_albedo.png" />
+    <Image Include="src\Assets\TemplateGrid_normal.bmp" />
+    <Image Include="src\Assets\TemplateGrid_normal.png" />
+    <Image Include="src\bitmap1.bmp" />
     <Image Include="src\icon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

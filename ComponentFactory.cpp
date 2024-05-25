@@ -11,7 +11,9 @@ std::shared_ptr<Component> ComponentFactory::CreateComponent(GameObject* gameObj
     case Component::ComponentType_MeshComponent:
         return duplicateComponent ? std::make_shared<MeshComponent>(gameObject, static_cast<MeshComponent*>(duplicateComponent.get())) : std::make_shared<MeshComponent>(gameObject);
     case Component::ComponentType_ParticleComponent:
-        return std::make_shared<ParticleComponent>(gameObject);
+        return std::make_shared<ParticleComponent>(gameObject);    
+    case Component::ComponentType_TerrainComponent:
+        return std::make_shared<TerrainComponent>(gameObject);
     }
     return nullptr;
 }

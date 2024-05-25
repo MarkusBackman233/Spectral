@@ -51,15 +51,9 @@ void Texture::LoadTexture(const std::string& filename)
 
 }
 
-void Texture::LoadTexture(unsigned char* bytes, size_t size)
+void Texture::LoadTexture(unsigned char* bytes, const Math::Vector2i& size)
 {
-	//int width, height, channels;
-	//unsigned char* imageData = stbi_load_from_memory(bytes, size, &width, &height, &channels, STBI_rgb_alpha);
-	//if (!imageData) {
-	//	LogMessage("ERROR: Could not not load texture: ");
-	//	return;
-	//}
-	Render::CreateTexture(bytes, Math::Vector2i(1024, 1024), m_textureSRV, m_texture);
+	Render::CreateTexture(bytes, size, m_textureSRV, m_texture);
 	GenerateMips();
 }
 

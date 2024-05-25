@@ -41,6 +41,7 @@ public:
 
 
     void DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector3& color);
+     HINSTANCE m_hInstance;
 
 private:
 
@@ -69,5 +70,4 @@ private:
     DirectX::XMFLOAT4 frustumPlanes[6];
 
 };
-static HINSTANCE m_hInstance;
 static std::wstring m_windowClassName;

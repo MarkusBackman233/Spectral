@@ -54,11 +54,18 @@ private:
 		DirectX::XMFLOAT4 cameraPosition;
 	};
 
+	struct Light
+	{
+		DirectX::XMFLOAT4 position;
+		DirectX::XMFLOAT4 color;
+	};
+
 	struct PixelConstantBuffer 
 	{
 		DirectX::XMFLOAT4 ambientLighting;
 		DirectX::XMFLOAT4 fogColor;
-		DirectX::XMFLOAT4 data; // x = Shininess
+		DirectX::XMFLOAT4 data; // x = Shininess,  w = num lights
+		Light lights[50];
 	};
 
 	static bool HasSetupShader;

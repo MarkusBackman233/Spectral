@@ -1,8 +1,12 @@
 #pragma once
 #include "utility"
+#include "pch.h"
 class DefaultAssets
 {
 public:
-	static std::pair<unsigned char*,size_t> GetDefaultAlbedoBytes();
+	static void LoadDefaults();
+
+private: 
+	static void LoadBitMap(const std::string& filename, int resourceId);
 };
 

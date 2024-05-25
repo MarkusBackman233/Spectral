@@ -57,6 +57,7 @@ Editor::Editor()
     m_componentTypes[Component::ComponentType_PhysicsComponent] = "Physics Component";
     m_componentTypes[Component::ComponentType_LightComponent] = "Light Component";
     m_componentTypes[Component::ComponentType_ParticleComponent] = "Particle Component";
+    m_componentTypes[Component::ComponentType_TerrainComponent] = "Terrain Component";
     LogMessage("Welcome!");
 
 }

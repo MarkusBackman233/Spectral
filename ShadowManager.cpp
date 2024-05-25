@@ -130,14 +130,14 @@ void ShadowManager::DrawShadowDepth(std::unordered_map<std::shared_ptr<Mesh>, st
 
 void ShadowManager::SetupLightMatrix()
 {
-    const float nearPlane = 25.f;
+    const float nearPlane = 1.f;
     const float farPlane = 150.0f;
 
     Math::Vector3 lightDirection(0.1f, -0.6f, -0.9f);
     lightDirection = lightDirection.GetNormal();
 
-    //Math::Vector3 cameraPos(Render::GetCameraPosition().x, 0.0f, Render::GetCameraPosition().z);
-    Math::Vector3 cameraPos(-24.839f, 0.0f, 5.0f);
+    Math::Vector3 cameraPos(Render::GetCameraPosition().x, 0.0f, Render::GetCameraPosition().z);
+    //Math::Vector3 cameraPos(-24.839f, 0.0f, 5.0f);
 
     auto lightPosPre = cameraPos - lightDirection * 100.0f;
     auto lightTargetPre = lightPosPre - lightDirection;
@@ -149,7 +149,7 @@ void ShadowManager::SetupLightMatrix()
     m_viewMatrix = XMMatrixLookAtLH(lightPos, targetPos, up);
 
     // Calculate the projection matrix
-    Math::Vector2 size(100, 100);
+    Math::Vector2 size(250, 250);
 
     m_projectionMatrix = XMMatrixOrthographicRH(size.x, size.y, nearPlane, farPlane);
 

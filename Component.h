@@ -19,6 +19,7 @@ public:
 		ComponentType_MeshComponent,
 		ComponentType_LightComponent,
 		ComponentType_ParticleComponent,
+		ComponentType_TerrainComponent,
 
 		ComponentType_Invalid,
 	};

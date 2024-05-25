@@ -183,7 +183,7 @@ LRESULT CALLBACK RenderManager::StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM wP
             DestroyMenu(hMenu);
         }
         DestroyWindow(hWnd);
-        UnregisterClass(m_windowClassName.c_str(),m_hInstance);
+        UnregisterClass(m_windowClassName.c_str(), RenderManager::GetInstance()->m_hInstance);
         return 0;
     }
 

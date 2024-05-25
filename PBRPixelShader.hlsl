@@ -16,6 +16,7 @@ struct PS_INPUT
 {
     float4 lpos : TEXCOORD1;
     float4 position : SV_POSITION;
+    float4 worldPosition : TEXCOORD2;
     float2 TextureUV : TEXCOORD0;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
@@ -43,6 +44,9 @@ cbuffer PixelConstantBuffer : register(b0)
     float4 ambientLighting;
     float4 fogColor;
     float4 data; // x = hasAO 
+    
+    Light lights[3];
+    
 };
 
 #define PI 3.14159265
@@ -146,6 +150,8 @@ float ShadowCalculation(float4 lpos)
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
+    
+
     float4 albedo = albedoMap.Sample(samplerState, input.TextureUV);
     float3 viewDir = normalize(input.viewDirection);
 
@@ -169,23 +175,36 @@ float4 main(PS_INPUT input) : SV_TARGET
     float materialMetallic = metallicMap.Sample(samplerState, input.TextureUV).r * data.z;
     float materialRoughness = roughnessMap.Sample(samplerState, input.TextureUV).r * data.y;
     
-    float3 lightColor = fogColor.xyz ;
+    float3 lightColor = fogColor.xyz;
     
     F0 = lerp(albedo.rgb, F0, materialMetallic);
 
-    float intensity = fogColor.a * 10;
-    //if (l.type == 1)
-    //{
-    //    float l_dist = lightDist(hit.hit_point, l);
-    //    intensity = l.intensity / (l_dist * l_dist);
-    //} 
 
-    float3 H = normalize(viewDir + LightDirection);
-    float Shadow = ShadowCalculation(input.lpos);
-    float3 brdfRec = computeReflectance(normal, viewDir, F0, albedo.rgb, LightDirection, H, lightColor, intensity, materialMetallic, materialRoughness)
-    * Shadow + fogColor.rgb * (input.distanceToCamera * 0.0001f);
     
+    float3 brdfRec = float3(0.0, 0.0, 0.0);
+    
+    float Shadow = ShadowCalculation(input.lpos);
+    
+    {
+        float intensity = fogColor.a * 10;
+        float3 H = normalize(viewDir + LightDirection);
+        brdfRec += computeReflectance(normal, viewDir, F0, albedo.rgb, LightDirection, H, lightColor, intensity, materialMetallic, materialRoughness) * Shadow;
+    }
+    
+    for (float i = 0.0; i < data.w; i ++)
+    {
+        
+        float l_dist = length(input.worldPosition.xyz - lights[i].position);
+        float lightIntensity = 50 / (l_dist * l_dist);
+        
+        float3 currDirection = normalize(lights[i].position - input.worldPosition.xyz);
+        
+        float3 H = normalize(viewDir + currDirection);
+        brdfRec += computeReflectance(normal, viewDir, F0, albedo.rgb, currDirection, H, lights[i].color, lightIntensity, materialMetallic, materialRoughness);
+    }
+    
+
     if (albedo.a < 0.1)
         discard;
-    return float4(pow(ambient + brdfRec, 1.0 / 2.2), 1.0);
+    return float4(pow(ambient, 1.0 / 2.2) + brdfRec  + fogColor.rgb * (input.distanceToCamera * 0.0001f), 1.0);
 }
