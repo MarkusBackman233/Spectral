@@ -5,14 +5,9 @@
 class ProjectBrowserManager
 {
 public:
-	static ProjectBrowserManager* GetInstance() {
-		static ProjectBrowserManager instance;
-		return &instance;
-	}
 
-	ProjectBrowserManager();
+	void StartBrowserWindow();
 
-	bool Update();
 private:
 
 	struct PreviousProject
@@ -26,6 +21,7 @@ private:
 		std::string Path;
 		std::string Name;
 	};
+	bool Update();
 
 	std::filesystem::path SelectFromFileExplorer();
 

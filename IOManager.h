@@ -128,6 +128,8 @@ public:
 	static std::string SpectralSceneExtention;
 	static std::string SpectralMaterialExtention;
 
+	static void SetExecutableDirectiory();
+
 	static bool LoadFBX(const std::string& filename);
 	static bool LoadTexture(const std::string& filename);
 

@@ -28,6 +28,7 @@
 #include "Spectral.h"
 #include "ProfilerManager.h"
 #include "SkyboxManager.h"
+#include <tchar.h>
 
 RenderManager::RenderManager()
 {
@@ -361,6 +362,34 @@ void RenderManager::Render()
     m_instancedMeshes.clear();
     RenderPhysics();
     pBlendState->Release();
+}
+
+void RenderManager::SetWindowSize(const Math::Vector2i& size)
+{
+    RECT desktop;
+    // Get a handle to the desktop window
+    const HWND hDesktop = GetDesktopWindow();
+    // Get the size of screen to the variable desktop
+    GetWindowRect(hDesktop, &desktop);
+    ::SetWindowLong(GetWindowHandle(), GWL_STYLE, GetWindowLong(GetWindowHandle(), GWL_STYLE) & ~WS_SIZEBOX);
+
+    MoveWindow(GetWindowHandle(),
+        desktop.right / 2 - size.x / 2,
+        desktop.bottom / 2 - size.y / 2, size.x,
+        size.y, TRUE);
+    
+}
+
+void RenderManager::SetWindowIcon(const std::string& iconName)
+{
+    HANDLE hIcon = LoadImageA(0, iconName.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
+    SendMessage(GetWindowHandle(), WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+    SendMessage(GetWindowHandle(), WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+}
+
+void RenderManager::SetWindowTitle(const std::string& windowTitle)
+{
+    SetWindowTextA(GetWindowHandle(), windowTitle.c_str());
 }
 
 void RenderManager::DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector3& color)

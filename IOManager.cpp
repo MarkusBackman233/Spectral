@@ -31,6 +31,17 @@ std::string IOManager::SpectralSceneExtention = ".sps";
 std::string IOManager::SpectralMaterialExtention = ".spmt";
 
 
+void IOManager::SetExecutableDirectiory()
+{
+    WCHAR path[MAX_PATH];
+    GetModuleFileName(NULL, path, MAX_PATH);
+
+    std::filesystem::path currentDir = std::wstring(path);
+    std::filesystem::path parentDir = currentDir.parent_path();
+    IOManager::ExecutableDirectory = currentDir.parent_path().string() + std::string("\\");
+    IOManager::ExecutableDirectoryWide = currentDir.parent_path().wstring() + std::wstring(L"\\");
+}
+
 bool IOManager::LoadFBX(const std::string& filename)
 {
     Assimp::Importer importer;

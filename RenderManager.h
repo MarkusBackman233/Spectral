@@ -29,6 +29,11 @@ public:
     void Update();
     void Render();
 
+
+    void SetWindowSize(const Math::Vector2i& size);
+    void SetWindowIcon(const std::string& iconName);
+    void SetWindowTitle(const std::string& windowTitle);
+
 	std::shared_ptr<DeviceResources> GetDeviceResources() { return m_deviceResources; }
     Math::Matrix GetProjectionMatrix() const;
     Math::Matrix GetViewMatrix() const;

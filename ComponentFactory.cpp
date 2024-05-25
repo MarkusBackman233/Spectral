@@ -1,15 +1,18 @@
 #include "ComponentFactory.h"
 
+#define CREATE_OR_DUPLICATE_COMPONENT(component) \
+     duplicateComponent ? std::make_shared<component>(gameObject, static_cast<component*>(duplicateComponent.get())) : std::make_shared<component>(gameObject)
+
 std::shared_ptr<Component> ComponentFactory::CreateComponent(GameObject* gameObject, Component::ComponentType componentType, const std::shared_ptr<Component>& duplicateComponent)
 {
     switch (componentType)
     {
     case Component::ComponentType_LightComponent:
-        return  duplicateComponent ? std::make_shared<LightComponent>(gameObject, static_cast<LightComponent*>(duplicateComponent.get())) : std::make_shared<LightComponent>(gameObject);
+        return CREATE_OR_DUPLICATE_COMPONENT(LightComponent);
     case Component::ComponentType_PhysicsComponent:
-        return duplicateComponent ? std::make_shared<PhysicsComponent>(gameObject, static_cast<PhysicsComponent*>(duplicateComponent.get())) : std::make_shared<PhysicsComponent>(gameObject);
+        return CREATE_OR_DUPLICATE_COMPONENT(PhysicsComponent);
     case Component::ComponentType_MeshComponent:
-        return duplicateComponent ? std::make_shared<MeshComponent>(gameObject, static_cast<MeshComponent*>(duplicateComponent.get())) : std::make_shared<MeshComponent>(gameObject);
+        return CREATE_OR_DUPLICATE_COMPONENT(MeshComponent);
     case Component::ComponentType_ParticleComponent:
         return std::make_shared<ParticleComponent>(gameObject);    
     case Component::ComponentType_TerrainComponent:

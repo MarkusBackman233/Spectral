@@ -8,11 +8,50 @@
 #include <filesystem>
 #include <tchar.h>
 #include <codecvt>
+#include "RenderManager.h"
 
-ProjectBrowserManager::ProjectBrowserManager()
+void ProjectBrowserManager::StartBrowserWindow()
 {
     m_previousProjectsFilename = std::string(IOManager::ExecutableDirectory + "PreviousProjects.txt");
     ReadPreviousProjects();
+
+    if (!IsWindowVisible(RenderManager::GetInstance()->GetWindowHandle()))
+    {
+        ShowWindow(RenderManager::GetInstance()->GetWindowHandle(), SW_SHOW);
+        RenderManager::GetInstance()->SetWindowSize(Math::Vector2i(720, 480));
+    }
+
+    MSG msg{};
+    msg.message = WM_NULL;
+    PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
+    bool projectSelected = false;
+
+    while (WM_QUIT != msg.message)
+    {
+        bool gotMessage = (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE) != 0);
+        if (gotMessage)
+        {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+        else
+        {
+            RenderManager::GetInstance()->Render();
+            Editor::GetInstance()->PreRender();
+            if (Update())
+            {
+                projectSelected = true;
+            }
+            Editor::GetInstance()->Render();
+            RenderManager::GetInstance()->GetDeviceResources()->GetSwapChain()->Present(0, 0);
+        }
+        if (projectSelected)
+        {
+            break;
+        }
+    }
+    ShowWindow(RenderManager::GetInstance()->GetWindowHandle(), SW_HIDE);
+
 }
 void ProjectBrowserManager::ReadPreviousProjects()
 {
