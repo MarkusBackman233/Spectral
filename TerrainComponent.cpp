@@ -6,12 +6,23 @@
 #include <DirectXCollision.h>
 #include "TextureManager.h"
 #include "StringUtils.h"
+#include "Editor.h"
+#include "GameObject.h"
+#ifdef EDITOR
+#include "PropertyWindowFactory.h"
+#endif // DEBUG
+#include "EditorUtils.h"
+#include "Intersection.h"
+#include "IOManager.h"
+#include "MaterialManager.h"
+#include "Texture.h"
+#include "Material.h"
+
+
 TerrainComponent::TerrainComponent(GameObject* owner)
 	: Component(owner)
-    , m_brushSize(30.0f)
+    , m_brushSize(100.0f)
 {
-    m_componentName = "TerrainComponent";
-    m_componentType = ComponentType_TerrainComponent;
 
     m_mesh = std::make_shared<Mesh>();
     m_mesh->SetName("Terrain");
@@ -22,65 +33,31 @@ TerrainComponent::TerrainComponent(GameObject* owner)
 
 void TerrainComponent::Render()
 {
-    Render::DrawInstance(m_mesh, m_owner->GetMatrix());
+    Render::DrawInstance(m_mesh, m_owner->GetWorldMatrix());
 }
 
 void TerrainComponent::Update(float deltaTime)
 {
+#ifdef EDITOR
      float direction = ImGui::IsKeyDown(ImGuiKey_LeftShift) ?  1.0f : 0.0f;
      direction = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) ?  -1.0f : direction;
 
-    if ( !ImGuizmo::IsOver() && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())
+    if (EditorUtils::IsCursorInViewport())
     {
-        Math::Vector3 hitPosition;
-        bool hitMesh = false;
 
-        auto viewProj = Render::GetViewMatrix() * Render::GetProjectionMatrix();
+        Math::Vector3 origin, rayDirection;
+        if (!EditorUtils::CursorToWorldDirection(origin, rayDirection))
+            return;
+        float distance = 0.0f;
 
-        auto mousePos = ImGui::GetMousePos();
-        auto windowSize = Render::GetWindowSize();
-
-        if (mousePos.x > 0 && mousePos.x < windowSize.x && mousePos.y > 0 && mousePos.y < windowSize.y)
+        if (direction != 0.0f && ImGui::IsKeyDown(ImGuiKey_MouseLeft))
         {
-            float ndcX = (2.0f * abs(mousePos.x)) / windowSize.x - 1.0f;
-            float ndcY = 1.0f - (2.0f * abs(mousePos.y)) / windowSize.y;
+            if (!Spectral::Intersection::MeshTriangles(GetMesh().get(), m_owner->GetWorldMatrix(), origin, rayDirection, distance))
+                return;
 
-            DirectX::XMMATRIX inverseviewproj = DirectX::XMMatrixInverse(nullptr, *static_cast<DirectX::XMMATRIX*>((void*)&viewProj));
-            DirectX::XMVECTOR origin = DirectX::XMVectorSet(ndcX, ndcY, 0.0f, 1.0);
-            DirectX::XMVECTOR farPoint = DirectX::XMVectorSet(ndcX, ndcY, 1.0f, 1.0);
+            auto hitPosition = (origin + rayDirection * distance).Transform(m_owner->GetWorldMatrix().GetInverse());
 
-            DirectX::XMVECTOR rayorigin = DirectX::XMVector3TransformCoord(origin, inverseviewproj);
-            DirectX::XMVECTOR rayend = DirectX::XMVector3TransformCoord(farPoint, inverseviewproj);
-            DirectX::XMVECTOR raydirection = DirectX::XMVectorSubtract(rayend, rayorigin);
-            raydirection = DirectX::XMVector3Normalize(raydirection);
 
-            float minDistance = std::numeric_limits<float>::max();
-
-            const auto& mesh = m_mesh;
-            DirectX::XMMATRIX inverseObjectMatrix = DirectX::XMMatrixInverse(nullptr, *static_cast<DirectX::XMMATRIX*>((void*)&m_owner->GetMatrix()));
-            DirectX::XMVECTOR localRayOrigin = DirectX::XMVector3TransformCoord(rayorigin, inverseObjectMatrix);
-            DirectX::XMVECTOR localRayDirection = DirectX::XMVector3TransformNormal(raydirection, inverseObjectMatrix);
-            localRayDirection = DirectX::XMVector3Normalize(localRayDirection);
-            for (unsigned int i = 0; i < mesh->indices32.size() - 3; i += 3)
-            {
-                int index1 = mesh->indices32[i];
-                int index2 = mesh->indices32[(size_t)i + 1];
-                int index3 = mesh->indices32[(size_t)i + 2];
-                DirectX::XMVECTOR p1 = DirectX::XMVectorSet(mesh->vertexes[index1].position.x, mesh->vertexes[index1].position.y, mesh->vertexes[index1].position.z, 1.0f);
-                DirectX::XMVECTOR p2 = DirectX::XMVectorSet(mesh->vertexes[index2].position.x, mesh->vertexes[index2].position.y, mesh->vertexes[index2].position.z, 1.0f);
-                DirectX::XMVECTOR p3 = DirectX::XMVectorSet(mesh->vertexes[index3].position.x, mesh->vertexes[index3].position.y, mesh->vertexes[index3].position.z, 1.0f);
-
-                float fakeDistance = 0.0f;
-                if (DirectX::TriangleTests::Intersects(localRayOrigin, localRayDirection, p1, p2, p3, fakeDistance))
-                { // i need to make this much better
-                    auto dxVec = DirectX::XMVectorAdd(localRayOrigin, DirectX::XMVectorMultiply(localRayDirection, DirectX::XMVectorSet(fakeDistance, fakeDistance, fakeDistance, fakeDistance)));
-                    hitPosition =  *static_cast<Math::Vector3*>((void*)&dxVec);
-                    hitMesh = true;
-                }
-            }
-        }
-        if (direction != 0.0f && ImGui::IsKeyDown(ImGuiKey_MouseLeft) && hitMesh)
-        {
             for (auto& point : m_mesh->vertexes)
             {
 
@@ -94,72 +71,146 @@ void TerrainComponent::Update(float deltaTime)
                     point.position.y += (m_brushSize - distance) * 0.3f * direction * deltaTime;
                 }
             }
-            Render::CreateVertexAndIndexBuffer(m_mesh.get());
+
+
+            for (size_t i = 0; i < m_mesh->indices32.size(); i += 3) {
+                Math::Vector3 v0 = m_mesh->vertexes[m_mesh->indices32[i]].position;
+                Math::Vector3 v1 = m_mesh->vertexes[m_mesh->indices32[i + 1]].position;
+                Math::Vector3 v2 = m_mesh->vertexes[m_mesh->indices32[i + 2]].position;
+
+                Math::Vector3 edge1 = v1 - v0;
+                Math::Vector3 edge2 = v2 - v0;
+                
+                Math::Vector3 normal = edge1.Cross(edge2).GetNormal();
+
+
+                m_mesh->vertexes[m_mesh->indices32[i]].normal += normal;
+                m_mesh->vertexes[m_mesh->indices32[i + 1]].normal += normal;
+                m_mesh->vertexes[m_mesh->indices32[i + 2]].normal += normal;
+            }
+
+            for (size_t i = 0; i < m_mesh->vertexes.size(); ++i) 
+            {
+                m_mesh->vertexes[i].normal = -m_mesh->vertexes[i].normal;
+            }
+
+            m_mesh->CreateVertexAndIndexBuffer(Render::GetDevice());
+            m_mesh->CalculateBoundingBox();
         }
     }
+#endif // EDITOR
 }
 #ifdef EDITOR
 void TerrainComponent::ComponentEditor()
 {
     ImGui::DragFloat("BrushSize",&m_brushSize,0.7f,0.0f,100.0f);
 
+
     ImGui::Separator();
 
-    struct TextureSelector
+
+    ImGui::Text(std::string("Material: " + m_mesh->GetMaterial()->GetName()).c_str());
+    if (ImGui::Button("Edit##Material"))
     {
-        TextureSelector(std::string name, Editor::PropertyWindowType propertyType, int textureId)
-            : m_name(name)
-            , m_propertyType(propertyType)
-            , m_textureId(textureId)
-        {}
-        std::string m_name;
-        Editor::PropertyWindowType m_propertyType;
-        int m_textureId;
-    };
-    std::vector<TextureSelector> textures{
-        TextureSelector("Albedo", Editor::PropertyWindowType_Texture,ALBEDO),
-        TextureSelector("Normal", Editor::PropertyWindowType_Normal,NORMAL),
-        TextureSelector("Roughness", Editor::PropertyWindowType_Roughness,ROUGHNESS),
-        TextureSelector("Metallic", Editor::PropertyWindowType_Metallic,METALLIC),
-        TextureSelector("Ao", Editor::PropertyWindowType_Ao,AO),
+        PropertyWindowFactory::SelectMaterial(m_mesh);
+    }
+
+    bool isDisabled = m_mesh->GetMaterial()->GetName() == "default";
+
+    if (isDisabled)
+    {
+        ImGui::BeginDisabled();
+    }
+
+    enum TextureType
+    {
+        Albedo,
+        Normal,
+        Roughness,
+        Metallic,
+        AmbientOcclusion
     };
 
-    for (const auto& texture : textures)
+    static std::vector<std::pair<std::string, TextureType>> textures{
+        {"Albedo", TextureType::Albedo},
+        {"Normal", TextureType::Normal},
+        {"Roughness", TextureType::Roughness},
+        {"Metallic", TextureType::Metallic},
+        {"Ao", TextureType::AmbientOcclusion},
+    };
+
+    for (const auto& [textureName, textureId] : textures)
     {
-        if (m_mesh->GetMaterial()->GetTexture(texture.m_textureId) && m_mesh->GetMaterial()->GetTexture(texture.m_textureId)->GetResourceView().Get())
+        if (m_mesh->GetMaterial()->GetTexture(textureId) && m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
         {
-            ImGui::Text(std::string(texture.m_name + ": " + StringUtils::StripPathFromFilename(TextureManager::GetInstance()->GetTextureName(m_mesh->GetMaterial()->GetTexture(texture.m_textureId)))).c_str());
-            auto resource = m_mesh->GetMaterial()->GetTexture(texture.m_textureId)->GetResourceView().Get();
-            if (ImGui::ImageButton(resource, Editor::GetInstance()->GetDefaultTextureSize()) && m_mesh->GetMaterial()->GetName() != "default")
+            auto selectedTextureName = GetMesh()->GetMaterial()->GetTexture(textureId)->GetFilename();
+            ImGui::Text(std::string(textureName + ": " + selectedTextureName).c_str());
+            auto resource = m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
+            if (ImGui::ImageButton(textureName.c_str(), resource, Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                Editor::GetInstance()->OpenPropertyWindow(texture.m_propertyType);
+                auto material = m_mesh->GetMaterial();
+                PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
             }
         }
         else
         {
-            ImGui::Text(std::string(texture.m_name + ": Not selected").c_str());
+            ImGui::Text(std::string(textureName + ": Not selected").c_str());
 
-            if (ImGui::Button(std::string("##" + texture.m_name).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
+            if (ImGui::Button(std::string("##" + textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                Editor::GetInstance()->OpenPropertyWindow(texture.m_propertyType);
+                auto material = m_mesh->GetMaterial();
+                PropertyWindowFactory::SelectTexture(material, textureId);
             }
         }
         ImGui::Separator();
     }
 
-    ImGui::DragFloat("Roughness", &m_mesh->GetMaterial()->GetMaterialSettings().Roughness, 1.0f, 0.0f, 1.0f);
-    ImGui::DragFloat("Metallic", &m_mesh->GetMaterial()->GetMaterialSettings().Metallic, 1.0f, 0.0f, 1.0f);
+    ImGui::DragFloat("Roughness", &m_mesh->GetMaterial()->GetMaterialSettings().Roughness, 0.05f, 0.0f, 1.0f);
+    ImGui::DragFloat("Metallic", &m_mesh->GetMaterial()->GetMaterialSettings().Metallic, 0.05f, 0.0f, 1.0f);
 
+    ImGui::ColorPicker4("Color", &m_mesh->GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
+
+    if (isDisabled)
+    {
+        ImGui::EndDisabled();
+    }
+}
+void TerrainComponent::DisplayComponentIcon()
+{
+    ImGui::SameLine();
+    ImGui::Image(TextureManager::GetInstance()->GetTexture("Terrain.bmp")->GetResourceView().Get(), ImVec2(15, 15));
 }
 #endif
 
+void TerrainComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+{
+    m_mesh->SetName("UserTerrain");
+
+    object.AddMember("Terrain Name", rapidjson::Value(m_mesh->GetName().c_str(), allocator), allocator);
+    IOManager::SaveSpectralModel(GetMesh());
+    object.AddMember("Material", rapidjson::Value(m_mesh->GetMaterial()->GetName().c_str(), allocator), allocator);
+
+
+}
+
+void TerrainComponent::LoadComponent(const rapidjson::Value& object)
+{
+    IOManager::LoadSpectralModel("UserTerrain", m_mesh);
+    m_mesh->SetMaterial(MaterialManager::GetInstance()->GetMaterial(object["Material"].GetString()));
+}
+
+std::shared_ptr<Mesh> TerrainComponent::GetMesh()
+{
+    return m_mesh;
+}
+
 void TerrainComponent::CreatePlaneMesh()
 {
-    const int nx = 100; // Number of segments along the x-axis
-    const int ny = 100; // Number of segments along the y-axis
-    const float width = 100.0f; // Width of the plane
-    const float height = 100.0f; // Height of the plane
-    const float UVscale = 10.0f;
+    const int nx = 50; // Number of segments along the x-axis
+    const int ny = 50; // Number of segments along the y-axis
+    const float width = 500.0f; // Width of the plane
+    const float height = 500.0f; // Height of the plane
+    const float UVscale = 50.0f;
 
     m_mesh->vertexes.reserve((size_t)nx * ny);
     m_mesh->indices32.reserve((size_t)nx * ny);
@@ -174,10 +225,10 @@ void TerrainComponent::CreatePlaneMesh()
 
             m_mesh->vertexes.push_back(Mesh::Vertex());
 
-            m_mesh->vertexes.back().position = DirectX::XMFLOAT3(x, y, z);
-            m_mesh->vertexes.back().normal = DirectX::XMFLOAT3(0.0f, 1.0f, 0.0f);
-            m_mesh->vertexes.back().tangent = DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f);
-            m_mesh->vertexes.back().uv = DirectX::XMFLOAT2(static_cast<float>(i) / nx * UVscale, static_cast<float>(j) / ny * UVscale);
+            m_mesh->vertexes.back().position = Math::Vector3(x, y, z);
+            m_mesh->vertexes.back().normal = Math::Vector3(0.0f, 1.0f, 0.0f);
+            m_mesh->vertexes.back().tangent = Math::Vector3(1.0f, 0.0f, 0.0f);
+            m_mesh->vertexes.back().uv = Math::Vector2(static_cast<float>(i) / nx * UVscale, static_cast<float>(j) / ny * UVscale);
         }
     }
 
@@ -197,5 +248,6 @@ void TerrainComponent::CreatePlaneMesh()
             m_mesh->indices32.push_back(row2 + i);
         }
     }
-    Render::CreateVertexAndIndexBuffer(m_mesh.get());
+    m_mesh->CreateVertexAndIndexBuffer(Render::GetDevice());
+    m_mesh->CalculateBoundingBox();
 }

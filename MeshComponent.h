@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 #include "Component.h"
-#include <string>
 
 class Mesh;
 class Material;
@@ -15,10 +14,12 @@ public:
 	MeshComponent(GameObject* owner, MeshComponent* meshComponent);
 	MeshComponent(GameObject* owner, std::shared_ptr<Mesh> mesh);
 
+	Component::Type GetComponentType() override { return Component::Type::Mesh; };
+
 	void Render() override;
 	void Update(float deltaTime) override;
-	void SaveComponent(WriteObject& readObject) override;
-	void LoadComponent(ReadObject& readObject) override;
+	void SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator) override;
+	void LoadComponent(const rapidjson::Value& object) override;
 
 #ifdef EDITOR
 	void ComponentEditor() override;
@@ -29,6 +30,7 @@ public:
 	void SetMesh(std::shared_ptr<Mesh> mesh);
 
 private:
+
 	std::shared_ptr<Mesh> m_mesh;
 
 };

@@ -7,3 +7,7 @@
 #include <deque>
 #include <functional>
 #include <iostream>
+#include <array>
+#include "SpectralAssert.h"
+#include "Logger.h"
+#include "filesystem"

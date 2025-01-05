@@ -1,62 +1,44 @@
 #pragma once
 #include "pch.h"
-#include <DirectXMath.h>
 #include <d3d11.h>
 #include <minwindef.h>
 #include <wtypes.h>
 #include <wrl.h>
+#include "Matrix.h"
+#include "OrthographicCamera.h"
 
 class Mesh;
+class InstanceManager;
 
 class ShadowManager
 {
 public:
-	static ShadowManager* GetInstance() {
-		static ShadowManager instance;
-		return &instance;
-	}
-
 	ShadowManager();
 
-	void DrawShadowDepth(std::unordered_map<std::shared_ptr<Mesh>, std::vector<DirectX::XMFLOAT4X4>>& drawList);
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>  GetShadowTexture() { return m_shadowResourceView; }
-	bool DrawedShadows = false;
+	void CreateResources(ID3D11Device* device);
 
-	DirectX::XMFLOAT4X4 GetShadowViewProjectionMatrix() const { return m_viewProjectionMatrix; }
+	void DrawShadowDepth(ID3D11DeviceContext* context, const InstanceManager& instanceManager);
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetShadowTexture() const { return m_shadowResourceView; }
 
-	ID3D11SamplerState* GetShadowCompareSamplerState() { return m_comparisonSamplerState.Get(); }
+	Math::Matrix GetShadowViewProjectionMatrix() const { return m_camera->GetViewProjectionMatrix(); }
+
+	ID3D11SamplerState* GetShadowCompareSamplerState() const { return m_comparisonSamplerState.Get(); }
+
+
 
 private:
 	void SetupLightMatrix();
 
-	DirectX::XMMATRIX m_viewMatrix;
-	DirectX::XMMATRIX m_projectionMatrix;
-	DirectX::XMFLOAT4X4 m_viewProjectionMatrix;
-
-	Microsoft::WRL::ComPtr<ID3D11Texture2D>        m_shadowDepthTexture;
-	Microsoft::WRL::ComPtr<ID3D11DepthStencilView> m_shadowDepthView;
+	std::unique_ptr<OrthographicCamera> m_camera;
+	uint16_t m_ShadowMapSize;
+	D3D11_VIEWPORT m_viewPort;
+	Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_shadowDepthTexture;
+	Microsoft::WRL::ComPtr<ID3D11DepthStencilView>   m_shadowDepthView;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_shadowResourceView;
-
-
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_resourceView;
-
-	Microsoft::WRL::ComPtr<ID3D11InputLayout>       m_pInputLayout;
-	Microsoft::WRL::ComPtr<ID3D11VertexShader>      m_pVertexShader;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader>       m_pPixelShader;
-	Microsoft::WRL::ComPtr<ID3D11Buffer>            m_pVertexConstantBufferData;
-
-	Microsoft::WRL::ComPtr<ID3D11Buffer>			m_pInstanceBuffer;
-
-	Microsoft::WRL::ComPtr<ID3D11SamplerState>		m_comparisonSamplerState;
-
-	struct VertexConstantBuffer
-	{
-		DirectX::XMFLOAT4X4 viewProjection;
-	};
-
-	static_assert((sizeof(VertexConstantBuffer) % 16) == 0, "Constant Buffer size must be 16-byte aligned");
-	VertexConstantBuffer m_vertexConstantBuffer;
-
-	unsigned int m_ShadowMapSize;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout>        m_pInputLayout;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader>       m_pVertexShader;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader>        m_pPixelShader;
+	Microsoft::WRL::ComPtr<ID3D11Buffer>             m_pVertexConstantBufferData;
+	Microsoft::WRL::ComPtr<ID3D11SamplerState>		 m_comparisonSamplerState;
 };
 

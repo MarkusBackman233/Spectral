@@ -11,11 +11,12 @@ ProfileObject::~ProfileObject()
 {
 	if (m_timerStarted)
 	{
-		ProfilerManager::GetInstance()->GetTimers()[timerName] = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - StartTime).count();
+		long long time = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - StartTime).count();
+		ProfilerManager::GetInstance()->SetTime(timerName, time);
 	}
 	else
 	{
-		std::cout << "Error: timer, " << timerName << " was not started!" << std::endl;
+		Logger::Error("Timer, " + timerName + " was not started!");
 	}
 }
 

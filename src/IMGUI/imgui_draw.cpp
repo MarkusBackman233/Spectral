@@ -251,10 +251,10 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_SliderGrab] = ImVec4(0.93f, 0.30f, 0.93f, 0.51f);
     colors[ImGuiCol_SliderGrabActive] = ImVec4(0.93f, 0.30f, 0.93f, 0.51f);
     colors[ImGuiCol_Button] = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);
-    colors[ImGuiCol_ButtonHovered] = ImVec4(0.70f, 0.69f, 0.69f, 1.00f);
+    colors[ImGuiCol_ButtonHovered] = ImVec4(0.44f, 0.16f, 0.45f, 1.00f);
     colors[ImGuiCol_ButtonActive] = ImVec4(0.93f, 0.30f, 0.93f, 0.51f);
     colors[ImGuiCol_Header] = ImVec4(0.70f, 0.69f, 0.69f, 1.00f);
-    colors[ImGuiCol_HeaderHovered] = ImVec4(0.70f, 0.69f, 0.69f, 1.00f);
+    colors[ImGuiCol_HeaderHovered] = ImVec4(1.00f, 0.16f, 1.00f, 1.00f);
     colors[ImGuiCol_HeaderActive] = ImVec4(0.93f, 0.30f, 0.93f, 0.51f);
     colors[ImGuiCol_Separator] = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
     colors[ImGuiCol_SeparatorHovered] = ImVec4(0.26f, 0.26f, 0.26f, 1.00f);

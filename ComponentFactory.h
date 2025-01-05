@@ -1,14 +1,12 @@
 #pragma once
-#include "MeshComponent.h"
-#include "PhysicsComponent.h"
-#include "LightComponent.h"
-#include "ParticleComponent.h"
-#include "TerrainComponent.h"
-#include <memory>
-
+#include "pch.h"
+#include "Component.h"
 class ComponentFactory
 {
 public:
-	static std::shared_ptr<Component> CreateComponent(GameObject* gameObject, Component::ComponentType componentType, const std::shared_ptr<Component>& duplicateComponent = nullptr);
+	static std::shared_ptr<Component> CreateComponent(GameObject* gameObject, Component::Type componentType, const std::shared_ptr<Component>& duplicateComponent = nullptr);
+
+	static const std::unordered_map<Component::Type, std::string> ComponentTypes;
+	static const std::unordered_map<std::string, Component::Type> ComponentNames;
 };
 

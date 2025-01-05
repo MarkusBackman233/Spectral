@@ -2,7 +2,8 @@
 #include "RenderManager.h"
 #include <fstream>
 #include "MeshComponent.h"
-
+#include "IOManager.h"
+#include "GuiManager.h"
 namespace Render
 {
 	ID3D11Device* GetDevice()
@@ -18,27 +19,36 @@ namespace Render
 		return RenderManager::GetInstance()->GetDeviceResources()->GetDefaultSamplerState();
 	}
 
-	void DrawInstance(std::shared_ptr<Mesh> mesh, Math::Matrix& matrix)
+	void DrawInstance(std::shared_ptr<Mesh> mesh, const Math::Matrix& matrix)
 	{
-		RenderManager::GetInstance()->DrawInstancedMesh(mesh, matrix);
+		RenderManager::GetInstance()->GetInstanceManager()->AddInstance(mesh, matrix);
 	}
 
-	Math::Matrix GetViewMatrix()
+	const Math::Matrix& GetViewMatrix()
 	{
-		return RenderManager::GetInstance()->GetViewMatrix();
+		return RenderManager::GetInstance()->GetCamera()->GetViewMatrix();
+	}
+	const Math::Matrix& GetProjectionMatrix()
+	{
+		return RenderManager::GetInstance()->GetCamera()->GetProjectionMatrix();
+	}
+	const Math::Matrix& GetViewProjectionMatrix()
+	{
+		return RenderManager::GetInstance()->GetCamera()->GetViewProjectionMatrix();
+	}
+	Math::Vector3 GetCameraPosition()
+	{
+		return RenderManager::GetInstance()->GetCamera()->GetWorldMatrix().GetPosition();
+	}
+	Math::Vector3 GetCameraDirection()
+	{
+		return -RenderManager::GetInstance()->GetCamera()->GetWorldMatrix().GetFront();
 	}
 
-	Math::Matrix GetProjectionMatrix()
+
+	Camera* GetCamera()
 	{
-		return RenderManager::GetInstance()->GetProjectionMatrix();
-	}
-	const Math::Vector3& GetCameraPosition()
-	{
-		return RenderManager::GetInstance()->GetPlayer()->GetPosition();
-	}
-	DirectX::XMFLOAT4X4& GetViewProjectionMatrix()
-	{
-		return RenderManager::GetInstance()->GetViewProjectionMatrix();
+		return RenderManager::GetInstance()->GetCamera();
 	}
 
 	std::vector<char> LoadShaderBytecode(const std::string& filename)
@@ -52,64 +62,57 @@ namespace Render
 		return buffer;
 	}
 
-	HRESULT CreatePixelShader(const std::string& filename, ID3D11PixelShader** pixelShader)
+	HRESULT CreatePixelShader(ID3D11Device* device, const std::string& filename, ID3D11PixelShader** pixelShader)
 	{
 		HRESULT hr = S_OK;
-		auto buffer = LoadShaderBytecode(IOManager::ExecutableDirectory + "shaders\\" + filename);
-		hr = Render::GetDevice()->CreatePixelShader(buffer.data(), buffer.size(), nullptr, pixelShader);
+		auto buffer = LoadShaderBytecode((IOManager::ExecutableDirectory / "shaders" / filename).string());
+		hr = device->CreatePixelShader(buffer.data(), buffer.size(), nullptr, pixelShader);
+
 		ThrowIfFailed(hr);
 		return hr;
 	}
-	HRESULT CreateVertexShader(const std::string& filename, ID3D11VertexShader** vertexShader, D3D11_INPUT_ELEMENT_DESC* inputDesc, size_t inputSize, ID3D11InputLayout** inputLayout)
+	HRESULT CreateVertexShader(ID3D11Device* device, const std::string& filename, ID3D11VertexShader** vertexShader, D3D11_INPUT_ELEMENT_DESC* inputDesc, size_t inputSize, ID3D11InputLayout** inputLayout)
 	{
 		HRESULT hr = S_OK;
-		auto buffer = LoadShaderBytecode(IOManager::ExecutableDirectory + "shaders\\" + filename);
-		hr = Render::GetDevice()->CreateVertexShader(buffer.data(), buffer.size(), nullptr, vertexShader);
-		hr = Render::GetDevice()->CreateInputLayout(inputDesc, (UINT)inputSize, buffer.data(), buffer.size(), inputLayout);
+		auto buffer = LoadShaderBytecode((IOManager::ExecutableDirectory / "shaders" / filename).string());
+		hr = device->CreateVertexShader(buffer.data(), buffer.size(), nullptr, vertexShader);
+		hr = device->CreateInputLayout(inputDesc, (UINT)inputSize, buffer.data(), buffer.size(), inputLayout);
 		ThrowIfFailed(hr);
 		return hr;
 	}
-	void SetShaders(Microsoft::WRL::ComPtr<ID3D11PixelShader>& pixelShader, Microsoft::WRL::ComPtr<ID3D11VertexShader>& vertexShader, Microsoft::WRL::ComPtr<ID3D11InputLayout>& inputLayout)
+	void SetShaders(Microsoft::WRL::ComPtr<ID3D11PixelShader>& pixelShader, Microsoft::WRL::ComPtr<ID3D11VertexShader>& vertexShader, Microsoft::WRL::ComPtr<ID3D11InputLayout>& inputLayout, ID3D11DeviceContext* context)
 	{
-		auto lockedContext = Render::GetContext();
-		lockedContext.GetContext()->PSSetShader(pixelShader.Get(), nullptr, 0);
-		lockedContext.GetContext()->VSSetShader(vertexShader.Get(), nullptr, 0);
-		lockedContext.GetContext()->IASetInputLayout(inputLayout.Get());
+		context->PSSetShader(pixelShader.Get(), nullptr, 0);
+		context->VSSetShader(vertexShader.Get(), nullptr, 0);
+		context->IASetInputLayout(inputLayout.Get());
 	}
 
 
-	HRESULT CreateConstantBuffer(size_t size, Microsoft::WRL::ComPtr<ID3D11Buffer>& buffer)
+	HRESULT CreateConstantBuffer(ID3D11Device* device, size_t size, Microsoft::WRL::ComPtr<ID3D11Buffer>& buffer)
 	{
 		HRESULT hr = S_OK;
 		CD3D11_BUFFER_DESC bufferDesc((UINT)size, D3D11_BIND_CONSTANT_BUFFER);
-		hr = Render::GetDevice()->CreateBuffer(&bufferDesc, nullptr, &buffer);
+		hr = device->CreateBuffer(&bufferDesc, nullptr, &buffer);
 		ThrowIfFailed(hr);
 		return hr;
 	}
 
-	void UpdateConstantBuffer(SHADER_TYPE shaderType, int slotIndex, Microsoft::WRL::ComPtr<ID3D11Buffer>& destinationData, const void* sourceData)
+	void UpdateConstantBuffer(SHADER_TYPE shaderType, int slotIndex, Microsoft::WRL::ComPtr<ID3D11Buffer>& destinationData, const void* sourceData, ID3D11DeviceContext* context)
 	{
-		auto lockedContext = Render::GetContext();
-		lockedContext.GetContext()->UpdateSubresource(destinationData.Get(), 0, nullptr, sourceData, 0, 0);
+		context->UpdateSubresource(destinationData.Get(), 0, nullptr, sourceData, 0, 0);
 		switch (shaderType)
 		{
-		case Render::SHADER_TYPE::SHADER_TYPE_PIXEL:
-			lockedContext.GetContext()->PSSetConstantBuffers(slotIndex, 1, destinationData.GetAddressOf());
+		case SHADER_TYPE::SHADER_TYPE_PIXEL:
+			context->PSSetConstantBuffers(slotIndex, 1, destinationData.GetAddressOf());
 			break;
-		case Render::SHADER_TYPE::SHADER_TYPE_VERTEX:
-			lockedContext.GetContext()->VSSetConstantBuffers(slotIndex, 1, destinationData.GetAddressOf());
+		case SHADER_TYPE::SHADER_TYPE_VERTEX:
+			context->VSSetConstantBuffers(slotIndex, 1, destinationData.GetAddressOf());
 			break;
 		}
 
 	}
 
-
-	void CreateVertexAndIndexBuffer(Mesh* mesh)
-	{
-		RenderManager::GetInstance()->CreateVertexAndIndexBuffer(mesh);
-	}
-
-	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>& resourceView, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture)
+	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture)
 	{
 		D3D11_TEXTURE2D_DESC texDesc = {};
 		texDesc.Width = size.x;
@@ -122,25 +125,123 @@ namespace Render
 
 		D3D11_SUBRESOURCE_DATA initData = {};
 		initData.pSysMem = textureData;
-		initData.SysMemPitch = size.x * 4; // 4 bytes per pixel for RGBA format
+		initData.SysMemPitch = size.x * 4;
 		ThrowIfFailed(Render::GetDevice()->CreateTexture2D(&texDesc, &initData, &texture));
-
-		//D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-		//srvDesc.Format = texDesc.Format;
-		//srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		//srvDesc.Texture2D.MipLevels = 1;
-		//srvDesc.Texture2D.MostDetailedMip = 0;
-		//hr = Render::GetDevice()->CreateShaderResourceView(texture.Get(), &srvDesc, &resourceView); // Not needed since we are generating mips in another step.
 	}
 
-	void DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector3& color)
+	void DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector4& color)
 	{
-		RenderManager::GetInstance()->DrawLine(start, end, color);
+		RenderManager::GetInstance()->GetLineRenderer()->AddLine(start, end, color);
+	}
+
+	void DrawText2D(const std::string& text, const Math::Vector2& position)
+	{
+		RenderManager::GetInstance()->GetGuiManager()->Text(text, position);
+	}
+
+	void DrawGuizmo(const Math::Vector3& position, std::shared_ptr<Texture> texture, const Math::Vector4& color)
+	{
+		RenderManager::GetInstance()->GetGuizmoRenderer()->AddGuizmo(texture, position, color);
 	}
 
 	Math::Vector2i GetWindowSize()
 	{
-		return RenderManager::GetInstance()->WindowSize;
+		Math::Vector2 windowSize = RenderManager::GetInstance()->GetWindowsManager()->GetWindowSize();
+
+		return Math::Vector2i(static_cast<int>(windowSize.x), static_cast<int>(windowSize.y));
 	}
 
+	Math::Vector2 GetWindowSizef()
+	{
+		return RenderManager::GetInstance()->GetWindowsManager()->GetWindowSize();
+	}
+
+	void SetWindowSize(const Math::Vector2i& size) 
+	{
+		RECT desktop;
+		GetWindowRect(GetDesktopWindow(), &desktop);
+
+		MoveWindow(Render::GetWindowHandle(),
+			desktop.right / 2 - size.x / 2,
+			desktop.bottom / 2 - size.y / 2,
+			size.x,
+			size.y,
+			TRUE
+		);
+	}
+
+	void SetWindowIcon(const std::string& iconName)
+	{
+		auto windowHandle = Render::GetWindowHandle();
+
+		HANDLE hIcon = LoadImageA(0, iconName.c_str(), IMAGE_ICON, 0, 0, LR_DEFAULTSIZE | LR_LOADFROMFILE);
+		SendMessage(windowHandle, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+		SendMessage(windowHandle, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+	}
+
+	void SetWindowTitle(const std::string& windowTitle)
+	{
+		SetWindowTextA(Render::GetWindowHandle(), windowTitle.c_str());
+
+	}
+
+	void ShowWindow(const bool show)
+	{
+		ShowWindow(Render::GetWindowHandle(), show ? SW_SHOW : SW_HIDE);
+	}
+
+	void EnableDraggableBorders(const bool enable)
+	{
+		if (enable)
+		{
+			::SetWindowLong(Render::GetWindowHandle(), GWL_STYLE, GetWindowLong(Render::GetWindowHandle(), GWL_STYLE) | WS_SIZEBOX);
+		}
+		else
+		{
+			::SetWindowLong(Render::GetWindowHandle(), GWL_STYLE, GetWindowLong(Render::GetWindowHandle(), GWL_STYLE) & ~WS_SIZEBOX);
+		}
+	}
+	HWND GetWindowHandle()
+	{
+		return RenderManager::GetInstance()->GetWindowsManager()->GetWindowHandle();
+	}
+	HINSTANCE GetWinInstance()
+	{
+		return RenderManager::GetInstance()->GetWindowsManager()->GetWinInstance();
+	}
+
+	void CopyRenderTarget(ID3D11DeviceContext* context, ID3D11RenderTargetView* destination, ID3D11RenderTargetView* source)
+	{
+		ID3D11Resource* pSrcResource = nullptr;
+		ID3D11Resource* pDstResource = nullptr;
+		destination->GetResource(&pDstResource);
+		source->GetResource(&pSrcResource);
+		context->CopyResource(pDstResource, pSrcResource);
+		pSrcResource->Release();
+		pDstResource->Release();
+	}
+
+	/*
+	Math::Vector2 RenderManager::WorldspaceToScreenspace(const Math::Vector3& worldspace) const
+	{
+		DirectX::XMMATRIX viewProjMatrix = DirectX::XMMatrixMultiply(m_viewMatrix, m_projectionMatrix);
+		DirectX::XMVECTOR worldCoords = DirectX::XMVectorSet(worldspace.x, worldspace.y, worldspace.z, 1.0f);
+		DirectX::XMVECTOR clipCoords = DirectX::XMVector4Transform(worldCoords, viewProjMatrix);
+
+		DirectX::XMFLOAT4 clipCoordsFloat;
+		DirectX::XMStoreFloat4(&clipCoordsFloat, clipCoords);
+
+		if (clipCoordsFloat.w == 0.0f) {
+			return Math::Vector2(100, 100);
+		}
+
+		DirectX::XMVECTOR ndcCoords = DirectX::XMVectorDivide(clipCoords, DirectX::XMVectorSplatW(clipCoords));
+		Math::Vector2 screenCoords;
+		DirectX::XMFLOAT4 ndcCoordsFloat;
+		DirectX::XMStoreFloat4(&ndcCoordsFloat, ndcCoords);
+		screenCoords.x = (ndcCoordsFloat.x + 1.0f) * 0.5f * Render::GetWindowSize().x;
+		screenCoords.y = (1.0f - ndcCoordsFloat.y) * 0.5f * Render::GetWindowSize().y;
+		return screenCoords;
+	}
+	*/
 };

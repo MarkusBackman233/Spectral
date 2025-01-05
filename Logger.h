@@ -1,13 +1,16 @@
 #pragma once
 #include "pch.h"
-
-#ifdef EDITOR
-#include "Editor.h"
-#include <string>
-#endif // EDITOR
-static void LogMessage(std::string message)
+class Logger
 {
-#ifdef EDITOR
-	Editor::GetInstance()->LogMessage(message);
-#endif // EDITOR
-}
+public:
+	static void Info(const std::string& message);
+	static void Error(const std::string& message);
+
+	std::deque<std::string>& GetLog();
+private:
+	static Logger* GetInstance() {
+		static Logger instance;
+		return &instance;
+	}
+	std::deque<std::string> m_logBuffer;
+};

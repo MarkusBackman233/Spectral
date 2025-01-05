@@ -1,5 +1,7 @@
 #pragma once
 #include "pch.h"
+#include <shared_mutex>
+
 class Material;
 
 class MaterialManager
@@ -14,13 +16,12 @@ public:
 
 	void AddMaterial(std::shared_ptr<Material> material);
 	std::shared_ptr<Material> GetDefaultMaterial();
-	std::shared_ptr<Material> GetLineMaterial();
 
 	std::shared_ptr<Material> GetMaterial(const std::string& name);
-	std::unordered_map<std::string, std::shared_ptr<Material>>& GetMaterials() { return m_materials; }
+	std::unordered_map<std::string, std::shared_ptr<Material>> GetMaterials() { return m_materials; }
 	
 private:
-
 	std::unordered_map<std::string, std::shared_ptr<Material>> m_materials;
+	mutable std::shared_mutex m_mutex;
 };
 

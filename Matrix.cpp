@@ -1,288 +1,357 @@
 #include "Matrix.h"
+#include "DirectXMath.h"
+#include "EditorUtils.h"
+#include "DxMathUtils.h"
+#include "MathFunctions.h"
+using namespace Spectral;
+using namespace Math;
 
-Math::Matrix::Matrix(float* matrix)
+Matrix::Matrix()
+{
+	data[0][0] = 1.0f;
+	data[1][1] = 1.0f;
+	data[2][2] = 1.0f;
+	data[3][3] = 1.0f;
+}
+
+Matrix::Matrix(float* matrix)
 {
 	float* src = matrix;
-	float* dest = &m_matrix[0][0];
+	float* dest = &data[0][0];
 	for (int i = 0; i < 16; ++i) {
 		*dest++ = *src++;
 	}
 }
 
-Math::Matrix Math::Matrix::Inverse()
+float* Matrix::Data() const
 {
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = m_matrix[0][0]; matrix.m_matrix[0][1] = m_matrix[1][0]; matrix.m_matrix[0][2] = m_matrix[2][0]; matrix.m_matrix[0][3] = 0.0f;
-	matrix.m_matrix[1][0] = m_matrix[0][1]; matrix.m_matrix[1][1] = m_matrix[1][1]; matrix.m_matrix[1][2] = m_matrix[2][1]; matrix.m_matrix[1][3] = 0.0f;
-	matrix.m_matrix[2][0] = m_matrix[0][2]; matrix.m_matrix[2][1] = m_matrix[1][2]; matrix.m_matrix[2][2] = m_matrix[2][2]; matrix.m_matrix[2][3] = 0.0f;
-	matrix.m_matrix[3][0] = -(m_matrix[3][0] * matrix.m_matrix[0][0] + m_matrix[3][1] * matrix.m_matrix[1][0] + m_matrix[3][2] * matrix.m_matrix[2][0]);
-	matrix.m_matrix[3][1] = -(m_matrix[3][0] * matrix.m_matrix[0][1] + m_matrix[3][1] * matrix.m_matrix[1][1] + m_matrix[3][2] * matrix.m_matrix[2][1]);
-	matrix.m_matrix[3][2] = -(m_matrix[3][0] * matrix.m_matrix[0][2] + m_matrix[3][1] * matrix.m_matrix[1][2] + m_matrix[3][2] * matrix.m_matrix[2][2]);
-	matrix.m_matrix[3][3] = 1.0f;
+	return const_cast<float*>(&data[0][0]);
+}
+
+Matrix Matrix::GetInverse() const
+{
+	return DxMathUtils::ToSp(DirectX::XMMatrixInverse(nullptr, DxMathUtils::ToDx(*this)));
+}
+
+Matrix Matrix::MakeIdentity()
+{
+	Matrix matrix;
+	matrix.data[0][0] = 1.0f;
+	matrix.data[1][1] = 1.0f;
+	matrix.data[2][2] = 1.0f;
+	matrix.data[3][3] = 1.0f;
+	return matrix;
+}
+
+Matrix Matrix::MakeRotationX(float angleRad)
+{
+	Matrix matrix;
+	matrix.data[0][0] = 1.0f;
+	matrix.data[1][1] = cosf(angleRad);
+	matrix.data[1][2] = sinf(angleRad);
+	matrix.data[2][1] = -sinf(angleRad);
+	matrix.data[2][2] = cosf(angleRad);
+	matrix.data[3][3] = 1.0f;
+	return matrix;
+}
+
+void Matrix::Transpose()
+{
+	Matrix transposedMatrix;
+	for (int i = 0; i < 4; ++i)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			transposedMatrix.data[i][j] = data[j][i];
+		}
+	}
+	*this = transposedMatrix;
+}
+
+Matrix Matrix::MakeRotationY(float angleRad)
+{
+	Matrix matrix;
+	matrix.data[0][0] = cosf(angleRad);
+	matrix.data[0][2] = sinf(angleRad);
+	matrix.data[2][0] = -sinf(angleRad);
+	matrix.data[1][1] = 1.0f;
+	matrix.data[2][2] = cosf(angleRad);
+	matrix.data[3][3] = 1.0f;
+	return matrix;
+}
+
+Matrix Matrix::MakeRotationZ(float angleRad)
+{
+	Matrix matrix;
+	matrix.data[0][0] = cosf(angleRad);
+	matrix.data[0][1] = sinf(angleRad);
+	matrix.data[1][0] = -sinf(angleRad);
+	matrix.data[1][1] = cosf(angleRad);
+	matrix.data[2][2] = 1.0f;
+	matrix.data[3][3] = 1.0f;
+	return matrix;
+}
+
+Matrix Matrix::MakeRotationXYZ(const Vector3& xyzAngleInRad)
+{
+	return Matrix::MakeRotationX(xyzAngleInRad.x) * Matrix::MakeRotationY(xyzAngleInRad.y) * Matrix::MakeRotationY(xyzAngleInRad.z);
+}
+
+Matrix Matrix::MakeRotationXYZAndTranslate(const Vector3& xyzAngleInRad, const Vector3& position)
+{
+	Matrix matrix = MakeRotationXYZ(xyzAngleInRad);
+	matrix.SetPosition(position);
+	return matrix;
+}
+
+Matrix Matrix::MakePerspective(float fov, float aspectRatio, float nearClip, float farClip)
+{
+	return DxMathUtils::ToSp(DirectX::XMMatrixPerspectiveFovRH(fov, aspectRatio, nearClip, farClip));
+}
+
+void Matrix::LookAt(const Vector3& pos, const Vector3& target, const Vector3& up)
+{
+	*this = DxMathUtils::ToSp(DirectX::XMMatrixLookAtLH(DxMathUtils::ToDx(pos), DxMathUtils::ToDx(target), DxMathUtils::ToDx(up)));
+}
+
+Matrix Matrix::MakeTranslation(const Vector3& pos)
+{
+	Matrix matrix;
+	matrix.data[0][0] = 1.0f;
+	matrix.data[1][1] = 1.0f;
+	matrix.data[2][2] = 1.0f;
+	matrix.data[3][3] = 1.0f;
+	matrix.data[3][0] = pos.x;
+	matrix.data[3][1] = pos.y;
+	matrix.data[3][2] = pos.z;
 	return matrix;
 }
 
 
-Math::Matrix Math::Matrix::MakeIdentity()
+Matrix Matrix::MakeRotationFromQuaternion(const Vector4& quat)
 {
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = 1.0f;
-	matrix.m_matrix[1][1] = 1.0f;
-	matrix.m_matrix[2][2] = 1.0f;
-	matrix.m_matrix[3][3] = 1.0f;
+	Matrix matrix;
+	matrix.data[0][0] = 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z);
+	matrix.data[0][1] = 2.0f * (quat.x * quat.y + quat.z * quat.w);
+	matrix.data[0][2] = 2.0f * (quat.x * quat.z - quat.y * quat.w);
+	matrix.data[1][0] = 2.0f * (quat.x * quat.y - quat.z * quat.w);
+	matrix.data[1][1] = 1.0f - 2.0f * (quat.x * quat.x + quat.z * quat.z);
+	matrix.data[1][2] = 2.0f * (quat.y * quat.z + quat.x * quat.w);
+	matrix.data[2][0] = 2.0f * (quat.x * quat.z + quat.y * quat.w);
+	matrix.data[2][1] = 2.0f * (quat.y * quat.z - quat.x * quat.w);
+	matrix.data[2][2] = 1.0f - 2.0f * (quat.x * quat.x + quat.y * quat.y);
+	matrix.data[3][3] = 1.0f;
 	return matrix;
 }
 
-Math::Matrix Math::Matrix::MakeRotationX(float angleRad)
+Matrix Matrix::MakeRotationAA(const Vector3& axis, float angle)
 {
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = 1.0f;
-	matrix.m_matrix[1][1] = cosf(angleRad);
-	matrix.m_matrix[1][2] = sinf(angleRad);
-	matrix.m_matrix[2][1] = -sinf(angleRad);
-	matrix.m_matrix[2][2] = cosf(angleRad);
-	matrix.m_matrix[3][3] = 1.0f;
-	return matrix;
-}
+	Matrix matrix;
 
-Math::Matrix Math::Matrix::MakeRotationY(float angleRad)
-{
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = cosf(angleRad);
-	matrix.m_matrix[0][2] = sinf(angleRad);
-	matrix.m_matrix[2][0] = -sinf(angleRad);
-	matrix.m_matrix[1][1] = 1.0f;
-	matrix.m_matrix[2][2] = cosf(angleRad);
-	matrix.m_matrix[3][3] = 1.0f;
-	return matrix;
-}
-
-Math::Matrix Math::Matrix::MakeRotationZ(float angleRad)
-{
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = cosf(angleRad);
-	matrix.m_matrix[0][1] = sinf(angleRad);
-	matrix.m_matrix[1][0] = -sinf(angleRad);
-	matrix.m_matrix[1][1] = cosf(angleRad);
-	matrix.m_matrix[2][2] = 1.0f;
-	matrix.m_matrix[3][3] = 1.0f;
-	return matrix;
-}
-
-void Math::Matrix::PointAt(const Math::Vector3& pos, const Math::Vector3& target, const Math::Vector3& up)
-{
-	Math::Vector3 newForward = target - pos;
-
-	newForward = newForward.GetNormal();
-
-	Math::Vector3 a = newForward * up.Dot(newForward);
-	Math::Vector3 newUp = up - a;
-	newUp = newUp.GetNormal();
-
-	Math::Vector3 newRight = newUp.Cross(newForward);
-
-	m_matrix[0][0] = newRight.x;	m_matrix[0][1] = newRight.y;	m_matrix[0][2] = newRight.z;	m_matrix[0][3] = 0.0f;
-	m_matrix[1][0] = newUp.x;		m_matrix[1][1] = newUp.y;		m_matrix[1][2] = newUp.z;		m_matrix[1][3] = 0.0f;
-	m_matrix[2][0] = newForward.x;	m_matrix[2][1] = newForward.y;	m_matrix[2][2] = newForward.z;	m_matrix[2][3] = 0.0f;
-	m_matrix[3][0] = pos.x;			m_matrix[3][1] = pos.y;			m_matrix[3][2] = pos.z;			m_matrix[3][3] = 1.0f;
-
-}
-
-Math::Matrix Math::Matrix::MakeTranslation(const Math::Vector3& pos)
-{
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = 1.0f;
-	matrix.m_matrix[1][1] = 1.0f;
-	matrix.m_matrix[2][2] = 1.0f;
-	matrix.m_matrix[3][3] = 1.0f;
-	matrix.m_matrix[3][0] = pos.x;
-	matrix.m_matrix[3][1] = pos.y;
-	matrix.m_matrix[3][2] = pos.z;
-	return matrix;
-}
-
-
-Math::Matrix Math::Matrix::MakeRotationQuaternion(const Math::Vector3& quat)
-{
-	Math::Matrix matrix;
-	matrix.m_matrix[0][0] = 1.0f - 2.0f * (quat.y * quat.y + quat.z * quat.z);
-	matrix.m_matrix[0][1] = 2.0f * (quat.x * quat.y + quat.z * quat.w);
-	matrix.m_matrix[0][2] = 2.0f * (quat.x * quat.z - quat.y * quat.w);
-	matrix.m_matrix[1][0] = 2.0f * (quat.x * quat.y - quat.z * quat.w);
-	matrix.m_matrix[1][1] = 1.0f - 2.0f * (quat.x * quat.x + quat.z * quat.z);
-	matrix.m_matrix[1][2] = 2.0f * (quat.y * quat.z + quat.x * quat.w);
-	matrix.m_matrix[2][0] = 2.0f * (quat.x * quat.z + quat.y * quat.w);
-	matrix.m_matrix[2][1] = 2.0f * (quat.y * quat.z - quat.x * quat.w);
-	matrix.m_matrix[2][2] = 1.0f - 2.0f * (quat.x * quat.x + quat.y * quat.y);
-	matrix.m_matrix[3][3] = 1.0f;
-	return matrix;
-}
-
-Math::Matrix Math::Matrix::MakeRotationAA(Math::Vector3 axis, float angle)
-{
-	axis.GetNormal();
-
-	Math::Matrix matrix;
-	float s = sin(angle);
-	float c = cos(angle);
+	float s = sinf(angle);
+	float c = cosf(angle);
 	float x = axis.x;
 	float y = axis.y;
 	float z = axis.z;
 
-	matrix.m_matrix[0][0] = x * x * (1.0f - c) + c;
-	matrix.m_matrix[0][1] = x * y * (1.0f - c) - z * s;
-	matrix.m_matrix[0][2] = x * z * (1.0f - c) + y * s;
+	matrix.data[0][0] = x * x * (1.0f - c) + c;
+	matrix.data[0][1] = x * y * (1.0f - c) - z * s;
+	matrix.data[0][2] = x * z * (1.0f - c) + y * s;
 
-	matrix.m_matrix[1][0] = x * y * (1.0f - c) + z * s;
-	matrix.m_matrix[1][1] = y * y * (1.0f - c) + c;
-	matrix.m_matrix[1][2] = y * z * (1.0f - c) - x * s;
+	matrix.data[1][0] = x * y * (1.0f - c) + z * s;
+	matrix.data[1][1] = y * y * (1.0f - c) + c;
+	matrix.data[1][2] = y * z * (1.0f - c) - x * s;
 
-	matrix.m_matrix[2][0] = x * z * (1.0f - c) - y * s;
-	matrix.m_matrix[2][1] = y * z * (1.0f - c) + x * s;
-	matrix.m_matrix[2][2] = z * z * (1.0f - c) + c;
+	matrix.data[2][0] = x * z * (1.0f - c) - y * s;
+	matrix.data[2][1] = y * z * (1.0f - c) + x * s;
+	matrix.data[2][2] = z * z * (1.0f - c) + c;
 
-	matrix.m_matrix[3][3] = 1.0f;
+	matrix.data[3][3] = 1.0f;
 
 	return matrix;
 }
 
-Math::Matrix Math::Matrix::Scale(const Math::Vector3& scale)
+Matrix Matrix::MakeScale(const Vector3& scale)
 {
-	Math::Matrix mat;
-	mat.m_matrix[0][0] = scale.x;  mat.m_matrix[0][1] = 0.0f;     mat.m_matrix[0][2] = 0.0f;     mat.m_matrix[0][3] = 0.0f;
-	mat.m_matrix[1][0] = 0.0f;     mat.m_matrix[1][1] = scale.y;  mat.m_matrix[1][2] = 0.0f;     mat.m_matrix[1][3] = 0.0f;
-	mat.m_matrix[2][0] = 0.0f;     mat.m_matrix[2][1] = 0.0f;     mat.m_matrix[2][2] = scale.z;  mat.m_matrix[2][3] = 0.0f;
-	mat.m_matrix[3][0] = 0.0f;     mat.m_matrix[3][1] = 0.0f;     mat.m_matrix[3][2] = 0.0f;     mat.m_matrix[3][3] = 1.0f;
+	Matrix mat;
+	mat.data[0][0] = scale.x;  mat.data[0][1] = 0.0f;     mat.data[0][2] = 0.0f;     mat.data[0][3] = 0.0f;
+	mat.data[1][0] = 0.0f;     mat.data[1][1] = scale.y;  mat.data[1][2] = 0.0f;     mat.data[1][3] = 0.0f;
+	mat.data[2][0] = 0.0f;     mat.data[2][1] = 0.0f;     mat.data[2][2] = scale.z;  mat.data[2][3] = 0.0f;
+	mat.data[3][0] = 0.0f;     mat.data[3][1] = 0.0f;     mat.data[3][2] = 0.0f;     mat.data[3][3] = 1.0f;
 	return mat;
 }
 
-Math::Vector3 Math::Matrix::GetScale()
+Vector3 Matrix::GetPosition() const
 {
-	return Math::Vector3(RightLength(), UpLength(), FrontLength());
+	return Vector3(data[3][0], data[3][1], data[3][2]);
 }
 
-Math::Vector3 Math::Matrix::MatrixToQuaternion() const
+void Matrix::SetPosition(const Vector3& pos)
 {
-	Vector3 q;
-	float trace = m_matrix[0][0] + m_matrix[1][1] + m_matrix[2][2];
+	data[3][0] = pos.x;
+	data[3][1] = pos.y;
+	data[3][2] = pos.z;
+	data[3][3] = 1.0f;
+}
+
+Vector3 Matrix::GetScale() const
+{
+	return Vector3(RightLength(), UpLength(), FrontLength());
+}
+
+Vector4 Matrix::GetQuaternion() const
+{
+	Vector4 q;
+	float trace = data[0][0] + data[1][1] + data[2][2];
 
 	if (trace > 0.0f) {
-		float s = 0.5f / sqrt(trace + 1.0f);
+		float s = 0.5f / sqrtf(trace + 1.0f);
 		q.w = 0.25f / s;
-		q.x = (m_matrix[2][1] - m_matrix[1][2]) * s;
-		q.y = (m_matrix[0][2] - m_matrix[2][0]) * s;
-		q.z = (m_matrix[1][0] - m_matrix[0][1]) * s;
+		q.x = (data[2][1] - data[1][2]) * s;
+		q.y = (data[0][2] - data[2][0]) * s;
+		q.z = (data[1][0] - data[0][1]) * s;
 	}
 	else {
-		if (m_matrix[0][0] > m_matrix[1][1] && m_matrix[0][0] > m_matrix[2][2]) {
-			float s = 2.0f * sqrt(1.0f + m_matrix[0][0] - m_matrix[1][1] - m_matrix[2][2]);
-			q.w = (m_matrix[2][1] - m_matrix[1][2]) / s;
+		if (data[0][0] > data[1][1] && data[0][0] > data[2][2]) {
+			float s = 2.0f * sqrtf(1.0f + data[0][0] - data[1][1] - data[2][2]);
+			q.w = (data[2][1] - data[1][2]) / s;
 			q.x = 0.25f * s;
-			q.y = (m_matrix[0][1] + m_matrix[1][0]) / s;
-			q.z = (m_matrix[0][2] + m_matrix[2][0]) / s;
+			q.y = (data[0][1] + data[1][0]) / s;
+			q.z = (data[0][2] + data[2][0]) / s;
 		}
-		else if (m_matrix[1][1] > m_matrix[2][2]) {
-			float s = 2.0f * sqrt(1.0f + m_matrix[1][1] - m_matrix[0][0] - m_matrix[2][2]);
-			q.w = (m_matrix[0][2] - m_matrix[2][0]) / s;
-			q.x = (m_matrix[0][1] + m_matrix[1][0]) / s;
+		else if (data[1][1] > data[2][2]) {
+			float s = 2.0f * sqrtf(1.0f + data[1][1] - data[0][0] - data[2][2]);
+			q.w = (data[0][2] - data[2][0]) / s;
+			q.x = (data[0][1] + data[1][0]) / s;
 			q.y = 0.25f * s;
-			q.z = (m_matrix[1][2] + m_matrix[2][1]) / s;
+			q.z = (data[1][2] + data[2][1]) / s;
 		}
 		else {
-			float s = 2.0f * sqrt(1.0f + m_matrix[2][2] - m_matrix[0][0] - m_matrix[1][1]);
-			q.w = (m_matrix[1][0] - m_matrix[0][1]) / s;
-			q.x = (m_matrix[0][2] + m_matrix[2][0]) / s;
-			q.y = (m_matrix[1][2] + m_matrix[2][1]) / s;
+			float s = 2.0f * sqrtf(1.0f + data[2][2] - data[0][0] - data[1][1]);
+			q.w = (data[1][0] - data[0][1]) / s;
+			q.x = (data[0][2] + data[2][0]) / s;
+			q.y = (data[1][2] + data[2][1]) / s;
 			q.z = 0.25f * s;
 		}
 	}
 	return q;
 }
 
-Math::Vector3 Math::Matrix::Right() const
+Matrix Matrix::operator*(const Matrix& A) const
 {
-	return Math::Vector3(m_matrix[0][0], m_matrix[0][1], m_matrix[0][2], m_matrix[0][3]).GetNormal();
+	Matrix matrix;
+	for (int c = 0; c < 4; c++)
+		for (int r = 0; r < 4; r++)
+			matrix.data[r][c] = data[r][0] * A.data[0][c] + data[r][1] * A.data[1][c] + data[r][2] * A.data[2][c] + data[r][3] * A.data[3][c];
+	return matrix;
 }
 
-Math::Vector3 Math::Matrix::Up() const
+Vector4 Matrix::operator*(const Vector4& A) const
 {
-	return Math::Vector3(m_matrix[1][0], m_matrix[1][1], m_matrix[1][2], m_matrix[1][3]).GetNormal();
+	Vector4 vector;
+	vector.x = A.x * data[0][0] + A.y * data[1][0] + A.z * data[2][0] + A.w * data[3][0];
+	vector.y = A.x * data[0][1] + A.y * data[1][1] + A.z * data[2][1] + A.w * data[3][1];
+	vector.z = A.x * data[0][2] + A.y * data[1][2] + A.z * data[2][2] + A.w * data[3][2];
+	vector.w = A.x * data[0][3] + A.y * data[1][3] + A.z * data[2][3] + A.w * data[3][3];
+	return vector;
 }
 
-Math::Vector3 Math::Matrix::Front() const
+Vector3 Matrix::operator*(const Vector3& A) const
 {
-	return Math::Vector3(m_matrix[2][0], m_matrix[2][1], m_matrix[2][2], m_matrix[2][3]).GetNormal();
+	Vector3 vector;
+	vector.x = A.x * data[0][0] + A.y * data[1][0] + A.z * data[2][0];
+	vector.y = A.x * data[0][1] + A.y * data[1][1] + A.z * data[2][1];
+	vector.z = A.x * data[0][2] + A.y * data[1][2] + A.z * data[2][2];
+	return vector;
+}
+
+Vector3 Matrix::GetRight() const
+{
+	return Vector3(data[0][0], data[0][1], data[0][2]).GetNormal();
+}
+
+Vector3 Matrix::GetUp() const
+{
+	return Vector3(data[1][0], data[1][1], data[1][2]).GetNormal();
+}
+
+Vector3 Matrix::GetFront() const
+{
+	return Vector3(data[2][0], data[2][1], data[2][2]).GetNormal();
 }
 
 
-float Math::Matrix::RightLength() const
+float Matrix::RightLength() const
 {
-	return sqrt(Math::Vector3(m_matrix[0][0], m_matrix[0][1], m_matrix[0][2], m_matrix[0][3]).Length());
+	return Vector3(data[0][0], data[0][1], data[0][2]).Length();
 }
 
-float Math::Matrix::UpLength() const
+float Matrix::UpLength() const
 {
-	return sqrt(Math::Vector3(m_matrix[1][0], m_matrix[1][1], m_matrix[1][2], m_matrix[1][3]).Length());
+	return Vector3(data[1][0], data[1][1], data[1][2]).Length();
 }
 
-float Math::Matrix::FrontLength() const
+float Matrix::FrontLength() const
 {
-	return sqrt(Math::Vector3(m_matrix[2][0], m_matrix[2][1], m_matrix[2][2], m_matrix[2][3]).Length());
+	return Vector3(data[2][0], data[2][1], data[2][2]).Length();
 }
 
-void Math::Matrix::SetRight(const Math::Vector3& direction)
+void Matrix::SetRight(const Vector3& direction)
 {
-	m_matrix[0][0] = direction.x;
-	m_matrix[0][1] = direction.y;
-	m_matrix[0][2] = direction.z;
-	m_matrix[0][3] = 0.0f;
+	data[0][0] = direction.x;
+	data[0][1] = direction.y;
+	data[0][2] = direction.z;
+	data[0][3] = 0.0f;
 }
 
-void Math::Matrix::SetUp(const Math::Vector3& direction)
+void Matrix::SetUp(const Vector3& direction)
 {
-	m_matrix[1][0] = direction.x;
-	m_matrix[1][1] = direction.y;
-	m_matrix[1][2] = direction.z;
-	m_matrix[1][3] = 0.0f;
+	data[1][0] = direction.x;
+	data[1][1] = direction.y;
+	data[1][2] = direction.z;
+	data[1][3] = 0.0f;
 }
 
-void Math::Matrix::SetFront(const Math::Vector3& direction)
+void Matrix::SetFront(const Vector3& direction)
 {
-	m_matrix[2][0] = direction.x;
-	m_matrix[2][1] = direction.y;
-	m_matrix[2][2] = direction.z;
-	m_matrix[2][3] = 0.0f;
+	data[2][0] = direction.x;
+	data[2][1] = direction.y;
+	data[2][2] = direction.z;
+	data[2][3] = 0.0f;
 }
 
-void Math::Matrix::OrthoNormalize()
+void Matrix::OrthoNormalize()
 {
-	// Normalize right, up, and forward vectors
-	Math::Vector3 right = Right();
-	Math::Vector3 up = Up();
-	Math::Vector3 forward = Front();
-
-	right.GetNormal();
-	up.GetNormal();
-	forward.GetNormal();
-
-	// Make right vector orthogonal to up and forward
-	right = right - up * up.Dot(right);
-	right = right - forward * forward.Dot(right);
-	right.GetNormal();
-
-	// Make up vector orthogonal to right and forward
-	up = up - right * right.Dot(up);
-	up = up - forward * forward.Dot(up);
-	up.GetNormal();
-
-	// Make forward vector orthogonal to right and up
-	forward = forward - right * right.Dot(forward);
-	forward = forward - up * up.Dot(forward);
-	forward.GetNormal();
-
-	// Set the matrix with the new orthogonalized vectors
-	SetRight(right);
-	SetUp(up);
-	SetFront(forward);
+	auto scale = GetScale();
+	scale.x = 1.0f / scale.x;
+	scale.y = 1.0f / scale.y;
+	scale.z = 1.0f / scale.z;
+	*this = Matrix::MakeScale(scale) * *this;
 }
 
+Vector3 Matrix::GetRotationXYZInRads() const {
+	Vector3 rotation;
+
+	// Assuming the matrix is in row-major order and is orthonormal
+	if (data[0][2] < 1.0f) {
+		if (data[0][2] > -1.0f) {
+			rotation.y = asinf(data[0][2]); // Pitch
+			rotation.x = atan2f(-data[1][2], data[2][2]); // Yaw
+			rotation.z = atan2f(-data[0][1], data[0][0]); // Roll
+		}
+		else {
+			// Not a unique solution: rotation.x - rotation.z = atan2(-m[1][0], m[1][1])
+			rotation.y = -static_cast<float>(Math::PI) / 2.0f; // Pitch at -90 degrees
+			rotation.x = -atan2f(data[1][0], data[1][1]); // Yaw
+			rotation.z = 0.0f; // Roll
+		}
+	}
+	else {
+		// Not a unique solution: rotation.x + rotation.z = atan2(-m[1][0], m[1][1])
+		rotation.y = static_cast<float>(Math::PI) / 2.0f; // Pitch at 90 degrees
+		rotation.x = atan2f(data[1][0], data[1][1]); // Yaw
+		rotation.z = 0.0f; // Roll
+	}
+
+	return rotation;
+}

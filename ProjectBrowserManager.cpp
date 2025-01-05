@@ -1,3 +1,4 @@
+#ifdef EDITOR
 #include "ProjectBrowserManager.h"
 #include "Editor.h"
 #include "iRender.h"
@@ -5,20 +6,22 @@
 #include "src/IMGUI/imgui_internal.h"
 #include <ShlObj.h>
 #include "IOManager.h"
-#include <filesystem>
-#include <tchar.h>
-#include <codecvt>
 #include "RenderManager.h"
+#include "StringUtils.h"
 
-void ProjectBrowserManager::StartBrowserWindow()
+
+ProjectBrowserManager::ProjectBrowserManager()
+    : m_hasLoadedProject(false)
 {
-    m_previousProjectsFilename = std::string(IOManager::ExecutableDirectory + "PreviousProjects.txt");
+    Render::SetWindowIcon("icon.ico");
+    Render::SetWindowTitle("Spectral | Project Browser");
+    m_previousProjectsPath = IOManager::ExecutableDirectory / "PreviousProjects.txt";
     ReadPreviousProjects();
 
-    if (!IsWindowVisible(RenderManager::GetInstance()->GetWindowHandle()))
+    if (!IsWindowVisible(Render::GetWindowHandle()))
     {
-        ShowWindow(RenderManager::GetInstance()->GetWindowHandle(), SW_SHOW);
-        RenderManager::GetInstance()->SetWindowSize(Math::Vector2i(720, 480));
+        Render::ShowWindow(true);
+        Render::SetWindowSize(Math::Vector2i(720, 480));
     }
 
     MSG msg{};
@@ -38,26 +41,47 @@ void ProjectBrowserManager::StartBrowserWindow()
         {
             RenderManager::GetInstance()->Render();
             Editor::GetInstance()->PreRender();
-            if (Update())
-            {
-                projectSelected = true;
-            }
+            projectSelected = Update();
             Editor::GetInstance()->Render();
-            RenderManager::GetInstance()->GetDeviceResources()->GetSwapChain()->Present(0, 0);
+            RenderManager::GetInstance()->Present();
         }
         if (projectSelected)
         {
             break;
         }
     }
-    ShowWindow(RenderManager::GetInstance()->GetWindowHandle(), SW_HIDE);
 
+    if (msg.message == WM_QUIT)
+    {
+        m_hasLoadedProject = false;
+        return;
+    }
+
+    Render::ShowWindow(false);
+    Render::SetWindowTitle(std::string("Spectral | ") + IOManager::ProjectName);
+    IOManager::CollectProjectFiles();
+
+    std::filesystem::path projectIniFile = IOManager::ProjectDirectory / "Spectral_Project.ini";
+    std::string previouslyLoadedSceneName = IOManager::ReadFromIniFile(projectIniFile, "Project", "LastScene");
+    if (previouslyLoadedSceneName != IOManager::IniFailedToFindItem)
+    {
+        IOManager::LoadSpectralScene(previouslyLoadedSceneName);
+    }
+    m_hasLoadedProject = true;
+    return;
 }
+
+bool ProjectBrowserManager::HasLoadedProject()
+{
+    return m_hasLoadedProject;
+}
+
 void ProjectBrowserManager::ReadPreviousProjects()
 {
     m_previousProjects.clear();
-    std::ifstream previousProjects(m_previousProjectsFilename);
-    if (previousProjects) {
+    std::ifstream previousProjects(m_previousProjectsPath);
+    if (previousProjects) 
+    {
         std::string line;
         while (getline(previousProjects, line)) 
         {
@@ -65,8 +89,9 @@ void ProjectBrowserManager::ReadPreviousProjects()
         }
         previousProjects.close();
     }
-    else {
-        std::ofstream newfile(m_previousProjectsFilename);
+    else 
+    {
+        std::ofstream newfile(m_previousProjectsPath);
         newfile.close();
     }
 }
@@ -78,95 +103,67 @@ bool ProjectBrowserManager::Update()
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
     ImGui::SetNextWindowSize(ImVec2((float)windowSize.x, (float)windowSize.y));
 
-    auto windowFlags = ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNavFocus |
-        ImGuiWindowFlags_NoScrollbar;
+    auto windowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoScrollbar;
     static bool openModal = false;
-
     bool projectSelected = false;
-
-    if (ImGui::Begin("Project Browser", 0, windowFlags))
+    
+    if (ImGui::Begin("Project Browser", nullptr, windowFlags | ImGuiWindowFlags_NoTitleBar))
     {
-
         auto cursorPos = ImGui::GetCursorPos();
         auto availRegion = ImGui::GetContentRegionAvail();
 
         const float menuPadding = 5.0f;
 
         const float leftMenuSize = availRegion.x / 4;
-        const float rightMenuSize = availRegion.x - availRegion.x / 4;
-
+        const float rightMenuSize = availRegion.x - leftMenuSize;
         ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_SpanAllColumns, menuPadding);
-        ImGui::SetNextWindowPos(ImVec2(cursorPos.x, cursorPos.y + menuPadding));
-        ImGui::SetNextWindowSize(ImVec2(leftMenuSize, availRegion.y - menuPadding));
-        if (ImGui::Begin("##LeftSideCreate", 0, windowFlags))
+        //ImGui::SetNextWindowPos(ImVec2(cursorPos.x, cursorPos.y + menuPadding));
+        if(ImGui::BeginChild("meme##LeftSideCreate", ImVec2(leftMenuSize, ImGui::GetContentRegionAvail().y),true))
         {
-            ImVec2 buttonSize(leftMenuSize - menuPadding - menuPadding, 40.0f);
-            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
+            ImGui::NewLine();
+            ImVec2 buttonSize(ImGui::GetContentRegionAvail().x, 40.0f);
             if (ImGui::Button("New Project", buttonSize))
             {
                 ImGui::OpenPopup("New Project");
             }
 
-            const float modalPadding = 100.0f;
-            ImGui::SetNextWindowPos(ImVec2(modalPadding * 0.5f, modalPadding * 0.5f));
-            ImGui::SetNextWindowSize(ImVec2(availRegion.x - modalPadding, availRegion.y - modalPadding));
+            ImGui::SetNextWindowPos(ImVec2(availRegion.x * 0.5f - 154.0f, availRegion.y * 0.5f - 62.0f));
+            ImGui::SetNextWindowSize(ImVec2(308.0f, 124.0f));
             bool openWindow = true;
             if (ImGui::BeginPopupModal("New Project", &openWindow, windowFlags)) 
             {
-
-                static std::string projectName;
-                char* cstrText = (char*)projectName.c_str();
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
-                ImGui::Text("Project Name:");
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
-                if (ImGui::InputText("##projectnameinput", cstrText, 255))
-                {
-                    projectName = std::string(cstrText);
-                }
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
-                ImGui::NewLine();
                 static std::filesystem::path projectPath;
-                char* cstrpath = (char*)projectPath.c_str();
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
+                static std::string projectName;
+                ImGui::Text("Project Name:");
+                ImGui::InputText("##projectnameinput", projectName.data(), 255);
+                auto pathString = projectPath.string();
                 ImGui::Text("Path:");
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
-                ImGui::InputText("##projectpathinput", cstrpath, 255);
-
+                ImGui::InputText("##projectpathinput", pathString.data(), 255);
                 ImGui::SameLine();
                 if (ImGui::Button("File Explorer"))
                 {
                     projectPath = SelectFromFileExplorer();
                 }
 
-                ImGui::NewLine();
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
-                bool simpleRender = false;
-                ImGui::Checkbox("Simple render as default?", &simpleRender);
-                ImGui::NewLine();
+                ImGui::Separator();
 
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
                 if (ImGui::Button("Create", ImVec2(60, 0)))
                 {
-                    //if (!projectPath.string().empty() && !projectName.empty())
-                    {
-                        CreateProject(projectPath.parent_path().wstring(), projectName);
+                    CreateProject(projectPath.parent_path().wstring(), projectName);
 
-                        AddToPreviousProject(projectPath.string());
-                        ReadPreviousProjects();
+                    AddToPreviousProject(projectPath.string());
+                    ReadPreviousProjects();
 
-                        projectName = "";
-                        projectPath = "";
+                    projectName = "";
+                    projectPath = "";
 
-                        ImGui::CloseCurrentPopup();
-                    }
+                    ImGui::CloseCurrentPopup();
                 }
                 ImGui::EndPopup();
             }
 
-
-            ImGui::SetNextWindowPos(ImVec2(modalPadding * 0.5f, modalPadding * 0.5f));
-            ImGui::SetNextWindowSize(ImVec2(availRegion.x - modalPadding, availRegion.y - modalPadding));
+            ImGui::SetNextWindowPos(ImVec2(availRegion.x * 0.5f - 154.0f, availRegion.y * 0.5f - 62.0f));
+            ImGui::SetNextWindowSize(ImVec2(308.0f, 124.0f));
             if (ImGui::BeginPopupModal("Project does not exist", &openWindow, windowFlags))
             {
                 ImGui::NewLine();
@@ -180,50 +177,46 @@ bool ProjectBrowserManager::Update()
                 ImGui::EndPopup();
             }
 
-            ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding - 1);
             if (ImGui::Button("Load", buttonSize))
             {
                 LoadProject();
             }
-            ImGui::End();
+            ImGui::EndChild();
         }
-        ImGui::SetNextWindowPos(ImVec2(cursorPos.x + leftMenuSize, cursorPos.y + menuPadding));
-        ImGui::SetNextWindowSize(ImVec2(availRegion.x, availRegion.y - menuPadding));
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1.0f, 1.0f, 1.0f, 0.06f));
-        if (ImGui::Begin("Previous Projects", 0, windowFlags))
+        ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
+        if (ImGui::BeginChild("meme##asdasd", ImGui::GetContentRegionAvail(), false))
         {
-            ImGui::Separator();
+            ImGui::Text("Previous Proejcts");
 
-            ImGui::PopStyleColor();
-            ImVec2 removeProjectbuttonSize(50 - menuPadding, 40.0f);
-            ImVec2 projectButtonSize(rightMenuSize - menuPadding - menuPadding - menuPadding - 50.0f, 40.0f);
-            for (const auto& projectPath : m_previousProjects)
+            for (const auto& [path, name] : m_previousProjects)
             {
-                ImGui::SetCursorPosX(ImGui::GetCursorPos().x + menuPadding);
-                if (!projectPath.Name.empty() && ImGui::Button(projectPath.Name.c_str(), projectButtonSize))
+                if (name.size() < 3)
+                {
+                    continue;
+                }
+                if (ImGui::Button(name.c_str(), ImVec2(ImGui::GetContentRegionAvail().x - 50, 40.0f)))
                 {
                     projectSelected = true;
-                    IOManager::ProjectDirectory = projectPath.Path;
-                    IOManager::ProjectDirectoryWide = std::filesystem::path(projectPath.Path).wstring();
-                    IOManager::ProjectName = projectPath.Name;
-                    RemoveProjectFromOldProjects(projectPath.Path);
-                    m_previousProjects.push_front(PreviousProject(IOManager::ProjectDirectory, IOManager::ProjectName));
-                    AddToPreviousProject(IOManager::ProjectDirectory);
+                    SelectProject(path, name);
                     break;
                 }
                 ImGui::SameLine();
-                ImGui::PushID(projectPath.Path.c_str());
-                if (ImGui::Button("X", removeProjectbuttonSize))
+                ImGui::PushID(path.c_str());
+                if (ImGui::Button("X", ImVec2(ImGui::GetContentRegionAvail().x, 40.0f)))
                 {
-                    RemoveProjectFromOldProjects(projectPath.Path);
+                    RemoveProjectFromOldProjects(path);
                     ImGui::PopID();
                     break;
                 }
                 ImGui::PopID();
             }
 
-            ImGui::End();
+            ImGui::EndChild();
         }
+
+
         ImGui::End();
     }
 
@@ -241,7 +234,7 @@ void ProjectBrowserManager::RemoveProjectFromOldProjects(const std::filesystem::
         }
     }
     
-    std::ofstream outFile(m_previousProjectsFilename);
+    std::ofstream outFile(m_previousProjectsPath);
     outFile.close();
 
     for (const auto& projectPath : m_previousProjects)
@@ -252,25 +245,25 @@ void ProjectBrowserManager::RemoveProjectFromOldProjects(const std::filesystem::
 
 void ProjectBrowserManager::CreateProject(const std::filesystem::path& path, const std::string& name)
 {
-    WCHAR iniFile[MAX_PATH];
+    std::filesystem::path iniFile = path / L"Spectral_Project.ini";
 
-    _stprintf_s(iniFile, _T("%s\\Spectral_Project.ini"), path.c_str());
-     
-    HANDLE hFile = CreateFile(iniFile, GENERIC_WRITE, FILE_SHARE_READ,
-        NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE hFile = CreateFile(iniFile.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     CloseHandle(hFile);
-    auto length = (int)name.length();
-    size_t reqLength = ::MultiByteToWideChar(CP_UTF8, 0, name.c_str(), length, 0, 0);
-    std::wstring ret(reqLength, L'\0');
-    auto lengthRet = (int)ret.length();
-    ::MultiByteToWideChar(CP_UTF8, 0, name.c_str(), length, &ret[0], lengthRet);
     
-    BOOL writeResult = WritePrivateProfileString(L"Project", L"Name", ret.c_str(), iniFile);
-    if (!writeResult) {
-        // Handle error: Unable to write to the INI file
-        DWORD error = GetLastError();
-        std::cerr << "Error writing to INI file: " << error << std::endl;
+    BOOL writeResult = WritePrivateProfileString(L"Project", L"Name", StringUtils::StringToWideString(name).c_str(), iniFile.c_str());
+    if (!writeResult) 
+    {
+        Logger::Error("Error writing to INI file: " + GetLastError());
     }
+}
+
+void ProjectBrowserManager::SelectProject(const std::filesystem::path& path, const std::string& name)
+{
+    IOManager::ProjectDirectory = path;
+    IOManager::ProjectName = name;
+    RemoveProjectFromOldProjects(path);
+    m_previousProjects.push_front(PreviousProject(IOManager::ProjectDirectory, IOManager::ProjectName));
+    AddToPreviousProject(IOManager::ProjectDirectory);
 }
 
 void ProjectBrowserManager::LoadProject()
@@ -290,7 +283,7 @@ void ProjectBrowserManager::LoadProject()
                 break;
             }
         }
-        if (alreadyInPrevious)
+        if (alreadyInPrevious) // if the project already exists, remove it and add it to push it to the front.
         {
             RemoveProjectFromOldProjects(path);
         }
@@ -306,41 +299,31 @@ void ProjectBrowserManager::LoadProject()
 
 bool ProjectBrowserManager::DoesProjectFileExist(const std::filesystem::path& path)
 {
-    return std::filesystem::exists(path.wstring() + L"\\Spectral_Project.ini");
+    return std::filesystem::exists(path / L"Spectral_Project.ini");
 }
+
 
 std::string ProjectBrowserManager::ReadProjectNameFromIni(const std::filesystem::path& path)
 {
-    WCHAR iniFile[MAX_PATH];
+    std::wstring string;
+    GetPrivateProfileString(L"Project", L"Name", L"", string.data(), 256, (path / L"Spectral_Project.ini").c_str());
 
-    _stprintf_s(iniFile, _T("%s\\Spectral_Project.ini"), path.c_str());
-    WCHAR buffer[256];
-    GetPrivateProfileString(L"Project", L"Name", L"", buffer, 256, iniFile);
-
-    int bufferSize = WideCharToMultiByte(CP_UTF8, 0, buffer, -1, nullptr, 0, nullptr, nullptr);
-    if (bufferSize == 0) {
-        // Handle error
-        return "";
-    }
-    std::string result(bufferSize, 0);
-    if (WideCharToMultiByte(CP_UTF8, 0, buffer, -1, &result[0], bufferSize, nullptr, nullptr) == 0) {
-        // Handle error
-        return "";
-    }
-    return result;
+    return StringUtils::WideStringToString(string);
 }
 
 std::filesystem::path ProjectBrowserManager::SelectFromFileExplorer()
 {
     BROWSEINFO bi = { 0 };
-    bi.lpszTitle = L"Select a folder";
+    bi.lpszTitle = L"Select a spectral project folder";
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 
     LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
     std::filesystem::path selectedPath;
-    if (pidl != nullptr) {
+    if (pidl != nullptr) 
+    {
         TCHAR path[MAX_PATH];
-        if (SHGetPathFromIDList(pidl, path)) {
+        if (SHGetPathFromIDList(pidl, path)) 
+        {
             selectedPath = path;
             selectedPath.append("\0");
         }
@@ -353,8 +336,8 @@ std::filesystem::path ProjectBrowserManager::SelectFromFileExplorer()
 void ProjectBrowserManager::AddToPreviousProject(const std::filesystem::path& path) const
 {
     std::ofstream previousProjectsFile;
-    previousProjectsFile.open(m_previousProjectsFilename, std::ios_base::app);
+    previousProjectsFile.open(m_previousProjectsPath, std::ios_base::app);
     previousProjectsFile << path.string() << "\n";
     previousProjectsFile.close();
 }
-
+#endif

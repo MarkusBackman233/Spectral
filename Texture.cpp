@@ -1,110 +1,94 @@
 #include "Texture.h"
-#include <iostream>
-#include "Spectral.h"
-
-#include "TextureManager.h"
 #include "Vector2.h"
-#include <d3d11.h>
-#include <DirectXMath.h>
-
 #include "iRender.h"
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_HDR_IMPLEMENTATION
 #include "src/External/stb_image.h"
 #include "src/External/DDSTextureLoader/DDSTextureLoader11.h"
 #include "Logger.h"
-#include <mutex>
-#include "DefaultAssets.h"
 #include "IOManager.h"
 
 
-Texture::Texture()
+bool Texture::LoadTexture(unsigned char* bytes, const Math::Vector2i& size)
 {
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+	Render::CreateTexture(bytes, size, texture);
+	GenerateMips(texture.Get());
+	return true;
 }
 
-void Texture::LoadTexture(const std::string& filename)
+
+bool Texture::LoadTexture(const std::filesystem::path& file)
 {
-	
-	LogMessage("Loading Texture: " + filename);
-	if (filename.find(".dds") != std::string::npos)
+	auto stringFilename = file.string();
+
+	Logger::Info("Loading Texture: " + stringFilename);
+	if (file.wstring().find(L".dds") != std::wstring::npos)
 	{
-		ID3D11Resource* texture; // Need to clean up??
+		ID3D11Resource* resource;
 		ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
 			Render::GetDevice(),
 			Render::GetContext().GetContext(),
-			std::wstring(IOManager::ProjectDirectoryWide + std::wstring(filename.begin(), filename.end())).c_str(),
-			&texture,
+			file.wstring().c_str(),
+			&resource,
 			&m_textureSRV));
-		texture->Release();
+		resource->Release();
 	}
 	else
 	{
 		int width, height, channels;
-		unsigned char* imageData = stbi_load(std::string(IOManager::ProjectDirectory + filename).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+		unsigned char* imageData = stbi_load(stringFilename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 		if (!imageData) {
-			LogMessage("ERROR: Could not not load texture: " + filename);
-			return;
+			Logger::Error("Could not not load texture: " + stringFilename);
+			return false;
 		}
-		Render::CreateTexture(imageData, Math::Vector2i(width, height), m_textureSRV, m_texture);
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+		Render::CreateTexture(imageData, Math::Vector2i(width, height), texture);
 		stbi_image_free(imageData);
-		GenerateMips();
+		GenerateMips(texture.Get());
+
 	}
-
+	return true;
 }
 
-void Texture::LoadTexture(unsigned char* bytes, const Math::Vector2i& size)
+std::string Texture::GetFilename()
 {
-	Render::CreateTexture(bytes, size, m_textureSRV, m_texture);
-	GenerateMips();
+	return m_filename;
 }
 
-bool Texture::GenerateMips()
+void Texture::SetFilename(const std::string& filename)
 {
-	ID3D11Texture2D* tex = nullptr; // FIRST generate mipmap texture________________________________
-	D3D11_TEXTURE2D_DESC texDesc2;
-	m_texture->GetDesc(&texDesc2);
-	texDesc2.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-	texDesc2.CPUAccessFlags = 0;
-	texDesc2.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	texDesc2.MipLevels = static_cast<int>(log2(std::max(texDesc2.Width, texDesc2.Height))) + 1;
-	texDesc2.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
-	texDesc2.Usage = D3D11_USAGE_DEFAULT;
-	ThrowIfFailed(Render::GetDevice()->CreateTexture2D(&texDesc2, nullptr, &tex));
-	
-	ID3D11Texture2D* stagTex; // create Staging texture_____________________________________
-	D3D11_TEXTURE2D_DESC stagDesc;
-	m_texture->GetDesc(&stagDesc);
-	stagDesc.ArraySize = 1;
-	stagDesc.BindFlags = 0;
-	stagDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-	stagDesc.MipLevels = 1;
-	stagDesc.MiscFlags = 0;
-	stagDesc.Usage = D3D11_USAGE_STAGING;
-	ThrowIfFailed(Render::GetDevice()->CreateTexture2D(&stagDesc, nullptr, &stagTex));
-	
-	// read from image_________________________________________________________________________
+	m_filename = filename;
+}
 
+
+void Texture::GenerateMips(ID3D11Texture2D* texture)
+{
+	auto device = Render::GetDevice();
 	auto lockedContext = Render::GetContext();
 
-	lockedContext.GetContext()->CopyResource(stagTex, m_texture.Get());
-	D3D11_MAPPED_SUBRESOURCE mapped;
-	lockedContext.GetContext()->Map(stagTex, 0, D3D11_MAP_READ, 0, &mapped);
-	UINT* arr = new UINT[(size_t)((float)mapped.RowPitch / (float)sizeof(UINT)) * stagDesc.Height];
-	ZeroMemory(arr, mapped.RowPitch * stagDesc.Height);
-	CopyMemory(arr, mapped.pData, mapped.RowPitch * stagDesc.Height);
-	lockedContext.GetContext()->Unmap(stagTex, 0);
-	
-	// copy image data into mipmap texture_______________________________________________________________
-	auto rect = CD3D11_BOX(0, 0, 0, stagDesc.Width, stagDesc.Height, 1);
-	lockedContext.GetContext()->UpdateSubresource(tex, 0, &rect, arr, mapped.RowPitch, mapped.DepthPitch);
-	
-	// create SRV of mipmap texture______________________________________________________________
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	srvDesc.Format = texDesc2.Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = texDesc2.MipLevels;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	ThrowIfFailed(Render::GetDevice()->CreateShaderResourceView(tex, &srvDesc, &m_textureSRV));
-	lockedContext.GetContext()->GenerateMips(m_textureSRV.Get());
+	D3D11_TEXTURE2D_DESC texDesc{};
+	texture->GetDesc(&texDesc);
 
-	return true;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.MipLevels = static_cast<UINT>(log2(std::max(texDesc.Width, texDesc.Height))) + 1;
+	texDesc.MiscFlags = D3D11_RESOURCE_MISC_GENERATE_MIPS;
+	texDesc.Usage = D3D11_USAGE_DEFAULT;
+
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> mipTexture;
+	ThrowIfFailed(device->CreateTexture2D(&texDesc, nullptr, mipTexture.GetAddressOf()));
+
+	lockedContext.GetContext()->CopySubresourceRegion(mipTexture.Get(), 0, 0, 0, 0, texture, 0, nullptr);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	srvDesc.Format = texDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = texDesc.MipLevels;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+
+	ThrowIfFailed(device->CreateShaderResourceView(mipTexture.Get(), &srvDesc, m_textureSRV.GetAddressOf()));
+
+	lockedContext.GetContext()->GenerateMips(m_textureSRV.Get());
 }

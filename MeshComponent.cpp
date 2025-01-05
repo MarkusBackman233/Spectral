@@ -10,35 +10,37 @@
 #include "IOManager.h"
 #include "MaterialManager.h"
 #include "StringUtils.h"
+#include "Editor.h"
+#include "PropertyWindowFactory.h"
+#include "DirectXCollision.h"
+#include "DxMathUtils.h"
+#include "RenderManager.h"
+#include "Editor.h"
+#include "Texture.h"
+#include "Material.h"
 
 MeshComponent::MeshComponent(GameObject* owner)
     : Component(owner)
+    , m_mesh(nullptr)
 {
-    m_componentName = "MeshComponent";
-    m_componentType = ComponentType_MeshComponent;
+
 }
 
 MeshComponent::MeshComponent(GameObject* owner, std::string filename)
     : Component(owner)
 {
-    m_componentName = "MeshComponent";
-    m_componentType = ComponentType_MeshComponent;
 	SetMesh(filename);
 }
 
 MeshComponent::MeshComponent(GameObject* owner, MeshComponent* meshComponent)
     : Component(owner)
 {
-    m_componentName = "MeshComponent";
-    m_componentType = ComponentType_MeshComponent;
 	SetMesh(meshComponent->GetMesh());
 }
 
 MeshComponent::MeshComponent(GameObject* owner, std::shared_ptr<Mesh> mesh)
     : Component(owner)
 {
-    m_componentName = "MeshComponent";
-    m_componentType = ComponentType_MeshComponent;
 	SetMesh(mesh);
 }
 
@@ -46,7 +48,13 @@ void MeshComponent::Render()
 {
     if(m_mesh.get() != nullptr)
     {
-	    Render::DrawInstance(m_mesh, m_owner->GetMatrix());
+        //DirectX::BoundingBox boundingBox;
+        //DirectX::BoundingBox::CreateFromPoints(boundingBox, Spectral::DxMathUtils::ToDx(m_mesh->GetBoundingBoxMin()), Spectral::DxMathUtils::ToDx(m_mesh->GetBoundingBoxMax()));
+        //boundingBox.Transform(boundingBox, Spectral::DxMathUtils::ToDx(m_owner->GetWorldMatrix()));
+        //if (RenderManager::GetInstance()->GetFrustum().Contains(boundingBox))
+        //{
+        //}
+	    Render::DrawInstance(m_mesh, m_owner->GetWorldMatrix());
     }
 }
 
@@ -55,23 +63,27 @@ void MeshComponent::Update(float deltaTime)
 
 }
 
-void MeshComponent::SaveComponent(WriteObject& readObject)
+void MeshComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
 {
     if (m_mesh)
     {
-        readObject.Write(m_mesh->GetName());
+        object.AddMember("Mesh", rapidjson::Value(m_mesh->GetName().c_str(), allocator), allocator);
+        object.AddMember("Material", rapidjson::Value(m_mesh->GetMaterial()->GetName().c_str(), allocator), allocator);
     }
     else
     {
-        readObject.Write("nomesh");
+        object.AddMember("Mesh", rapidjson::Value("NoName", allocator), allocator);
     }
 }
 
-void MeshComponent::LoadComponent(ReadObject& readObject)
+void MeshComponent::LoadComponent(const rapidjson::Value& object)
 {
-    std::string mesh;
-    readObject.Read(mesh);
-    m_mesh = ModelManager::GetInstance()->GetMesh(mesh);
+    std::string meshName = object["Mesh"].GetString();
+    if (meshName != "NoName")
+    {
+        m_mesh = ModelManager::GetInstance()->GetMesh(meshName);
+        m_mesh->SetMaterial(MaterialManager::GetInstance()->GetMaterial(object["Material"].GetString()));
+    }
 }
 
 #ifdef EDITOR
@@ -82,7 +94,7 @@ void MeshComponent::ComponentEditor()
     ImGui::Text(std::string("Mesh: " + meshName).c_str());
     if (ImGui::Button("Edit##Mesh"))
     {
-        Editor::GetInstance()->OpenPropertyWindow(Editor::PropertyWindowType_Mesh);
+        PropertyWindowFactory::SelectMesh(m_mesh);
     }
     ImGui::Separator();
     
@@ -92,73 +104,89 @@ void MeshComponent::ComponentEditor()
     ImGui::Text(std::string("Material: " + m_mesh->GetMaterial()->GetName()).c_str());
     if (ImGui::Button("Edit##Material"))
     {
-        Editor::GetInstance()->OpenPropertyWindow(Editor::PropertyWindowType_Mesh);
+        PropertyWindowFactory::SelectMaterial(m_mesh);
     }
+
+    bool isDisabled = m_mesh->GetMaterial()->GetName() == "default";
+
+    if (isDisabled)
+    {
+        ImGui::BeginDisabled();
+    }
+
+    enum TextureType
+    {
+        Albedo,
+        Normal,
+        Roughness,
+        Metallic,
+        AmbientOcclusion
+    };
+
+    static std::vector<std::pair<std::string, TextureType>> textures{
+        {"Albedo", TextureType::Albedo},
+        {"Normal", TextureType::Normal},
+        {"Roughness", TextureType::Roughness},
+        {"Metallic", TextureType::Metallic},
+        {"Ao", TextureType::AmbientOcclusion},
+    };
     
-
-    struct TextureSelector
+    for (const auto& [textureName, textureId] : textures)
     {
-        TextureSelector(std::string name, Editor::PropertyWindowType propertyType, int textureId) 
-            : m_name(name)
-            , m_propertyType(propertyType)
-            , m_textureId(textureId)
-        {}
-        std::string m_name;
-        Editor::PropertyWindowType m_propertyType;
-        int m_textureId;
-    };
-
-    std::vector<TextureSelector> textures{
-        TextureSelector("Albedo", Editor::PropertyWindowType_Texture,ALBEDO),
-        TextureSelector("Normal", Editor::PropertyWindowType_Normal,NORMAL),
-        TextureSelector("Roughness", Editor::PropertyWindowType_Roughness,ROUGHNESS),
-        TextureSelector("Metallic", Editor::PropertyWindowType_Metallic,METALLIC),
-        TextureSelector("Ao", Editor::PropertyWindowType_Ao,AO),
-    };
-
-    for (const auto& texture : textures)
-    {
-        if (m_mesh->GetMaterial()->GetTexture(texture.m_textureId) && m_mesh->GetMaterial()->GetTexture(texture.m_textureId)->GetResourceView().Get())
+        if (m_mesh->GetMaterial()->GetTexture(textureId) && m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
         {
-            ImGui::Text(std::string(texture.m_name + ": " + StringUtils::StripPathFromFilename(TextureManager::GetInstance()->GetTextureName(Editor::GetInstance()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial()->GetTexture(texture.m_textureId)))).c_str());
-            auto resource = m_mesh->GetMaterial()->GetTexture(texture.m_textureId)->GetResourceView().Get();
-            if (ImGui::ImageButton(resource, Editor::GetInstance()->GetDefaultTextureSize()) && m_mesh->GetMaterial()->GetName() != "default")
+            auto selectedTextureName = Editor::GetInstance()->GetObjectSelector()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial()->GetTexture(textureId)->GetFilename();
+            ImGui::Text(std::string(textureName + ": " + selectedTextureName).c_str());
+            auto resource = m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
+            if (ImGui::ImageButton(textureName.c_str(),resource, Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                Editor::GetInstance()->OpenPropertyWindow(texture.m_propertyType);
+                auto material = m_mesh->GetMaterial();
+                PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
             }
         }
         else
         {
-            ImGui::Text(std::string(texture.m_name + ": Not selected").c_str());
-
-            if (ImGui::Button(std::string("##"+ texture.m_name).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
+            ImGui::Text(std::string(textureName + ": Not selected").c_str());
+    
+            if (ImGui::Button(std::string("##"+ textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                Editor::GetInstance()->OpenPropertyWindow(texture.m_propertyType);
+                auto material = m_mesh->GetMaterial();
+                PropertyWindowFactory::SelectTexture(material, textureId);
             }
         }
         ImGui::Separator();
     }
 
-    ImGui::DragFloat("Roughness", &m_mesh->GetMaterial()->GetMaterialSettings().Roughness,1.0f,0.0f,1.0f);
-    ImGui::DragFloat("Metallic", &m_mesh->GetMaterial()->GetMaterialSettings().Metallic,1.0f,0.0f,1.0f);
+    ImGui::DragFloat("Roughness", &m_mesh->GetMaterial()->GetMaterialSettings().Roughness, 0.05f,0.0f,1.0f);
+    ImGui::DragFloat("Metallic", &m_mesh->GetMaterial()->GetMaterialSettings().Metallic, 0.05f,0.0f,1.0f);
+    ImGui::Checkbox("Backface Culling", &m_mesh->GetMaterial()->GetMaterialSettings().BackfaceCulling);
+    ImGui::ColorPicker4("Color", &m_mesh->GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
 
-    if (ImGui::Button("Export Mesh"))
+    if (isDisabled)
     {
-        auto DropfileTask = Concurrency::create_task(
-            [this]()
+        ImGui::EndDisabled();
+    }
+    ImGui::Separator();
+    if (ImGui::Button("Print Vertex Data"))
+    {
+        for (const auto& vertex : m_mesh->vertexes)
         {
-            IOManager::SaveSpectralModel(m_mesh);
-            IOManager::SaveSpectralMaterial(m_mesh->GetMaterial());
+            std::cout << "mesh->vertexes.push_back(Mesh::Vertex());" << std::endl;
+            std::cout << "mesh->vertexes.back().position = DirectX::XMFLOAT3((float)"<< vertex.position.x <<", (float)" << vertex.position.y << ", (float)" << vertex.position.z << "); " << std::endl;
+            std::cout << "mesh->vertexes.back().normal = DirectX::XMFLOAT3((float)"<< vertex.normal.x <<", (float)" << vertex.normal.y << ", (float)" << vertex.normal.z << "); " << std::endl;
+            std::cout << "mesh->vertexes.back().tangent = DirectX::XMFLOAT3((float)"<< vertex.tangent.x <<", (float)" << vertex.tangent.y << ", (float)" << vertex.tangent.z << "); " << std::endl;
+            std::cout << "mesh->vertexes.back().uv = DirectX::XMFLOAT2((float)"<< vertex.uv.x <<", (float)" << vertex.uv.y << "); " << std::endl;
         }
-        );
+
+        
+        std::cout << "mesh->indices32 = { ";
+        for (const auto& index : m_mesh->indices32)
+        {
+            std::cout << index << ",";
+        }
+        std::cout<< " };" << std::endl;
     }
 
-    float uv[2] = { 1.0f, 1.0f };
-    ImGui::PushItemWidth(208);
-    ImGui::InputFloat2("Uv Scale##01", uv);
-    ImGui::PopItemWidth();
-    ImGui::SameLine();
-    ImGui::SetCursorPosX(106);
 }
 #endif
 void MeshComponent::SetMesh(const std::string& filename)

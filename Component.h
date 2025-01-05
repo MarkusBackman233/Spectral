@@ -1,44 +1,47 @@
 #pragma once
 #include "pch.h"
-#include <string>
-#include <memory>
-#include "GameObject.h"
-
-#include "IOManager.h"
-
-#ifdef EDITOR
-#include "Editor.h"
-#endif
-
+#include "rapidjson/document.h"
+class GameObject;
 class Component
 {
 public:
-	enum ComponentType
+	enum class Type
 	{
-		ComponentType_PhysicsComponent,
-		ComponentType_MeshComponent,
-		ComponentType_LightComponent,
-		ComponentType_ParticleComponent,
-		ComponentType_TerrainComponent,
+		Physics,
+		Rigidbody,
+		PhysicsShape,
+		Joint,
+		Mesh,
+		Light,
+		Particle,
+		Terrain,
+		Camera,
+		Script,
+		CharacterController,
 
-		ComponentType_Invalid,
+		Invalid,
 	};
+
 	Component(GameObject* owner);
+	virtual Component::Type GetComponentType() { return Component::Type::Invalid; }
+
+
 	virtual void Start() {};
 	virtual void Reset() {};
 	virtual void Update(float deltaTime) {};
 	virtual void Render() {};
 	
-	virtual void SaveComponent(WriteObject& writeObject) {};
-	virtual void LoadComponent(ReadObject& readObject) {};
-
-	std::string GetComponentName() { return m_componentName; }
+	virtual void SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator) {};
+	virtual void LoadComponent(const rapidjson::Value& object) {};
 
 #ifdef EDITOR
 	virtual void ComponentEditor() {};
+	virtual void DisplayComponentIcon() {};
 #endif // EDITOR
 
 	GameObject* GetOwner(GameObject* owner) { return m_owner; }
+
+	virtual std::string GetComponentName();
 
 	template<typename T>
 	inline T* Is()
@@ -46,13 +49,8 @@ public:
 		return dynamic_cast<T*>(this);
 	}
 
-	ComponentType GetComponentType() const { return m_componentType; }
-
-
 protected:
 
-	std::string m_componentName;
-	ComponentType m_componentType;
 	GameObject* m_owner;
 };
 

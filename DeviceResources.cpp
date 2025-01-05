@@ -1,37 +1,25 @@
 #include "pch.h"
-#include <string>
-#include <memory>
 
 #include "DeviceResources.h"
 #include <dxgi1_3.h>
-#include <iostream>
 #include <mutex>
+#include "iRender.h"
+#include "Vector2.h"
 
-//-----------------------------------------------------------------------------
-// Constructor
-//-----------------------------------------------------------------------------
 DeviceResources::DeviceResources()
 {
+}
 
-};
-HRESULT DeviceResources::CreateDeviceResources()
+void DeviceResources::CreateResources(HWND hWnd, const Math::Vector2& windowSize)
 {
-    HRESULT hr = S_OK;
+    CreateDeviceResources();
+    CreateWindowResources(hWnd, windowSize);
+}
 
-    //D3D_FEATURE_LEVEL levels[] = {
-    //    D3D_FEATURE_LEVEL_9_2,
-    //    D3D_FEATURE_LEVEL_9_3,
-    //    D3D_FEATURE_LEVEL_10_0,
-    //    D3D_FEATURE_LEVEL_10_1,
-    //    D3D_FEATURE_LEVEL_11_0,
-    //    D3D_FEATURE_LEVEL_11_1
-    //};
-    D3D_FEATURE_LEVEL levels[] = {
-        D3D_FEATURE_LEVEL_11_1
-    };
+void DeviceResources::CreateDeviceResources()
+{
+    D3D_FEATURE_LEVEL levels[] = { D3D_FEATURE_LEVEL_11_1 };
 
-    // This flag adds support for surfaces with a color-channel ordering different
-    // from the API default. It is required for compatibility with Direct2D.
     UINT deviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -41,203 +29,216 @@ HRESULT DeviceResources::CreateDeviceResources()
     // Create the Direct3D 11 API device object and a corresponding context.
     Microsoft::WRL::ComPtr<ID3D11Device>        device;
     Microsoft::WRL::ComPtr<ID3D11DeviceContext> context;
-
-    hr = D3D11CreateDevice(
-        nullptr,                    // Specify nullptr to use the default adapter.
-        D3D_DRIVER_TYPE_HARDWARE,   // Create a device using the hardware graphics driver.
-        0,                          // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
-        deviceFlags,                // Set debug and Direct2D compatibility flags.
-        levels,                     // List of feature levels this app can support.
-        ARRAYSIZE(levels),          // Size of the list above.
-        D3D11_SDK_VERSION,          // Always set this to D3D11_SDK_VERSION for Windows Store apps.
-        &device,                    // Returns the Direct3D device created.
-        &m_featureLevel,            // Returns feature level of device created.
-        &context                    // Returns the device immediate context.
+    ThrowIfFailed(
+        D3D11CreateDevice(
+            nullptr,                    // Specify nullptr to use the default adapter.
+            D3D_DRIVER_TYPE_HARDWARE,   // Create a device using the hardware graphics driver.
+            0,                          // Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
+            deviceFlags,                // Set debug and Direct2D compatibility flags.
+            levels,                     // List of feature levels this app can support.
+            ARRAYSIZE(levels),          // Size of the list above.
+            D3D11_SDK_VERSION,          // Always set this to D3D11_SDK_VERSION for Windows Store apps.
+            &device,                    // Returns the Direct3D device created.
+            &m_featureLevel,            // Returns feature level of device created.
+            &context                    // Returns the device immediate context.
+        )
     );
-
-    if (FAILED(hr))
-    {
-        // Handle device interface creation failure if it occurs.
-        // For example, reduce the feature level requirement, or fail over 
-        // to WARP rendering.
-    }
-
     // Store pointers to the Direct3D 11.1 API device and immediate context.
     device.As(&m_pd3dDevice);
     context.As(&m_pd3dDeviceContext);
-
-
-
-    Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
-    D3D11_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Linear filtering
-    samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
-    samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
-    samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
-    samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    samplerDesc.MinLOD = 0;
-    samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-    
-    
-    hr = device->CreateSamplerState(&samplerDesc, &samplerState);
-    if (FAILED(hr))
     {
-        // Handle device interface creation failure if it occurs.
-        // For example, reduce the feature level requirement, or fail over 
-        // to WARP rendering.
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
+        D3D11_SAMPLER_DESC samplerDesc = {};
+        samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Linear filtering
+        samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
+        samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
+        samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
+        samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        samplerDesc.MaxAnisotropy = 16;
+        samplerDesc.MinLOD = 0;
+        samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+        
+        
+        ThrowIfFailed(device->CreateSamplerState(&samplerDesc, &samplerState));
+        samplerState.As(&m_defaultSamplerState);    
     }
-    samplerState.As(&m_defaultSamplerState);
+    {
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState;
+        D3D11_SAMPLER_DESC samplerDesc = {};
+        samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR; // Linear filtering
+        samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP; 
+        samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+        samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        samplerDesc.MinLOD = 0;
+        samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+        
+        ThrowIfFailed(device->CreateSamplerState(&samplerDesc, &clampSamplerState));
+        clampSamplerState.As(&m_clampSamplerState);
+    }
 
+    {
+        D3D11_RASTERIZER_DESC rasterizerDesc;
+        ZeroMemory(&rasterizerDesc, sizeof(rasterizerDesc));
+        rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+        rasterizerDesc.CullMode = D3D11_CULL_BACK;
+        device->CreateRasterizerState(&rasterizerDesc, m_backfaceCullingRasterizer.GetAddressOf());    
+        rasterizerDesc.CullMode = D3D11_CULL_NONE;
+        device->CreateRasterizerState(&rasterizerDesc, m_noCullingRasterizer.GetAddressOf());
+        context->RSSetState(m_backfaceCullingRasterizer.Get());
+    }
 
-    ID3D11RasterizerState* pRasterizerState = nullptr;
-    D3D11_RASTERIZER_DESC rasterizerDesc;
-    ZeroMemory(&rasterizerDesc, sizeof(rasterizerDesc));
-    rasterizerDesc.CullMode = D3D11_CULL_BACK; // Enable backface culling
-    rasterizerDesc.FillMode = D3D11_FILL_SOLID; // or D3D11_FILL_WIREFRAME if you want wireframe
-    device->CreateRasterizerState(&rasterizerDesc, &pRasterizerState);
+    {
+        D3D11_BLEND_DESC blendDesc;
+        ZeroMemory(&blendDesc, sizeof(blendDesc));
+        blendDesc.AlphaToCoverageEnable = false;
+        blendDesc.IndependentBlendEnable = false;
 
-    context->RSSetState(pRasterizerState);
+        blendDesc.RenderTarget[0].BlendEnable = false;
+        blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+        blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+        blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+        blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
-    return hr;
+        ThrowIfFailed(device->CreateBlendState(&blendDesc, m_defaultBlendState.GetAddressOf()));
+        blendDesc.RenderTarget[0].BlendEnable = true;
+        ThrowIfFailed(device->CreateBlendState(&blendDesc, m_transarentBlendState.GetAddressOf()));
+    }
 }
 
-HRESULT DeviceResources::CreateWindowResources(HWND hWnd)
+void DeviceResources::CreateWindowResources(HWND hWnd, const Math::Vector2& windowSize)
 {
-    HRESULT hr = S_OK;
-
-
     DXGI_SWAP_CHAIN_DESC desc;
     ZeroMemory(&desc, sizeof(DXGI_SWAP_CHAIN_DESC));
-    desc.Windowed = TRUE; // Sets the initial state of full-screen mode.
+    desc.Windowed = TRUE;
     desc.BufferCount = 2;
     desc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
     desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    desc.SampleDesc.Count = 1;      //multisampling setting
-    desc.SampleDesc.Quality = 0;    //vendor-specific flag
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
     desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     desc.OutputWindow = hWnd;
+    
 
-    // Create the DXGI device object to use in other factories, such as Direct2D.
     Microsoft::WRL::ComPtr<IDXGIDevice3> dxgiDevice;
     m_pd3dDevice.As(&dxgiDevice);
 
-    // Create swap chain.
     Microsoft::WRL::ComPtr<IDXGIAdapter> adapter;
+    ThrowIfFailed(dxgiDevice->GetAdapter(&adapter));
+
     Microsoft::WRL::ComPtr<IDXGIFactory> factory;
+    adapter->GetParent(IID_PPV_ARGS(&factory));
 
-    hr = dxgiDevice->GetAdapter(&adapter);
+    ThrowIfFailed(factory->CreateSwapChain(m_pd3dDevice.Get(),&desc,&m_pDXGISwapChain));
 
-    if (SUCCEEDED(hr))
-    {
-        adapter->GetParent(IID_PPV_ARGS(&factory));
-
-        hr = factory->CreateSwapChain(
-            m_pd3dDevice.Get(),
-            &desc,
-            &m_pDXGISwapChain
-        );
-    }
-
-    // Configure the back buffer, stencil buffer, and viewport.
-    hr = ConfigureBackBuffer(hWnd);
-
-    return hr;
+    ConfigureBackBuffer(windowSize);
 }
 
-HRESULT DeviceResources::ConfigureBackBuffer(HWND hWnd)
+void DeviceResources::ConfigureBackBuffer(const Math::Vector2& windowSize)
 {
-    HRESULT hr = S_OK;
+    ThrowIfFailed(m_pDXGISwapChain->GetBuffer(0,__uuidof(ID3D11Texture2D),(void**)&m_pBackBuffer));
+    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pBackBuffer.Get(),nullptr, m_pBackbufferRenderTarget.GetAddressOf()));
 
-    RECT rc;
-    GetClientRect(hWnd, &rc);
-    UINT width = rc.right - rc.left;
-    UINT height = rc.bottom - rc.top;
+    D3D11_TEXTURE2D_DESC textureDesc;
+    ZeroMemory(&textureDesc, sizeof(textureDesc));
+    textureDesc.Width = static_cast<UINT>(windowSize.x);
+    textureDesc.Height = static_cast<UINT>(windowSize.y);
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.Usage = D3D11_USAGE_DEFAULT;
+    textureDesc.BindFlags = 0;
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+    textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
+    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&textureDesc, NULL, m_pPostProcessingRenderTexture.GetAddressOf()));
 
-    hr = m_pDXGISwapChain->GetBuffer(
-        0,
-        __uuidof(ID3D11Texture2D),
-        (void**)&m_pBackBuffer);
+    textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&textureDesc, NULL, m_pRenderTexture.GetAddressOf()));
+    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pPostProcessingRenderTexture.Get(), nullptr, m_pPostRenderTarget.GetAddressOf()));
+    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pRenderTexture.Get(), nullptr, m_pRenderTarget.GetAddressOf()));
+    
+    
+    D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc{};
+    shaderResourceViewDesc.Format = textureDesc.Format;
+    shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+    shaderResourceViewDesc.Texture2D.MipLevels = 1;
+    ThrowIfFailed(m_pd3dDevice->CreateShaderResourceView(m_pRenderTexture.Get(), &shaderResourceViewDesc, m_pRenderTargetSRV.GetAddressOf()));
 
-    hr = m_pd3dDevice->CreateRenderTargetView(
-        m_pBackBuffer.Get(),
-        nullptr,
-        m_pRenderTarget.GetAddressOf()
-    );
+    m_pBackBuffer.Reset();
+    m_pRenderTexture.Reset();
+    m_pPostProcessingRenderTexture.Reset();
+    
 
-    m_pBackBuffer->GetDesc(&m_bbDesc);
+    D3D11_TEXTURE2D_DESC depthStencilDesc{};
+    depthStencilDesc.Width = static_cast<UINT>(windowSize.x);
+    depthStencilDesc.Height = static_cast<UINT>(windowSize.y);
+    depthStencilDesc.MipLevels = 1;
+    depthStencilDesc.ArraySize = 1;
+    depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS; // Support for both depth and shader resource
+    depthStencilDesc.SampleDesc.Count = 1;
+    depthStencilDesc.SampleDesc.Quality = 0;
+    depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+    depthStencilDesc.CPUAccessFlags = 0;
+    depthStencilDesc.MiscFlags = 0;
 
+    D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
+    depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    depthStencilViewDesc.Texture2D.MipSlice = 0;
 
+    D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc{};
+    depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    depthSRVDesc.Texture2D.MipLevels = 1;
+    depthSRVDesc.Texture2D.MostDetailedMip = 0;
+    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&depthStencilDesc,nullptr, &m_pDepthStencil));
+    ThrowIfFailed(m_pd3dDevice->CreateDepthStencilView(m_pDepthStencil.Get(),&depthStencilViewDesc, &m_pDepthStencilView));
+    ThrowIfFailed(m_pd3dDevice->CreateShaderResourceView(m_pDepthStencil.Get(), &depthSRVDesc, &m_pDepthSRV));
 
-
-    // Create a depth-stencil view for use with 3D rendering if needed.
-    CD3D11_TEXTURE2D_DESC depthStencilDesc(
-        DXGI_FORMAT_D24_UNORM_S8_UINT,
-        width,
-        height,
-        1, // This depth stencil view has only one texture.
-        1, // Use a single mipmap level.
-        D3D11_BIND_DEPTH_STENCIL
-    );
-    hr = m_pd3dDevice->CreateTexture2D(
-        &depthStencilDesc,
-        nullptr,
-        &m_pDepthStencil
-    );
-
-    CD3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc(D3D11_DSV_DIMENSION_TEXTURE2D);
-
-    hr = m_pd3dDevice->CreateDepthStencilView(
-        m_pDepthStencil.Get(),
-        &depthStencilViewDesc,
-        &m_pDepthStencilView
-    );
-
-
-
-    D3D11_VIEWPORT viewport;
-    viewport.Width = static_cast<float>(width);
-    viewport.Height = static_cast<float>(height);
+    D3D11_VIEWPORT viewport{};
+    viewport.Width = static_cast<FLOAT>(windowSize.x);
+    viewport.Height = static_cast<FLOAT>(windowSize.y);
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
-
     m_pd3dDeviceContext->RSSetViewports(1, &viewport);
-
-    return hr;
 }
 
-HRESULT DeviceResources::ReleaseBackBuffer()
+void DeviceResources::ReleaseBackBuffer()
 {
-    HRESULT hr = S_OK;
-
-    // Release the render target view based on the back buffer:
-    m_pRenderTarget.Reset();
-
-    // Release the back buffer itself:
     m_pBackBuffer.Reset();
-
-    // The depth stencil will need to be resized, so release it (and view):
+    m_pRenderTarget.Reset();
+    m_pBackbufferRenderTarget.Reset();
+    m_pPostRenderTarget.Reset();
+    m_pRenderTexture.Reset();
+    m_pPostProcessingRenderTexture.Reset();
+    m_pRenderTargetSRV.Reset();
     m_pDepthStencilView.Reset();
     m_pDepthStencil.Reset();
-
-    // After releasing references to these resources, we need to call Flush() to 
-    // ensure that Direct3D also releases any references it might still have to
-    // the same resources - such as pipeline bindings.
     m_pd3dDeviceContext->Flush();
+}
 
-    return hr;
+void DeviceResources::ResizeSwapchain()
+{
+    ThrowIfFailed(m_pDXGISwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0));
 }
 
 LockedContext DeviceResources::GetLockedDeviceContext()
 {
-    static std::mutex m_contextMutex;
-    m_contextMutex.lock();
-    return LockedContext(m_pd3dDeviceContext.Get(), &m_contextMutex);
+    static std::mutex contextMutex;
+    contextMutex.lock();
+    return LockedContext(m_pd3dDeviceContext.Get(), &contextMutex);
 }
-
 
 void DeviceResources::Present()
 {
-    m_pDXGISwapChain->Present(1, 0);
+    m_pDXGISwapChain->Present(0, 0);
 }

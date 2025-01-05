@@ -1,12 +1,12 @@
 #pragma once
 #include "pch.h"
 #include "Component.h"
-
+#include "Vector3.h"
 class ParticleComponent : public Component
 {
 public:
 	ParticleComponent(GameObject* owner);
-
+	Component::Type GetComponentType() override { return Component::Type::Particle; };
 	void Update(float deltaTime) override;
 
 	void Start() override;

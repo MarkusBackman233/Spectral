@@ -1,19 +1,16 @@
 #pragma once
+#ifdef EDITOR
 #include "pch.h"
 #include "src/IMGUI/ImGuizmo.h"
-#include <string>
-#include <vector>
-#include <unordered_map>
-#include <deque>
-#include <functional>
-#include "Vector2.h"
 #include "Matrix.h"
 #include "Undo.h"
+#include "PropertyWindow.h"
+#include "EditorCameraController.h"
+#include "ObjectSelector.h"
 
 class LevelProperties;
 class GameObject;
 class ObjectManager;
-class Spectral;
 class Component;
 class Texture;
 
@@ -22,32 +19,18 @@ class Texture;
 class Editor
 {
 public:
-	enum PropertyWindowType
-	{
-		PropertyWindowType_Disabled,
-		PropertyWindowType_Texture,
-		PropertyWindowType_Normal,
-		PropertyWindowType_Roughness,
-		PropertyWindowType_Metallic,
-		PropertyWindowType_Ao,
-		PropertyWindowType_Component,
-		PropertyWindowType_Mesh,
-	};
-
-
 	Editor();
 	~Editor();
 	static Editor* GetInstance() {
 		static Editor instance;
 		return &instance;
 	}
-	void PreRender();
+	static int ColorPickerMask;
+	 
+	void PreRender(); 
 	void Render();
-	void Update();
+	void Update(float deltaTime);
 
-	bool UpdateProjectBrowser();
-
-	void HandleRaycastSelection();
 	void HandleDropFile(std::string filename);
 
 	void GameObjectListItem(GameObject* gameObject);
@@ -58,61 +41,36 @@ public:
 
 	bool IsStarted() const { return m_started; }
 
-	void LogMessage(std::string message);
-
+	void StopSimulation();
+	 
 	ImVec2 GetDefaultTextureSize() const { return m_defaultImageSize; }
 
-	void OpenPropertyWindow(PropertyWindowType propertyType);
+	void SetPropertyWindow(std::shared_ptr<PropertyWindow> propertyWindow);
 
-	GameObject* SelectedGameObject() { return m_selectedGameObjects.empty() ? nullptr : m_selectedGameObjects[m_selectedGameObjects.size() - 1]; }
+	void AddUndoAction(std::shared_ptr<Undo> undo);
 
-	void SetSelectedGameObject(GameObject* gameObject);
-	void AddSelectedGameObject(GameObject* gameObject);
-	std::vector<GameObject*>& GetSelectedGameObjects() { return m_selectedGameObjects; }
-
+	ObjectSelector* GetObjectSelector() { return &m_objectSelector; }
+	EditorCameraController* GetEditorCameraController() { return &m_editorCameraController; }
 private:
-
-	class EditorWindow
-	{
-	public:
-		EditorWindow(const std::string& windowName, const Math::Vector2& position, const Math::Vector2& size)
-		{
-			bool open = true;
-			ImGui::SetNextWindowPos(ImVec2(position.x, position.y), ImGuiCond_Always);
-			ImGui::SetNextWindowSize(ImVec2(size.x, size.y), ImGuiCond_Always);
-			ImGui::Begin(windowName.c_str(), &open, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-		}
-		~EditorWindow() 
-		{
-			ImGui::End();
-		}
-	};
-
-
-
-
 	void PropertiesWindow();
 	void TopMenu();
 	void GameObjectsWindow();
-	void LogWindow();
 	void GameObjectComponentWindow();
-	void PropertyWindow();
-
-	void ImportWindow();
-
-	void HandleMeshDrawing();
-
 	void TransformWindow();
 
+	void DrawObjectOutline(GameObject* gameObject, bool isChildOfSelected);
+	void DrawGrid();
+
+	Math::Vector3 GetPositionInFontOfCamera(float distance);
+
 	LevelProperties* m_levelProperties;
+	EditorCameraController m_editorCameraController;
 
 	ImVec2 m_defaultImageSize;
 
 	ImGuizmo::OPERATION m_currentGizmoOperation;
 	ImGuizmo::MODE m_currentGizmoMode;
 	bool m_useSnap;
-	std::vector<GameObject*> m_selectedGameObjects;
-
 	bool m_started;
 	bool m_windowsOpen;
 
@@ -121,34 +79,13 @@ private:
 	int m_bottomMenuSizeY;
 
 	ImGuiWindowFlags m_defaultWindowFlags;
-
-	PropertyWindowType m_PropertyWindowType;
-
 	ImGuiViewport* m_mainViewport;
 
-	std::unordered_map<int, std::string> m_componentTypes;
+	ObjectSelector m_objectSelector;
 
-	std::deque<std::string> m_logBuffer;
+	std::shared_ptr<PropertyWindow> m_propertyWindow;
 
-	std::function<void()> m_returnPropertyFunction;
-	std::string m_currentFilepath;
-
-	static int ColorPickerMask;
-
-	std::deque<Undo> m_undoStack;
-
-	bool m_isImporting;
-
-	enum ImportFiletype
-	{
-		ImportFiletype_Mesh,
-		ImportFiletype_Texture,
-	};
-
-	std::string m_currentImportFilename;
-	ImportFiletype m_currentImportFiletype;
-
-
-
+	std::deque<std::shared_ptr<Undo>> m_undoStack;
 };
 
+#endif

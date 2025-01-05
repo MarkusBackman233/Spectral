@@ -1,78 +1,52 @@
 #pragma once
 #include "pch.h"
 #include "DeviceResources.h"
-#include <minwindef.h>
-#include <wtypes.h>
-#include <DirectXMath.h>
-#include <d3d11.h>
-#include "Vector3.h"
-#include "Matrix.h"
-
-#include "Player.h"
-#include <unordered_map>
-
-class Material;
+#include "PerspectiveCamera.h"
+#include "FXAA.h"
+#include "SSAO.h"
+#include "DeferredPipeline.h"
+#include "PbrRender.h"
+#include "SkyboxManager.h"
+#include "ShadowManager.h"
+#include "LineRenderer.h"
+#include "GuizmoRenderer.h"
+#include "WindowsManager.h"
+#include "InstanceManager.h"
+#include "GuiManager.h"
 
 class RenderManager
 {
 public:
-
-
 	static RenderManager* GetInstance() {
 		static RenderManager instance;
 		return &instance;
 	}
-    Math::Vector2i WindowSize;
-
 	RenderManager();
-
-    void Update();
+	void OnWindowResize();
     void Render();
+    void Present();
 
-
-    void SetWindowSize(const Math::Vector2i& size);
-    void SetWindowIcon(const std::string& iconName);
-    void SetWindowTitle(const std::string& windowTitle);
-
-	std::shared_ptr<DeviceResources> GetDeviceResources() { return m_deviceResources; }
-    Math::Matrix GetProjectionMatrix() const;
-    Math::Matrix GetViewMatrix() const;
-    DirectX::XMFLOAT4X4& GetViewProjectionMatrix() { return m_viewProjectionMatrix; }
-    void DrawInstancedMesh(std::shared_ptr<Mesh> mesh, Math::Matrix& matrix);
-    HWND GetWindowHandle() const { return m_hWnd; };
-    HRESULT CreateVertexAndIndexBuffer(Mesh* mesh);
-
-    Player* GetPlayer() { return m_player; }
-
-
-    void DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector3& color);
-     HINSTANCE m_hInstance;
+	InstanceManager*	GetInstanceManager()	{ return &m_instanceManager; }
+	GuizmoRenderer*		GetGuizmoRenderer()		{ return &m_guizmoRenderer; }
+	LineRenderer*		GetLineRenderer()		{ return &m_lineRenderer; }
+	WindowsManager*		GetWindowsManager()		{ return &m_windowsManager; }
+	DeviceResources*	GetDeviceResources()	{ return &m_deviceResources; }
+	GuiManager*			GetGuiManager()			{ return &m_guiManager; }
+	PbrRender*			GetPbrRenderer()		{ return &m_pbrRender; }
+	PerspectiveCamera*	GetCamera()				{ return m_camera.get(); }
 
 private:
-
-	HRESULT CreateDesktopWindow();
-
-	static LRESULT CALLBACK StaticWindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
-    void CreateViewAndPerspective();
-	void CreateWindowSizeDependentResources();
-
-    void RenderPhysics();
-
-	std::shared_ptr<DeviceResources> m_deviceResources;
-
-	HMENU     m_hMenu;
-	HWND      m_hWnd;
-
-    Microsoft::WRL::ComPtr<ID3D11Buffer> m_pInstanceBuffer;
-    std::unordered_map<std::shared_ptr<Mesh>, std::vector<DirectX::XMFLOAT4X4>> m_instancedMeshes;
-
-    Player* m_player;
-
-    DirectX::XMMATRIX m_viewMatrix;
-    DirectX::XMMATRIX m_projectionMatrix;
-    DirectX::XMFLOAT4X4 m_viewProjectionMatrix;
-
-    DirectX::XMFLOAT4 frustumPlanes[6];
-
+	WindowsManager m_windowsManager;
+	DeviceResources m_deviceResources;
+	DeferredPipeline m_deferredPipeline;
+	InstanceManager m_instanceManager;
+	PbrRender m_pbrRender;
+	SkyboxManager m_skyboxManager;
+	ShadowManager m_shadowManager;
+	LineRenderer m_lineRenderer;
+	GuizmoRenderer m_guizmoRenderer;
+	GuiManager m_guiManager;
+    FXAA m_FXAA;
+    SSAO m_SSAO;
+	std::unique_ptr<PerspectiveCamera> m_camera;
 };
-static std::wstring m_windowClassName;

@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <mutex>
+#include "Vector2.h"
 
 class LockedContext
 {
@@ -21,52 +22,67 @@ class DeviceResources
 public:
     DeviceResources();
 
+    void CreateResources(HWND hWnd, const Math::Vector2& windowSize);
 
-    HRESULT CreateDeviceResources();
-    HRESULT CreateWindowResources(HWND hWnd);
+    void ConfigureBackBuffer(const Math::Vector2& windowSize);
+    void ReleaseBackBuffer();
+    void ResizeSwapchain();
 
-    HRESULT ConfigureBackBuffer(HWND hWnd);
-    HRESULT ReleaseBackBuffer();
-
-    ID3D11Device* GetDevice() { return m_pd3dDevice.Get(); };
+    ID3D11Device* GetDevice() const { return m_pd3dDevice.Get(); };
     LockedContext GetLockedDeviceContext();
-    ID3D11RenderTargetView* GetRenderTarget() { return m_pRenderTarget.Get(); }
-    ID3D11DepthStencilView* GetDepthStencil() { return m_pDepthStencilView.Get(); }
-    IDXGISwapChain* GetSwapChain() { return m_pDXGISwapChain.Get(); }
+    ID3D11RenderTargetView* GetBackBufferTarget() const { return m_pBackbufferRenderTarget.Get(); }
+    ID3D11RenderTargetView* GetRenderTarget() const { return m_pRenderTarget.Get(); }
+    ID3D11RenderTargetView* GetPostRenderTarget() const { return m_pPostRenderTarget.Get(); }
 
-    ID3D11SamplerState* GetDefaultSamplerState() { return m_defaultSamplerState.Get(); }
+    ID3D11DepthStencilView* GetDepthStencil() const { return m_pDepthStencilView.Get(); }
+    ID3D11ShaderResourceView* GetDepthSRV() const { return m_pDepthSRV.Get(); }
+    IDXGISwapChain* GetSwapChain() const { return m_pDXGISwapChain.Get(); }
+
+    ID3D11SamplerState* GetDefaultSamplerState() const { return m_defaultSamplerState.Get(); }
+    ID3D11SamplerState* GetClampSamplerState() const { return m_clampSamplerState.Get(); }
+    ID3D11BlendState*   GetDefaultBlendState() const { return m_defaultBlendState.Get(); }
+    ID3D11BlendState*   GetTransparentBlendState() const { return m_transarentBlendState.Get(); }
+
+    ID3D11ShaderResourceView* RenderTargetSRV() const { return m_pRenderTargetSRV.Get(); }
+
+    ID3D11RasterizerState* GetBackfaceCullingRasterizer() const { return m_backfaceCullingRasterizer.Get(); }
+    ID3D11RasterizerState* GetNoCullingRasterizer() const { return m_noCullingRasterizer.Get(); }
+
 
     void Present();
 
 private:
+    void CreateWindowResources(HWND hWnd, const Math::Vector2& windowSize);
+    void CreateDeviceResources();
 
-    //-----------------------------------------------------------------------------
-    // Direct3D device
-    //-----------------------------------------------------------------------------
     Microsoft::WRL::ComPtr<ID3D11Device>        m_pd3dDevice;
-    Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_pd3dDeviceContext; // immediate context
+    Microsoft::WRL::ComPtr<ID3D11DeviceContext> m_pd3dDeviceContext;
     Microsoft::WRL::ComPtr<IDXGISwapChain>      m_pDXGISwapChain;
 
 
-    //-----------------------------------------------------------------------------
-    // DXGI swap chain device resources
-    //-----------------------------------------------------------------------------
     Microsoft::WRL::ComPtr<ID3D11Texture2D>        m_pBackBuffer;
-    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pRenderTarget;
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_pBackbufferRenderTarget;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pRenderTexture;
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>   m_pRenderTarget;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pRenderTargetSRV;
 
 
-    //-----------------------------------------------------------------------------
-    // Direct3D device resources for the depth stencil
-    //-----------------------------------------------------------------------------
+    Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPostProcessingRenderTexture;
+    Microsoft::WRL::ComPtr<ID3D11RenderTargetView>   m_pPostRenderTarget;
+
+
     Microsoft::WRL::ComPtr<ID3D11Texture2D>         m_pDepthStencil;
     Microsoft::WRL::ComPtr<ID3D11DepthStencilView>  m_pDepthStencilView;
-    //-----------------------------------------------------------------------------
-    // Direct3D device metadata and device resource metadata
-    //-----------------------------------------------------------------------------
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>   m_pDepthSRV;
+
     D3D_FEATURE_LEVEL       m_featureLevel;
     D3D11_TEXTURE2D_DESC    m_bbDesc;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_defaultSamplerState;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> m_clampSamplerState;
+    Microsoft::WRL::ComPtr<ID3D11BlendState>   m_defaultBlendState;
+    Microsoft::WRL::ComPtr<ID3D11BlendState>   m_transarentBlendState;
 
-    //std::mutex m_contextMutex;
-    
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_backfaceCullingRasterizer;
+    Microsoft::WRL::ComPtr<ID3D11RasterizerState>   m_noCullingRasterizer;
 };

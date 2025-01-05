@@ -1,38 +1,48 @@
+#ifdef EDITOR
 #include "pch.cpp"
 
 #include "Editor.h"
 #include "src/IMGUI/imgui.h"
 
 #include <iostream>
-#include "LevelProperties.h"
 #include "src/IMGUI/imgui_internal.h"
 #include "GameObject.h"
 #include "Matrix.h"
 #include "ObjectManager.h"
-#include "Spectral.h"
-#include "ModelManager.h"
-#include <filesystem>
 #include "TextureManager.h"
-#include "Player.h"
-#include "ComponentFactory.h"
-#include "MaterialManager.h"
 #include "iRender.h"
 #include "ShadowManager.h"
 #include "ProfilerManager.h"
 #include "src/IMGUI/imgui_impl_dx11.h"
 #include "src/IMGUI/imgui_impl_win32.h"
-
+#include "RenderManager.h"
 #include <ppltasks.h>
-#include <future>
 #include "IOManager.h"
 #include "StringUtils.h"
 #include "EditorUtils.h"
-#include <DirectXCollision.h>
 #include <ShlObj.h>
+#include "MeshComponent.h"
+#include "TerrainComponent.h"
+#include "Logger.h"
+#include "SceneManager.h"
+#include "TimeManager.h"
+#include "Intersection.h"
+#include "DxMathUtils.h"
+#include "PropertyWindowFactory.h"
+#include "Texture.h"
+#include "Mesh.h"
+#include "ComponentFactory.h"
+#include "UndoTransform.h"
+#include "filesystem"
+#include "iInput.h"
+#include "GuiManager.h"
+#include "Vector4.h"
+#include "MathFunctions.h"
+using namespace Spectral;
 
-int Editor::ColorPickerMask = ImGuiColorEditFlags_NoAlpha |ImGuiColorEditFlags_NoPicker |ImGuiColorEditFlags_NoOptions |ImGuiColorEditFlags_NoSmallPreview |ImGuiColorEditFlags_NoTooltip 
-|ImGuiColorEditFlags_NoLabel |ImGuiColorEditFlags_NoSidePreview |ImGuiColorEditFlags_NoDragDrop 
-|ImGuiColorEditFlags_NoBorder |ImGuiColorEditFlags_InputRGB |ImGuiColorEditFlags_DisplayRGB |ImGuiColorEditFlags_Uint8;
+int Editor::ColorPickerMask = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoTooltip 
+| ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoDragDrop 
+| ImGuiColorEditFlags_NoBorder | ImGuiColorEditFlags_InputRGB | ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_Uint8;
 
 Editor::Editor()
     : m_currentGizmoOperation(ImGuizmo::TRANSLATE)
@@ -40,26 +50,14 @@ Editor::Editor()
     , m_useSnap(false)
     , m_started(false)
     , m_windowsOpen(true)
-    , m_isImporting(false)
-    , m_PropertyWindowType(PropertyWindowType_Disabled)
     , m_rightMenuSizeX(400)
-    , m_leftMenuSizeX(400)
-    , m_defaultImageSize{200,200}
+    , m_leftMenuSizeX(200)
+    , m_defaultImageSize{100,100}
+    , m_propertyWindow(nullptr)
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags = ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
-    ImGui::StyleColorsDark();
     ImGuizmo::AllowAxisFlip(false);
-    //ImFont* font_title = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\trebuc.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesDefault());
     m_defaultWindowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
-
-    m_componentTypes[Component::ComponentType_MeshComponent] = "Mesh Component";
-    m_componentTypes[Component::ComponentType_PhysicsComponent] = "Physics Component";
-    m_componentTypes[Component::ComponentType_LightComponent] = "Light Component";
-    m_componentTypes[Component::ComponentType_ParticleComponent] = "Particle Component";
-    m_componentTypes[Component::ComponentType_TerrainComponent] = "Terrain Component";
-    LogMessage("Welcome!");
-
+    Logger::Info("Welcome!");
 }
 
 Editor::~Editor()
@@ -78,38 +76,34 @@ void Editor::PreRender()
 void Editor::Render()
 {
     ImGui::Render();
-    {
-        auto lockedContext = Render::GetContext();
-        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-    }
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 
-void Editor::Update()
+void Editor::Update(float deltaTime)
 {
-    HandleRaycastSelection();
     m_mainViewport = ImGui::GetMainViewport(); 
     PreRender();
     TopMenu();
+    RenderManager::GetInstance()->GetGuiManager()->Render();
+
+    m_editorCameraController.Update(deltaTime);
+
     if (!m_started)
     {
-        int gridSize = 20;
-        float scale = 4.0f;
-        
-        Math::Vector3 offset(-gridSize * 0.5f * scale, 0.0f, -gridSize * 0.5f * scale);
-        
-        for (int i = 0; i < gridSize + 1; i++)
+        m_objectSelector.HandleRaycastSelection();
+        ImGui::ShowStyleEditor();
+        //ImGui::ShowDemoWindow();
+        DrawGrid();
+        for (auto* selectedGameObject : m_objectSelector.GetSelectedGameObjects())
         {
-            Render::DrawLine(Math::Vector3(i * scale, 0, 0) + offset, Math::Vector3(i * scale, 0, gridSize * scale) + offset,Math::Vector3(1.0f,0.0f,1.0f, 0.3f));
+            DrawObjectOutline(selectedGameObject, false);
         }
-        for (int i = 0; i < gridSize + 1; i++)
-        {
-            Render::DrawLine(Math::Vector3(0, 0, i * scale) + offset, Math::Vector3(gridSize * scale, 0, i * scale) + offset, Math::Vector3(1.0f, 0.0f, 1.0f, 0.3f));
-        }
-        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Z))
+
+        if (Input::GetKeyHeld(InputId::Control) && Input::GetKeyPressed(InputId::Z))
         {
             if (!m_undoStack.empty())
             {
-                m_undoStack.back().Execute();
+                m_undoStack.back()->Execute();
                 m_undoStack.pop_back();
             }
             
@@ -117,321 +111,98 @@ void Editor::Update()
 
         PropertiesWindow();
         GameObjectsWindow();
-        if (SelectedGameObject())
+        if (m_objectSelector.SelectedGameObject())
         {
-            if (ImGui::IsKeyPressed(ImGuiKey_Delete))
-            {
-                ObjectManager::GetInstance()->Destroy(SelectedGameObject());
-                SetSelectedGameObject(nullptr);
-                return;
-            }
-            if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_D) && !ImGui::IsKeyDown(ImGuiKey_MouseRight))
-            {
-                auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(SelectedGameObject()->GetName());
-                EditorUtils::DuplicateGameObject(duplicateGameObject, SelectedGameObject());
-                duplicateGameObject->SetParent(SelectedGameObject()->GetParent());
-                SetSelectedGameObject(duplicateGameObject);
-            }
-
-
-
-            if (EditTransform(SelectedGameObject()->GetMatrix()))
-            {
-                SelectedGameObject()->UpdateTransform();
-            }
-
-            static Math::Matrix beforeUsed;
-            static bool wasUsing = false;
-            if (ImGuizmo::IsUsingAny())
-            {
-                wasUsing = true;
-            }
-            else if (wasUsing)
-            {
-                wasUsing = false;
-
-                ChangedItem item{};
-                item.gameObject = SelectedGameObject();
-                ChangedValue value{};
-                value.matrix = beforeUsed;
-                
-                m_undoStack.push_back(Undo(UndoOperator::UNDO_EDIT_TRANSFORM, item, value));
-            }
-            else if (wasUsing == false)
-            {
-                beforeUsed = SelectedGameObject()->GetMatrix();
-            }
+            m_objectSelector.HandleSelectedGameObject(this);
         }
-        PropertyWindow();
-        LogWindow();
     }
 
-    if (ShadowManager::GetInstance()->DrawedShadows)
+    if (ImGui::Begin("Profiling"))
     {
-        ImGui::Begin("Shadow Depth Texture");
-        ImGui::Image(ShadowManager::GetInstance()->GetShadowTexture().Get(), ImVec2(256,256));
+        bool pauseCollection = ProfilerManager::GetInstance()->IsCollectionPaused();
+        ImGui::Checkbox("Pause Profiling", &pauseCollection);
+        ProfilerManager::GetInstance()->SetCollectionPaused(pauseCollection);
+        for (const auto& [timerName, time] : ProfilerManager::GetInstance()->GetTimers())
+        {
+            ImGui::Text(std::string("Timer: " + timerName).c_str());
+            std::vector<float> timerValues(time.size());
+            for (size_t i = 0; i < time.size(); i++)
+            {
+                timerValues[i] = static_cast<float>(time[i]);
+            }
+
+            ImGui::PlotLines("##plot", &timerValues.front(), static_cast<int>(timerValues.size()), 0, "", 0.0f, 80.0f);
+            ImGui::SameLine();
+
+            ImGui::Text(std::to_string(time.front()).c_str());
+
+            ImGui::Separator();
+        }
         ImGui::End();
     }
 
-    ImGui::Begin("Timers");
-    ImGui::Separator();
-    for (const auto& [timerName, time] : ProfilerManager::GetInstance()->GetTimers())
+    if (m_propertyWindow)
     {
-        ImGui::Text(std::string("Timer: " + timerName ).c_str());
-        ImGui::Text(std::to_string(time).c_str());
-        ImGui::Separator();
-    }
-    ImGui::End();
-
-    ImportWindow();
-
-    HandleMeshDrawing();
-}
-
-
-
-void Editor::HandleRaycastSelection()
-{
-    if (m_started)
-    {
-        return;
-    }
-
-    if (SelectedGameObject() && SelectedGameObject()->GetComponentOfType<MeshComponent>())
-    {
-        auto meshComponent = SelectedGameObject()->GetComponentOfType<MeshComponent>();
-        if (meshComponent->GetMesh())
-        {
-            auto minVec = meshComponent->GetMesh()->m_minBounds;
-            auto maxVec = meshComponent->GetMesh()->m_maxBounds;
-    
-            Math::Vector3 corners[8] = {
-                Math::Vector3(minVec.x, minVec.y, minVec.z),
-                Math::Vector3(minVec.x, minVec.y, maxVec.z),
-                Math::Vector3(minVec.x, maxVec.y, minVec.z),
-                Math::Vector3(minVec.x, maxVec.y, maxVec.z),
-                Math::Vector3(maxVec.x, minVec.y, minVec.z),
-                Math::Vector3(maxVec.x, minVec.y, maxVec.z),
-                Math::Vector3(maxVec.x, maxVec.y, minVec.z),
-                Math::Vector3(maxVec.x, maxVec.y, maxVec.z)
-            };
-    
-            for (int i = 0; i < 8; ++i) {
-                corners[i] = SelectedGameObject()->GetMatrix() * corners[i];
-            }
-    
-            int lineIndices[12][2] = {
-                {0, 1}, {1, 3}, {3, 2}, {2, 0},
-                {4, 5}, {5, 7}, {7, 6}, {6, 4},
-                {0, 4}, {1, 5}, {2, 6}, {3, 7}
-            };
-    
-            for (int i = 0; i < 12; ++i) {
-                int idx1 = lineIndices[i][0];
-                int idx2 = lineIndices[i][1];
-                Render::DrawLine(corners[idx1], corners[idx2]);
-            }
-        }
-    }
-
-    if (ImGui::IsKeyPressed(ImGuiKey_MouseLeft,false) && !ImGuizmo::IsOver() && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())
-    {
-        auto viewProj = Render::GetViewMatrix() * Render::GetProjectionMatrix();
-
-        auto mousePosX = ImGui::GetMousePos().x;
-        auto mousePosY = ImGui::GetMousePos().y;
-        auto windowSize = Render::GetWindowSize();
-
-        if (mousePosX > 0 && mousePosX < windowSize.x && mousePosY > 0 && mousePosY < windowSize.y)
-        {
-            float ndcX = (2.0f * abs(mousePosX)) / windowSize.x - 1.0f;
-            float ndcY = 1.0f - (2.0f * abs(mousePosY)) / windowSize.y;
-
-
-            DirectX::XMMATRIX inverseviewproj = DirectX::XMMatrixInverse(nullptr, *static_cast<DirectX::XMMATRIX*>((void*)&viewProj));
-            DirectX::XMVECTOR origin = DirectX::XMVectorSet(ndcX, ndcY, 0.0f, 1.0);
-            DirectX::XMVECTOR farPoint = DirectX::XMVectorSet(ndcX, ndcY, 1.0f, 1.0);
-        
-            DirectX::XMVECTOR rayorigin = DirectX::XMVector3TransformCoord(origin, inverseviewproj);
-            DirectX::XMVECTOR rayend = DirectX::XMVector3TransformCoord(farPoint, inverseviewproj);
-            DirectX::XMVECTOR raydirection = DirectX::XMVectorSubtract(rayend, rayorigin);
-            raydirection = DirectX::XMVector3Normalize(raydirection);
-        
-            float minDistance = std::numeric_limits<float>::max();
-            GameObject* currentClosest = nullptr;
-            for (const auto& object : ObjectManager::GetInstance()->GetGameObjects())
-            {
-                if (auto meshComponent = object->GetComponentOfType<MeshComponent>())
-                {
-                    auto mesh = meshComponent->GetMesh();
-
-                    if (!mesh)
-                        continue;
-
-                    DirectX::XMMATRIX inverseObjectMatrix = DirectX::XMMatrixInverse(nullptr, *static_cast<DirectX::XMMATRIX*>((void*)&object->GetMatrix()));
-                    DirectX::XMVECTOR localRayOrigin = DirectX::XMVector3TransformCoord(rayorigin, inverseObjectMatrix);
-                    DirectX::XMVECTOR localRayDirection = DirectX::XMVector3TransformNormal(raydirection, inverseObjectMatrix);
-                    localRayDirection = DirectX::XMVector3Normalize(localRayDirection);
-
-                    auto maxVec = meshComponent->GetMesh()->m_minBounds;
-                    auto minVec = meshComponent->GetMesh()->m_maxBounds;
-                    DirectX::BoundingBox boundingBox;
-                    DirectX::BoundingBox::CreateFromPoints(boundingBox, DirectX::XMVectorSet(minVec.x, minVec.y, minVec.z, 1.0), DirectX::XMVectorSet(maxVec.x, maxVec.y, maxVec.z, 1.0));
-
-                    float intersectionDistance = 0.0f;
-                    if (!boundingBox.Intersects(localRayOrigin, localRayDirection, intersectionDistance))
-                        continue;
-
-                    for (unsigned int i = 0; i < mesh->indices32.size() - 3; i += 3)
-                    {
-                        int index1 = mesh->indices32[i];
-                        int index2 = mesh->indices32[(size_t)i + 1];
-                        int index3 = mesh->indices32[(size_t)i + 2];
-                        DirectX::XMVECTOR p1 = DirectX::XMVectorSet(mesh->vertexes[index1].position.x, mesh->vertexes[index1].position.y, mesh->vertexes[index1].position.z, 1.0f);
-                        DirectX::XMVECTOR p2 = DirectX::XMVectorSet(mesh->vertexes[index2].position.x, mesh->vertexes[index2].position.y, mesh->vertexes[index2].position.z, 1.0f);
-                        DirectX::XMVECTOR p3 = DirectX::XMVectorSet(mesh->vertexes[index3].position.x, mesh->vertexes[index3].position.y, mesh->vertexes[index3].position.z, 1.0f);
-                        float fakeDistance = 0.0f;
-                        if (DirectX::TriangleTests::Intersects(localRayOrigin, localRayDirection, p1, p2, p3, fakeDistance))
-                        {
-                            auto dxHitPos = DirectX::XMVectorAdd(localRayOrigin, DirectX::XMVectorMultiply(localRayDirection, DirectX::XMVectorSet(fakeDistance, fakeDistance, fakeDistance, fakeDistance)));
-                            auto hitPosition = object->GetMatrix() * *static_cast<Math::Vector3*>((void*)&dxHitPos);
-                            float distance = (hitPosition - Render::GetCameraPosition()).Length();
-                            if (distance < minDistance)
-                            {
-                                minDistance = distance;
-                                currentClosest = object;
-                            }
-                        }
-                    }
-                }
-            }
-            if (currentClosest != nullptr)
-            {
-                if (ImGui::IsKeyDown(ImGuiKey_LeftAlt))
-                {
-                    SetSelectedGameObject(currentClosest);
-                }
-                else
-                {
-                    SetSelectedGameObject(currentClosest->GetRootGameObject());
-                }
-            }
-        }
-    }
-}
-
-void Editor::ImportWindow()
-{
-    if (m_isImporting == false)
-    {
-        return;
-    }
-
-    ImGui::Text(std::string("Importing: " + m_currentImportFilename).c_str());
-
-    switch (m_currentImportFiletype)
-    {
-    case Editor::ImportFiletype_Mesh:
-    {
-        bool preserveHierarchy = false;
-        ImGui::Checkbox("Preserve hierarchy", &preserveHierarchy);
-        break;
-    }
-    case Editor::ImportFiletype_Texture:
-    {
-        break;
-    }
-    }
-    if (ImGui::Button("Import"))
-    {
-        switch (m_currentImportFiletype)
-        {
-        case Editor::ImportFiletype_Mesh:
-        {
-            auto DropfileTask = Concurrency::create_task(
-                [this]() mutable
-            {
-                IOManager::LoadFBX(m_currentImportFilename);
-                LogMessage("Completed: " + m_currentImportFilename);
-            }
-            );
-            break;
-        }
-        case Editor::ImportFiletype_Texture:
-        {
-            IOManager::LoadTexture(m_currentImportFilename);
-            LogMessage("Completed: " + m_currentImportFilename);
-            break;
-        }
-        }
-        m_isImporting = false;
+        m_propertyWindow->Update();
     }
 }
 
 void Editor::HandleDropFile(std::string filename)
 {
-    static const std::vector<std::string> textureFiletypes{ ".dds" ,".png" ,".jpg", ".jpeg"};
+    Logger::Info("Loading drop file: " + StringUtils::StripPathFromFilename(filename));
 
-    auto DropfileTask = Concurrency::create_task(
-        [filename, this]() mutable
+    for (auto& filetype : IOManager::SupportedTextureFiles)
     {
-        auto strippedFilename = StringUtils::StripPathFromFilename(filename);
-
-        LogMessage(std::string("Loading: " + strippedFilename));
-
-        if (StringUtils::StringContainsCaseInsensitive(filename, ".fbx"))
+        if (StringUtils::StringContainsCaseInsensitive(filename, filetype))
         {
-            //m_currentImportFilename = filename;
-            //m_currentImportFiletype = ImportFiletype::ImportFiletype_Mesh;
-            //m_isImporting = true;
-            IOManager::LoadFBX(filename);
-            LogMessage("Completed: " + filename);
-            return;
-        }
-
-        for (auto& filetype : textureFiletypes)
-        {
-            if (StringUtils::StringContainsCaseInsensitive(filename, filetype))
+            auto DropfileTask = Concurrency::create_task(
+                [filename]()
             {
                 IOManager::LoadTexture(filename);
-                LogMessage("Completed: " + filename);
-                return;
             }
+            );
+            return;
         }
     }
-    );
+
+    for (auto& filetype : IOManager::SupportedMeshFiles)
+    {
+        if (StringUtils::StringContainsCaseInsensitive(filename, filetype))
+        {
+            auto DropfileTask = Concurrency::create_task(
+                [filename]()
+            {
+                IOManager::LoadFBX(filename);
+            }
+            );
+            return;
+        }
+    }
 }
 
 void Editor::GameObjectListItem(GameObject* gameObject)
 {
-    constexpr ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
-
-    ImGuiTreeNodeFlags node_flags = base_flags;
-    for (auto* selectedGameObject : m_selectedGameObjects)
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+    if(m_objectSelector.IsGameObjectSelected(gameObject))
     {
-        if (gameObject == selectedGameObject)
-        {
-            node_flags |= ImGuiTreeNodeFlags_Selected;
-        }
+        node_flags |= ImGuiTreeNodeFlags_Selected;
     }
 
-    if (gameObject->GetChildren().empty())
+    const auto& children = gameObject->GetChildren();
+
+    if (children.empty())
     {
         node_flags |= ImGuiTreeNodeFlags_Leaf;
     }
 
     bool node_open = ImGui::TreeNodeEx(gameObject, node_flags, gameObject->GetName().c_str());
-    if (ImGui::BeginDragDropTarget() && SelectedGameObject())
+
+    if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
     {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
         {
-            if(SelectedGameObject()->GetParent() != nullptr)
-            {
-                SelectedGameObject()->SetParent(nullptr);
-            }
-            SelectedGameObject()->SetParent(gameObject);
+            m_objectSelector.SelectedGameObject()->SetParent(gameObject);
         }
-
         ImGui::EndDragDropTarget();
     }
     if (ImGui::BeginDragDropSource())
@@ -443,11 +214,20 @@ void Editor::GameObjectListItem(GameObject* gameObject)
 
     if (ImGui::IsItemClicked())
     {
-        ImGui::IsKeyDown(ImGuiKey_LeftCtrl) ? AddSelectedGameObject(gameObject) : SetSelectedGameObject(gameObject);
+        m_objectSelector.AddSelectedGameObject(gameObject);
+
     }
+
+    const auto& components = gameObject->GetComponents();
+
+    for (auto& component : components)
+    {
+        component->DisplayComponentIcon();
+    }
+
     if (node_open)
     {
-        for (auto& childObject : gameObject->GetChildren())
+        for (auto& childObject : children)
         {
             GameObjectListItem(childObject);
         }
@@ -455,97 +235,85 @@ void Editor::GameObjectListItem(GameObject* gameObject)
     }
 }
 
-
 bool Editor::EditTransform(Math::Matrix& matrix)
 {
     static float snap[3] = { 1.f, 1.f, 1.f };
 
-    if (!ImGui::IsKeyDown(ImGuiKey_MouseRight))
+    if (!Input::GetKeyHeld(InputId::Mouse2))
     {
-        if (ImGui::IsKeyPressed(ImGuiKey_W))
+        if (Input::GetKeyHeld(InputId::W))
             m_currentGizmoOperation = ImGuizmo::TRANSLATE;
-        if (ImGui::IsKeyPressed(ImGuiKey_E))
+        if (Input::GetKeyHeld(InputId::E))
             m_currentGizmoOperation = ImGuizmo::ROTATE;
-        if (ImGui::IsKeyPressed(ImGuiKey_R)) 
+        if (Input::GetKeyHeld(InputId::R))
             m_currentGizmoOperation = ImGuizmo::SCALE;        
     }
 
     const ImGuiIO& io = ImGui::GetIO();
     ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
 
-    float model[16]{};
-    float view[16]{};
-    float projection[16]{};
+    bool isUsingGuizmo = ImGuizmo::Manipulate(
+        Render::GetViewMatrix().Data(),
+        Render::GetProjectionMatrix().Data(),
+        m_currentGizmoOperation, 
+        m_currentGizmoMode, 
+        matrix.Data(),
+        NULL, 
+        m_useSnap ? &snap[0] : NULL
+    );
 
-    EditorUtils::MatrixToFloatMatrix(matrix, model);
-    EditorUtils::MatrixToFloatMatrix(Render::GetViewMatrix(), view);
-    EditorUtils::MatrixToFloatMatrix(Render::GetProjectionMatrix(), projection);
-    bool isUsingGuizmo = ImGuizmo::Manipulate(view, projection, m_currentGizmoOperation, m_currentGizmoMode, model, NULL, m_useSnap ? &snap[0] : NULL);
-    
-    if (isUsingGuizmo)
-    {
-        EditorUtils::FloatMatrixToMatrix(model, matrix);
-        return true;
-    }
-
-    return false;
-}
-
-
-void Editor::LogMessage(std::string message)
-{
-    static std::mutex mutex;
-    mutex.lock();
-    std::cout << message << "\n";
-    m_logBuffer.push_back(message);
-    while (m_logBuffer.size() > 250)
-        m_logBuffer.pop_front();
-    mutex.unlock();
+    return isUsingGuizmo;
 }
 
 void Editor::PropertiesWindow()
 {
-    ImGui::SetNextWindowPos(ImVec2(m_mainViewport->WorkPos.x + m_mainViewport->WorkSize.x - m_rightMenuSizeX, m_mainViewport->WorkPos.y), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2((float)m_rightMenuSizeX, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y), ImGuiCond_Always);
-    ImGui::Begin("Properties Editor", &m_windowsOpen, m_defaultWindowFlags);
 
+    ImGui::SetNextWindowPos(ImVec2(m_mainViewport->WorkPos.x + m_mainViewport->WorkSize.x - m_rightMenuSizeX, m_mainViewport->WorkPos.y), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2((float)m_rightMenuSizeX , m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y ), ImGuiCond_Always);
+    ImGui::Begin("Properties Editor", &m_windowsOpen, m_defaultWindowFlags);
     if (ImGui::BeginTabBar("RightTabBar", ImGuiTabBarFlags_None))
     {
         if (ImGui::BeginTabItem("Object Properties"))
         {
-            if (SelectedGameObject() != nullptr)
+            if (m_objectSelector.SelectedGameObject() != nullptr)
             {
-                auto objectText = SelectedGameObject()->GetName();
+                std::string objectText = m_objectSelector.SelectedGameObject()->GetName();
                 auto cstrText = (char*)objectText.c_str();
                 if (ImGui::InputText("##ObjectName", cstrText, 255))
                 {
-                    SelectedGameObject()->SetName(cstrText);
+                    m_objectSelector.SelectedGameObject()->SetName(cstrText);
                 }
                 ImGui::Separator();
                 TransformWindow();
                 ImGui::Separator();
 
                 GameObjectComponentWindow();
-
-                if (ImGui::Button("Add Component##02", ImVec2((float)m_rightMenuSizeX, 40)))
-                {
-                    m_PropertyWindowType = PropertyWindowType_Component;
-                }
             }
             ImGui::EndTabItem();
         }
-        if (ImGui::BeginTabItem("Scene Settings"))
+        if (ImGui::BeginTabItem("Scene"))
         {
-            float* ambientLight = &Spectral::GetInstance()->GetAmbientLight().r;
+            auto& scene = SceneManager::GetInstance()->GetCurrentScene();
             ImGui::Text("Ambient Lighting");
-            ImGui::ColorPicker4("Ambient Lighting", ambientLight, ColorPickerMask);
-            ImGui::DragFloat("Ambient Lighting Intensity", &Spectral::GetInstance()->GetAmbientLight().a);
+            ImGui::ColorPicker4("Ambient Lighting", scene.GetLightingSettings().AmbientLight.Data(), ColorPickerMask);
+            ImGui::DragFloat("Ambient Lighting Intensity", &scene.GetLightingSettings().AmbientLight.w, 0.005f, 0.0f,1.0f);
             ImGui::Separator();
-            float* fogColor = &Spectral::GetInstance()->GetFogColor().r;
             ImGui::Text("Fog Color");
-            ImGui::ColorPicker4("Fog Color", fogColor, ColorPickerMask);
-            ImGui::DragFloat("Fog Intensity", &Spectral::GetInstance()->GetFogColor().a);
+            ImGui::ColorPicker4("Fog Color", scene.GetLightingSettings().FogColor.Data(), ColorPickerMask);
+            ImGui::DragFloat("Fog Intensity", &scene.GetLightingSettings().FogColor.w,0.005f,0.0f,1.0f);
 
+
+            ImGui::SeparatorText("Shadow Camera");
+            ImGui::SliderFloat("Size",      &scene.GetLightingSettings().ShadowCameraSize, 10.0f, 1000.0f);
+            ImGui::SliderFloat("Near Depth",&scene.GetLightingSettings().NearDepth,10.0f,1000.0f);
+            ImGui::SliderFloat("Far Depth", &scene.GetLightingSettings().FarDepth,10.0f,1000.0f);
+            ImGui::SliderFloat("Distance",  &scene.GetLightingSettings().CameraDistance,10.0f,1000.0f);
+            ImGui::SeparatorText("General");
+            ImGui::SliderFloat("gamma",  &scene.GetLightingSettings().gamma,0.5f,3.0f);
+
+            ImGui::SliderFloat("SSAOIntensity",  &scene.GetLightingSettings().SSAOIntensity,0.0f,10.0f);
+            ImGui::SliderFloat("SSAORadius",  &scene.GetLightingSettings().SSAORadius,0.0f,10.0f);
+            ImGui::SliderFloat("SSAOBias",  &scene.GetLightingSettings().SSAOBias,0.0f,0.1f);
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -559,6 +327,11 @@ void Editor::TopMenu()
 
     if (ImGui::BeginMainMenuBar())
     {
+        if (IsStarted())
+        {
+            ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+            ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+        }
         if (ImGui::BeginMenu("File"))
         {
             if (ImGui::MenuItem("New"))
@@ -570,29 +343,68 @@ void Editor::TopMenu()
             }
             if (ImGui::MenuItem("Load"))
             {
-                
-                IOManager::LoadSpectralScene("asd.sps");
+                IOManager::LoadSpectralScene("asd.json");
             }
             ImGui::Separator();
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Edit"))
+        if (ImGui::BeginMenu("Create"))
         {
-            if (ImGui::MenuItem("New GameObject", ""))
+            auto CreateMeshObject = [&](const std::string& gameObjectName, const std::string& meshName)
+            {
+                auto gameObject = ObjectManager::GetInstance()->CreateObject(gameObjectName);
+                gameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
+                m_objectSelector.SetSelectedGameObject(gameObject);
+                auto meshComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Mesh);
+                std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(meshName);
+
+                gameObject->AddComponent(meshComponent);
+            };
+
+            if (ImGui::MenuItem("Cube", ""))
+            {
+                CreateMeshObject("Cube", "Default Cube");
+            }
+            if (ImGui::MenuItem("Plane", ""))
+            {
+                CreateMeshObject("Plane", "Default Plane");
+            }
+            if (ImGui::MenuItem("Sphere", ""))
+            {
+                CreateMeshObject("Sphere", "Default Sphere");
+            }
+            if (ImGui::MenuItem("Terrain", ""))
+            {
+                auto gameObject = ObjectManager::GetInstance()->CreateObject("Terrain");
+                gameObject->SetPosition(GetPositionInFontOfCamera(100.0f));
+                m_objectSelector.SetSelectedGameObject(gameObject);
+                auto terrainComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Terrain);
+                gameObject->AddComponent(terrainComponent);
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Empty GameObject", ""))
             {
                 auto newGameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
-                SetSelectedGameObject(newGameObject);
+                newGameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
+                m_objectSelector.SetSelectedGameObject(newGameObject);
+            }            
+            if (ImGui::MenuItem("Point Light", ""))
+            {
+                auto newGameObject = ObjectManager::GetInstance()->CreateObject("new Point Light");
+                newGameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
+                newGameObject->AddComponent(ComponentFactory::CreateComponent(newGameObject,Component::Type::Light));
+                m_objectSelector.SetSelectedGameObject(newGameObject);
             }
             ImGui::Separator();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View"))
         {
-            if (ImGui::MenuItem("Physics", nullptr, Spectral::GetInstance()->m_renderPhysX))
-            {
-                Spectral::GetInstance()->m_renderPhysX = !Spectral::GetInstance()->m_renderPhysX;
-            }
+            //if (ImGui::MenuItem("Physics", nullptr, Spectral::GetInstance()->m_renderPhysX))
+            //{
+            //    Spectral::GetInstance()->m_renderPhysX = !Spectral::GetInstance()->m_renderPhysX;
+            //}
             ImGui::Separator();
             ImGui::EndMenu();
         }
@@ -628,8 +440,12 @@ void Editor::TopMenu()
             ImGui::Separator();
             ImGui::EndMenu();
         }
-
-        ImGui::Text(std::string(" | FPS: " + std::to_string(1.0f / Spectral::GetInstance()->GetDeltaTime())).c_str());
+        if (IsStarted())
+        {
+            ImGui::PopItemFlag();
+            ImGui::PopStyleVar();
+        }
+        ImGui::Text(std::string(" | FPS: " + std::to_string(1.0f / TimeManager::GetDeltaTime())).c_str());
 
 
         ImGui::SetCursorPosX(m_mainViewport->WorkSize.x / 2);
@@ -639,18 +455,12 @@ void Editor::TopMenu()
             if (ImGui::ArrowButton("PlayId", ImGuiDir_Right))
             {
                 m_started = true;
-                for (auto& gameObject : ObjectManager::GetInstance()->GetGameObjects())
-                {
-                    for (auto& component : gameObject->GetComponents())
-                    {
-                        component->Start();
-                    }
-                }
             }
         }
         else if (ImGui::Button("X"))
         {
             m_started = false;
+            m_objectSelector.SetSelectedGameObject(nullptr);
         }
         ImGui::EndMainMenuBar();
     }
@@ -659,383 +469,240 @@ void Editor::TopMenu()
 void Editor::GameObjectsWindow()
 {
     ImGui::SetNextWindowPos(ImVec2(0, m_mainViewport->WorkPos.y), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2((float)m_leftMenuSizeX, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y - 200), ImGuiCond_Always);
-    ImGui::Begin("GameObjects", &m_windowsOpen, m_defaultWindowFlags);
+    ImGui::SetNextWindowSize(ImVec2((float)m_leftMenuSizeX, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y ), ImGuiCond_Always);
 
-    if (ImGui::BeginListBox("##GameObjectsList", ImVec2((float)m_leftMenuSizeX, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y - 200)))
+    ImGui::Begin("GameObjects", &m_windowsOpen, m_defaultWindowFlags);
+    if (ImGui::BeginListBox("##GOList", ImGui::GetContentRegionAvail()))
     {
-        for (const auto gameObject : ObjectManager::GetInstance()->GetGameObjects())
+        auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
+        for (const auto& gameObject : gameObjects)
         {
             if (gameObject->GetParent() == nullptr)
             {
-                GameObjectListItem(gameObject);
+                GameObjectListItem(gameObject.get());
             }
         }
-
-        ImGui::EndListBox();
-    }
-    ImGui::End();
-}
-
-void Editor::LogWindow()
-{
-    ImGui::SetNextWindowPos(ImVec2(0, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y - 178 ), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(m_mainViewport->WorkSize.x - (float)m_rightMenuSizeX,  200), ImGuiCond_Always);
-    ImGui::Begin("Debug Console", &m_windowsOpen, m_defaultWindowFlags);
-    ImGui::Separator();
-    if (ImGui::BeginTabBar("BottomTabBar", ImGuiTabBarFlags_None))
-    {
-        if (ImGui::BeginTabItem("File Explorer"))
+        ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 100.0f)));
+        if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
         {
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Debug Console"))
-        {
-            auto size = ImGui::GetWindowSize();
-            size.y -= 50;
-            if (ImGui::BeginListBox("", size))
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
             {
-                for (const auto& logMessage : m_logBuffer)
-                {
-                    ImGui::Text(logMessage.c_str());
-                    ImGui::Separator();
-                }
-                ImGui::EndListBox();
+                m_objectSelector.SelectedGameObject()->SetParent(nullptr);
             }
-            ImGui::EndTabItem();
+            ImGui::EndDragDropTarget();
         }
-        ImGui::EndTabBar();
+        ImGui::EndListBox();
     }
     ImGui::End();
 }
 
 void Editor::GameObjectComponentWindow()
 {
-    for (const auto& component : SelectedGameObject()->GetComponents())
+    ImGui::PushStyleColor(ImGuiCol_FrameBg,ImVec4(0,0,0,1));
+
+    if (ImGui::BeginListBox("##GOCW", ImGui::GetContentRegionAvail()))
     {
-        if (ImGui::CollapsingHeader(component->GetComponentName().c_str()))
+        auto width = ImGui::GetWindowWidth() - 30;
+
+        auto components = m_objectSelector.SelectedGameObject()->GetComponents();
+        for (auto it = components.begin(); it != components.end();)
         {
-            component->ComponentEditor();
-        } 
-        ImGui::Separator();
-    }
-}
-
-void Editor::OpenPropertyWindow(PropertyWindowType propertyType)
-{
-    m_PropertyWindowType = m_PropertyWindowType == propertyType ? PropertyWindowType_Disabled : propertyType;
-}
-
-void Editor::SetSelectedGameObject(GameObject* gameObject)
-{
-    if (gameObject != SelectedGameObject())
-    {
-        ChangedItem item{};
-        item.gameObject = SelectedGameObject();
-        ChangedValue value{};
-
-        m_undoStack.push_back(Undo(UndoOperator::UNDO_CHANGE_SELECTION, item, value));
-    }
-    m_selectedGameObjects.clear();
-    if (gameObject)
-    {
-        m_selectedGameObjects.push_back(gameObject);
-    }
-}
-
-void Editor::AddSelectedGameObject(GameObject* gameObject)
-{
-    for (auto* selectedGameObject : m_selectedGameObjects)
-    {
-        if (selectedGameObject == gameObject)
-        {
-            return;
-        }
-    }
-    m_selectedGameObjects.push_back(gameObject);
-}
-
-void Editor::PropertyWindow()
-{
-    if (m_PropertyWindowType == PropertyWindowType_Disabled || !SelectedGameObject())
-    {
-        return;
-    }
-
-    bool isWindowOpen = true;
-    if (!ImGui::Begin("Select", &isWindowOpen, ImGuiWindowFlags_NoCollapse))
-    {
-        return;
-    }
-    if (isWindowOpen == false)
-    {
-        m_PropertyWindowType = PropertyWindowType_Disabled;
-    }
-
-    const ImVec2 defaultButtonSize(ImGui::GetCurrentWindow()->Size.x, 30);
-
-    switch (m_PropertyWindowType)
-    {
-        case PropertyWindowType_Texture:
-        case PropertyWindowType_Normal:
-        case PropertyWindowType_Roughness:
-        case PropertyWindowType_Metallic:
-        case PropertyWindowType_Ao:
-        {
-            if (!Editor::GetInstance()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh())
+            ImGui::PopStyleColor();
+            bool close = true;
+            ImGui::PushID(it->get());
+            if (ImGui::CollapsingHeader(it->get()->GetComponentName().c_str(), &close))
             {
-                m_PropertyWindowType = PropertyWindowType_Disabled;
-                return;
+                it->get()->ComponentEditor();
             }
-            int columnsPerRow = std::clamp((int)std::floor(ImGui::GetCurrentWindow()->Size.x / (m_defaultImageSize.x + 15)), 1, 20);
-            static char searchedString[128] = "";
-
-            std::string selectedTextureName = "";
-            if (m_PropertyWindowType == PropertyWindowType_Texture)
+            if (!close)
             {
-                selectedTextureName = StringUtils::StripPathFromFilename(TextureManager::GetInstance()->GetTextureName(Editor::GetInstance()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial()->GetTexture(ALBEDO)));
+                m_objectSelector.SelectedGameObject()->RemoveComponent(*it._Unwrapped());
             }
-            else if (m_PropertyWindowType == PropertyWindowType_Normal)
+            else
             {
-                selectedTextureName = StringUtils::StripPathFromFilename(TextureManager::GetInstance()->GetTextureName(Editor::GetInstance()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial()->GetTexture(NORMAL)));
-            }            
-            else if (m_PropertyWindowType == PropertyWindowType_Roughness)
-            {
-                selectedTextureName = StringUtils::StripPathFromFilename(TextureManager::GetInstance()->GetTextureName(Editor::GetInstance()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial()->GetTexture(ROUGHNESS)));
+                it++;
             }
-
-            ImGui::PushItemWidth(300);
-            ImGui::InputText("Search", searchedString, IM_ARRAYSIZE(searchedString));
-            ImGui::PopItemWidth();
+            ImGui::PopID();
             ImGui::Separator();
-            if (ImGui::BeginTable("##TextureSelector", columnsPerRow, ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_SizingFixedFit))
-            {
-                for (const auto& [textureName, texture] : TextureManager::GetInstance()->GetCachedTextures())
-                {
-                    if (!StringUtils::StringContainsCaseInsensitive(textureName, searchedString))
-                    {
-                        continue;
-                    }
-                    
-                    auto bgColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-                    if (selectedTextureName == StringUtils::StripPathFromFilename(textureName))
-                    {
-                        bgColor = ImVec4(1.0f, 0.3f, 1.0f, 1.0f);
-                    }
-
-                    ImGui::TableNextColumn();
-                    if (ImGui::ImageButton(texture->GetResourceView().Get(), m_defaultImageSize,ImVec2(0,0),ImVec2(1,1), -1, ImVec4(0, 0, 0, 0), bgColor))
-                    {
-                        auto material = SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial();
-
-
-                        switch (m_PropertyWindowType)
-                        {
-                        case Editor::PropertyWindowType_Texture:
-                            material->SetTexture(ALBEDO, texture);
-                            break;
-                        case Editor::PropertyWindowType_Normal:
-                            material->SetTexture(NORMAL, texture);
-                            break;
-                        case Editor::PropertyWindowType_Roughness:
-                            material->SetTexture(ROUGHNESS, texture);
-                            break;
-                        case Editor::PropertyWindowType_Metallic:
-                            material->SetTexture(METALLIC, texture);
-                            break;
-                        case Editor::PropertyWindowType_Ao:
-                            material->SetTexture(AO, texture);
-                            break;
-                        }
-
-                        IOManager::SaveSpectralMaterial(material);
-                        m_PropertyWindowType = PropertyWindowType_Disabled;
-                    }
-
-                    auto filename = StringUtils::StripPathFromFilename(TextureManager::GetInstance()->GetTextureName(texture));
-                    auto textWidth = ImGui::CalcTextSize(filename.c_str()).x;
-                    
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (m_defaultImageSize.x + 15 - textWidth) * 0.5f);
-                    ImGui::Text(filename.c_str());
-                    ImGui::SetCursorPosX(0);
-
-                }
-                ImGui::EndTable();
-            }
-            break;
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0, 0, 0, 1));
         }
-        case PropertyWindowType_Mesh:
+        if (ImGui::Button("Add Component##02", ImVec2(ImGui::GetContentRegionAvail().x, 40)))
         {
-            for (const auto& [meshName, mesh] : ModelManager::GetInstance()->GetCachedMeshes())
-            {
-                if (ImGui::Button(StringUtils::StripPathFromFilename(meshName).c_str(), defaultButtonSize))
-                {
-                    SelectedGameObject()->GetComponentOfType<MeshComponent>()->SetMesh(mesh);
-                    m_PropertyWindowType = PropertyWindowType_Disabled;
-                }
-            }
-            break;
-        }        
-        case PropertyWindowType_Component:
-        {
-            for (const auto& [componentId, componentName] : m_componentTypes)
-            {
-                if (ImGui::Button(componentName.c_str(), defaultButtonSize))
-                {
-                    SelectedGameObject()->AddComponent(ComponentFactory::CreateComponent(SelectedGameObject(),static_cast<Component::ComponentType>(componentId)));
-                    m_PropertyWindowType = PropertyWindowType_Disabled;
-                }
-            }
-            break;
-        }        
+            PropertyWindowFactory::SelectComponent(m_objectSelector.SelectedGameObject());
+        }
+        ImGui::EndListBox();
     }
-    ImGui::End();
+
+    ImGui::PopStyleColor();
 }
 
-
-
-void Editor::HandleMeshDrawing()
+void Editor::StopSimulation()
 {
-    ImGui::Begin("Mesh Painter");
-    static GameObject* selectedBrushObject;
-    static GameObject* selectedCanvasObject;
-
-    if (ImGui::Button("Set selected object as brush"))
-    {
-        selectedBrushObject = SelectedGameObject();
-    }
-
-    if (ImGui::Button("Set selected object as canvas"))
-    {
-        selectedCanvasObject = SelectedGameObject();
-    }
-
-    ImGui::Text(std::string("Selected brush: " + (selectedBrushObject ? selectedBrushObject->GetName() : "Not Selected")).c_str());
-    ImGui::Text(std::string("Selected canvas: " + (selectedCanvasObject ? selectedCanvasObject->GetName() : "Not Selected")).c_str());
-    static bool randomYRotation = false;
-    ImGui::Checkbox("Use random Y rotation?", &randomYRotation);
-
-    if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsKeyPressed(ImGuiKey_MouseLeft, true) && selectedBrushObject && !ImGuizmo::IsOver() && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered())
-    {
-        Math::Vector3 hitPosition;
-        Math::Vector3 hitNormal;
-        bool hitMesh = false;
-
-        auto viewProj = Render::GetViewMatrix() * Render::GetProjectionMatrix();
-
-        auto mousePosX = ImGui::GetMousePos().x;
-        auto mousePosY = ImGui::GetMousePos().y;
-        auto windowSize = Render::GetWindowSize();
-
-        if (selectedCanvasObject && mousePosX > 0 && mousePosX < windowSize.x && mousePosY > 0 && mousePosY < windowSize.y)
-        {
-            float ndcX = (2.0f * abs(mousePosX)) / windowSize.x - 1.0f;
-            float ndcY = 1.0f - (2.0f * abs(mousePosY)) / windowSize.y;
-
-            DirectX::XMMATRIX inverseviewproj = DirectX::XMMatrixInverse(nullptr, *static_cast<DirectX::XMMATRIX*>((void*)&viewProj));
-            DirectX::XMVECTOR origin = DirectX::XMVectorSet(ndcX, ndcY, 0.0f, 1.0);
-            DirectX::XMVECTOR farPoint = DirectX::XMVectorSet(ndcX, ndcY, 1.0f, 1.0);
-
-            DirectX::XMVECTOR rayorigin = DirectX::XMVector3TransformCoord(origin, inverseviewproj);
-            DirectX::XMVECTOR rayend = DirectX::XMVector3TransformCoord(farPoint, inverseviewproj);
-            DirectX::XMVECTOR raydirection = DirectX::XMVectorSubtract(rayend, rayorigin);
-            raydirection = DirectX::XMVector3Normalize(raydirection);
-
-            float minDistance = std::numeric_limits<float>::max();
-
-            if (auto meshComponent = selectedCanvasObject->GetComponentOfType<MeshComponent>())
-            {
-                auto mesh = meshComponent->GetMesh();
-                DirectX::XMMATRIX inverseObjectMatrix = DirectX::XMMatrixInverse(nullptr, *static_cast<DirectX::XMMATRIX*>((void*)&selectedCanvasObject->GetMatrix()));
-                DirectX::XMVECTOR localRayOrigin = DirectX::XMVector3TransformCoord(rayorigin, inverseObjectMatrix);
-                DirectX::XMVECTOR localRayDirection = DirectX::XMVector3TransformNormal(raydirection, inverseObjectMatrix);
-                localRayDirection = DirectX::XMVector3Normalize(localRayDirection);
-                for (unsigned int i = 0; i < mesh->indices32.size() - 3; i += 3)
-                {
-                    int index1 = mesh->indices32[i];
-                    int index2 = mesh->indices32[(size_t)i + 1];
-                    int index3 = mesh->indices32[(size_t)i + 2];
-                    DirectX::XMVECTOR p1 = DirectX::XMVectorSet(mesh->vertexes[index1].position.x, mesh->vertexes[index1].position.y, mesh->vertexes[index1].position.z, 1.0f);
-                    DirectX::XMVECTOR p2 = DirectX::XMVectorSet(mesh->vertexes[index2].position.x, mesh->vertexes[index2].position.y, mesh->vertexes[index2].position.z, 1.0f);
-                    DirectX::XMVECTOR p3 = DirectX::XMVectorSet(mesh->vertexes[index3].position.x, mesh->vertexes[index3].position.y, mesh->vertexes[index3].position.z, 1.0f);
-
-                    float fakeDistance = 0.0f;
-                    if (DirectX::TriangleTests::Intersects(localRayOrigin, localRayDirection, p1, p2, p3, fakeDistance))
-                    { // i need to make this much better
-                        auto dxVec = DirectX::XMVectorAdd(localRayOrigin, DirectX::XMVectorMultiply(localRayDirection, DirectX::XMVectorSet(fakeDistance, fakeDistance, fakeDistance, fakeDistance)));
-                        hitPosition = selectedCanvasObject->GetMatrix() *  *static_cast<Math::Vector3*>((void*)&dxVec);
-                        
-                        Triangle triangle(Math::Vector3(p3.m128_f32[0], p3.m128_f32[1], p3.m128_f32[2],1.0f),
-                            Math::Vector3(p2.m128_f32[0], p2.m128_f32[1], p2.m128_f32[2], 1.0f),
-                            Math::Vector3(p3.m128_f32[0], p3.m128_f32[1], p3.m128_f32[2], 1.0f));
-                        hitNormal = triangle.CalculateNormal();
-                        hitMesh = true;
-                    }
-                }
-            }
-        }
-        if (hitMesh)
-        {
-            auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(selectedBrushObject->GetName());
-            EditorUtils::DuplicateGameObject(duplicateGameObject, selectedBrushObject);
-            duplicateGameObject->SetParent(nullptr);
-            //auto scale = duplicateGameObject->GetMatrix().GetScale();
-            //
-            //Math::Matrix translationMatrix;
-            //translationMatrix.SetPosition(hitPosition);
-            //Math::Matrix rotationMatrix;
-            //Math::Vector3 up    = hitNormal * scale.y;
-            //Math::Vector3 right = up.Cross(Math::Vector3(0.0f, 1.0f, 0.0f, 0.0)).GetNormal() * scale.x;
-            //Math::Vector3 front = right.Cross(up).GetNormal() * scale.z;
-            //
-            //
-            //rotationMatrix.SetUp(up);
-            //rotationMatrix.SetRight(right);
-            //rotationMatrix.SetFront(front);
-            //
-            //duplicateGameObject->GetMatrix() = rotationMatrix * translationMatrix;
-            //duplicateGameObject->UpdateTransform();
-            duplicateGameObject->GetMatrix().SetPosition(hitPosition);
-            if (randomYRotation)
-            {
-                float circleInRad = 6.2831853f;
-                duplicateGameObject->GetMatrix() = Math::Matrix::MakeRotationZ(static_cast <float> (rand()) / static_cast <float> (RAND_MAX) * circleInRad) * duplicateGameObject->GetMatrix();
-            }
-            duplicateGameObject->UpdateTransform();
-            SetSelectedGameObject(duplicateGameObject);
-        }
-
-    }
-
-    ImGui::End();
+    m_started = false;
 }
 
+void Editor::SetPropertyWindow(std::shared_ptr<PropertyWindow> propertyWindow)
+{
+    m_propertyWindow = propertyWindow;
+}
+
+void Editor::AddUndoAction(std::shared_ptr<Undo> undo)
+{
+    m_undoStack.push_back(undo);
+}
 void Editor::TransformWindow()
 {
-    Math::Matrix* objectMatrix = SelectedGameObject()->GetParent() ? &SelectedGameObject()->GetLocalMatrix() : &SelectedGameObject()->GetMatrix();
+    auto selectedObject = m_objectSelector.SelectedGameObject();
+
+    Math::Matrix objectMatrix = selectedObject->GetParent() ? selectedObject->GetLocalMatrix() : selectedObject->GetWorldMatrix();
+
+    std::vector<std::pair<GameObject*, Math::Matrix>> beforeUsed;
+    std::vector<std::pair<GameObject*, Math::Matrix>> tempChildObjects;
+
+    auto selectedGameObjectInverseMatrix = selectedObject->GetWorldMatrix().GetInverse();
+
+    for (GameObject* selectedGameObject : m_objectSelector.GetSelectedGameObjects())
+    {
+        beforeUsed.emplace_back(selectedGameObject, selectedGameObject->GetWorldMatrix());
+
+        if (selectedGameObject->GetId() != selectedObject->GetId() && m_objectSelector.IsAnyParentSelected(selectedGameObject) == false)
+        {
+            Math::Matrix localMatrix = selectedGameObject->GetWorldMatrix() * selectedGameObjectInverseMatrix;
+
+            tempChildObjects.emplace_back(selectedGameObject, localMatrix);
+        }
+    }
 
     Math::Vector3 matrixTranslation, matrixRotation, matrixScale;
-    EditorUtils::DecomposeMatrix(*objectMatrix, matrixTranslation, matrixRotation, matrixScale);
-    if (ImGui::InputFloat3("Position", (float*)&matrixTranslation) ||
-        ImGui::InputFloat3("Rotation", (float*)&matrixRotation) ||
-        ImGui::InputFloat3("Scale", (float*)&matrixScale))
+    EditorUtils::DecomposeMatrix(objectMatrix, matrixTranslation, matrixRotation, matrixScale);
+    if (ImGui::InputFloat3("Position", matrixTranslation.Data(), "%.3f", ImGuiInputTextFlags_NoUndoRedo) ||
+        ImGui::InputFloat3("Rotation", matrixRotation.Data(), "%.3f", ImGuiInputTextFlags_NoUndoRedo) ||
+        ImGui::InputFloat3("Scale", matrixScale.Data(), "%.3f", ImGuiInputTextFlags_NoUndoRedo))
     {
-        { // This will not work good
-            ChangedItem item{};
-            item.gameObject = SelectedGameObject();
-            ChangedValue value{};
-            value.matrix = *objectMatrix;
-        
-            m_undoStack.push_back(Undo(UndoOperator::UNDO_EDIT_TRANSFORM, item, value));
-        }
+        AddUndoAction(std::make_shared<UndoTransform>(beforeUsed));
 
-        EditorUtils::RecomposeMatrix(*objectMatrix, matrixTranslation, matrixRotation, matrixScale);
+        EditorUtils::RecomposeMatrix(objectMatrix, matrixTranslation, matrixRotation, matrixScale);
 
-        if (SelectedGameObject()->GetParent())
+        if (selectedObject->GetParent())
         {
-            SelectedGameObject()->GetMatrix() = SelectedGameObject()->GetLocalMatrix() * SelectedGameObject()->GetParent()->GetMatrix();
+            selectedObject->SetWorldMatrix(objectMatrix * selectedObject->GetParent()->GetWorldMatrix());
         }
-        SelectedGameObject()->UpdateTransform();
+        else
+        {
+            selectedObject->SetWorldMatrix(objectMatrix);
+        }
+        for (auto& [object, localMatrix] : tempChildObjects)
+        {
+            object->SetWorldMatrix(localMatrix * selectedObject->GetWorldMatrix());
+        }
     }
 }
+
+void Editor::DrawObjectOutline(GameObject* gameObject, bool isChildOfSelected)
+{
+    if (gameObject->GetComponentOfType<MeshComponent>())
+    {
+        auto meshComponent = gameObject->GetComponentOfType<MeshComponent>();
+        if (meshComponent->GetMesh())
+        {
+            auto minVec = meshComponent->GetMesh()->GetBoundingBoxMin();
+            auto maxVec = meshComponent->GetMesh()->GetBoundingBoxMax();
+
+            Math::Vector3 corners[8] = {
+                Math::Vector3(minVec.x, minVec.y, minVec.z),
+                Math::Vector3(minVec.x, minVec.y, maxVec.z),
+                Math::Vector3(minVec.x, maxVec.y, minVec.z),
+                Math::Vector3(minVec.x, maxVec.y, maxVec.z),
+                Math::Vector3(maxVec.x, minVec.y, minVec.z),
+                Math::Vector3(maxVec.x, minVec.y, maxVec.z),
+                Math::Vector3(maxVec.x, maxVec.y, minVec.z),
+                Math::Vector3(maxVec.x, maxVec.y, maxVec.z)
+            };
+
+            for (int i = 0; i < 8; ++i) 
+            {
+                Math::Vector4 corner4 = gameObject->GetWorldMatrix() * Math::Vector4(corners[i].x, corners[i].y, corners[i].z, 1.0f);
+                corners[i].x = corner4.x;
+                corners[i].y = corner4.y;
+                corners[i].z = corner4.z;
+            }
+
+            int lineIndices[12][2] = {
+                {0, 1}, {1, 3}, {3, 2}, {2, 0},
+                {4, 5}, {5, 7}, {7, 6}, {6, 4},
+                {0, 4}, {1, 5}, {2, 6}, {3, 7}
+            };
+
+            for (int i = 0; i < 12; ++i) {
+                int idx1 = lineIndices[i][0];
+                int idx2 = lineIndices[i][1];
+
+
+                Math::Vector4 color = isChildOfSelected ? Math::Vector4(0.9f, 0.4f, 0.9f, 1.0f) : Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+                Render::DrawLine(corners[idx1], corners[idx2], color);
+            }
+        }
+    }
+    for (auto* child : gameObject->GetChildren())
+    {
+        DrawObjectOutline(child, true);
+    }
+}
+
+void Editor::DrawGrid()
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
+
+    Math::Vector4 color(colors[ImGuiCol_FrameBgHovered].x, colors[ImGuiCol_FrameBgHovered].y, colors[ImGuiCol_FrameBgHovered].z,0.3f);
+
+    int gridSize = 40;
+    float scale = 4.0f;
+
+    Math::Vector3 cameraPos(Math::SnapToNearest(Render::GetCameraPosition().Swizzle("xoz"), scale));
+    Math::Vector3 offset(-gridSize * 0.5f * scale, 0.0f, -gridSize * 0.5f * scale);
+    offset += cameraPos;
+    for (int i = 0; i < gridSize + 1; i++)
+    {
+        Render::DrawLine(Math::Vector3(i * scale, 0, 0) + offset, Math::Vector3(i * scale, 0, gridSize * scale) + offset, color);
+    }
+    for (int i = 0; i < gridSize + 1; i++)
+    {
+        Render::DrawLine(Math::Vector3(0, 0, i * scale) + offset, Math::Vector3(gridSize * scale, 0, i * scale) + offset, color);
+    }
+}
+
+Math::Vector3 Editor::GetPositionInFontOfCamera(float distance)
+{
+    float minDistance = std::numeric_limits<float>::max();
+
+    for (const auto& object : ObjectManager::GetInstance()->GetGameObjects())
+    {
+        std::shared_ptr<Mesh> mesh;
+        if (auto meshComponent = object->GetComponentOfType<MeshComponent>())
+        {
+            mesh = meshComponent->GetMesh();
+        }
+        else if (auto terrainComponent = object->GetComponentOfType<TerrainComponent>())
+        {
+            mesh = terrainComponent->GetMesh();
+        }
+        if (!mesh)
+            continue;
+        float distance;
+        if (Intersection::MeshTriangles(mesh.get(), object->GetWorldMatrix(), Render::GetCameraPosition(), Render::GetCameraDirection(), distance))
+        {
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+            }
+        }
+    }
+
+    if (minDistance > distance)
+    {
+        return Render::GetCameraPosition() + Render::GetCameraDirection() * distance;
+    }
+    return Render::GetCameraPosition() + Render::GetCameraDirection() * minDistance;
+}
+#endif

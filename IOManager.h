@@ -1,7 +1,13 @@
 #pragma once
 #include "pch.h"
 #include <fstream>
-#include <algorithm>
+#include <sstream>
+
+#include <rapidjson/document.h>
+#include <rapidjson/prettywriter.h>
+#include <rapidjson/stringbuffer.h>
+
+#include <filesystem>
 
 struct aiScene;
 struct aiMesh;
@@ -19,11 +25,11 @@ namespace Math
 class WriteObject
 {
 public:
-	WriteObject(std::string filename)
+	WriteObject(const std::filesystem::path& filePath)
 	{
 		try
 		{
-			m_file = std::ofstream(filename, std::ios::out | std::ios::binary);
+			m_file = std::ofstream(filePath, std::ios::out | std::ios::binary);
 		}
 		catch (std::exception& e)
 		{
@@ -65,9 +71,9 @@ private:
 class ReadObject
 {
 public:
-	ReadObject(std::string filename)
+	ReadObject(const std::filesystem::path& filePath)
 	{
-		m_file = std::ifstream(filename, std::ios::in | std::ios::binary);
+		m_file = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	}
 	~ReadObject() { m_file.close(); }
 
@@ -118,20 +124,25 @@ private:
 class IOManager
 {
 public:
+	static std::string IniFailedToFindItem;
+
 	static std::string ProjectName;
-	static std::string ProjectDirectory;
-	static std::string ExecutableDirectory;
-	static std::wstring ProjectDirectoryWide;
-	static std::wstring ExecutableDirectoryWide;
+	static std::filesystem::path ProjectDirectory;
+	static std::filesystem::path ExecutableDirectory;
 
 	static std::string SpectralModelExtention;
 	static std::string SpectralSceneExtention;
 	static std::string SpectralMaterialExtention;
 
+	static const std::vector<std::string> SupportedTextureFiles;
+	static const std::vector<std::string> SupportedMeshFiles;
+
 	static void SetExecutableDirectiory();
+	static bool LoadProject();
 
 	static bool LoadFBX(const std::string& filename);
 	static bool LoadTexture(const std::string& filename);
+	static bool LoadTexture(const std::filesystem::path& file);
 
 	static void SaveSpectralModel(std::shared_ptr<Mesh> mesh);
 	static bool LoadSpectralModel(const std::string& filename, std::shared_ptr<Mesh>& mesh);
@@ -144,11 +155,17 @@ public:
 
 	static void CollectProjectFiles();
 
-private: 
-	static void SaveGameObject(WriteObject& writeObject, GameObject* gameObject);
-	static void LoadGameObject(ReadObject& readObject, GameObject* parent);
+	static void WriteToIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name, const std::string& value);
+	static std::string ReadFromIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name);
 
-	static void ProcessMesh(const std::string& filename, aiMesh* mesh, const aiScene* scene, GameObject* gameObject);
-	static void ProcessNode(const std::string& filename, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform);
+private: 
+	static void SaveGameObject(rapidjson::Value& object, GameObject* gameObject, rapidjson::Document::AllocatorType& allocator);
+	static void LoadGameObject(const rapidjson::Value& object, GameObject* parent);
+
+	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject);
+	static void ProcessNode(const std::string& filename, const std::filesystem::path& path, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform);
+
+	static std::filesystem::path GetPath(const std::string& filename, const std::string& extention);
+
 };
 

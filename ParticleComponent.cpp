@@ -1,4 +1,6 @@
 #include "ParticleComponent.h"
+#include "Editor.h"
+
 
 ParticleComponent::ParticleComponent(GameObject* owner)
 	: Component(owner)
@@ -9,8 +11,6 @@ ParticleComponent::ParticleComponent(GameObject* owner)
 	, m_attraction(1.0f)
 {
 	//m_gravity = Math::Vector3(0.0f, -9.81f, 0.0f);
-	m_componentName = "ParticleComponent";
-	m_componentType = ComponentType_LightComponent;
 }
 
 
@@ -185,7 +185,7 @@ void ParticleComponent::KeepParticeInBounds(std::shared_ptr<Particle> particle) 
 	if (particle->position.y <= -10.0f)
 	{
 		particle->position.y = -10.0f;
-		particle->velocity = particle->velocity.reflect(Math::Vector3(0, 1, 0)) * m_restitution;
+		particle->velocity = particle->velocity.Reflect(Math::Vector3(0, 1, 0)) * m_restitution;
 	}
 	//if (particle->position.x >= 10.0f)
 	//{

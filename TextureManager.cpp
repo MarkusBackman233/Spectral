@@ -1,48 +1,48 @@
 #include "TextureManager.h"
-#include "Logger.h"
-#include <algorithm>
 #include "Texture.h"
-#include "StringUtils.h"
-#include "mutex"
+#include <shared_mutex>
 
-TextureManager::TextureManager() 
-	: m_textures{}
+std::shared_ptr<Texture> TextureManager::GetTexture(const std::filesystem::path& file)
 {
-	LogMessage("TextureManager initialized");
-}
+	std::shared_ptr<Texture> texture(nullptr);
+	std::string filename = file.filename().string();
 
-std::shared_ptr<Texture> TextureManager::GetTexture(const std::string& filename)
-{
-	static std::mutex mutex;
-	mutex.lock();
-	
-	auto texture = m_textures.find(filename);
-	if (texture != m_textures.end())
 	{
-		mutex.unlock();
-		return m_textures[filename];
-	}
-	m_textures[filename] = std::make_shared<Texture>();
-	mutex.unlock();
+		std::shared_lock lock(m_mutex); // Shared lock for reading
 
-	m_textures[filename]->LoadTexture(filename);
-	return m_textures[filename];
-}
-
-std::string TextureManager::GetTextureName(std::shared_ptr<Texture> texture)
-{
-	for (const auto& [filename, cachedTexture] : m_textures)
-	{
-		if (cachedTexture == texture)
+		auto textureIt = m_textures.find(filename);
+		if (textureIt != m_textures.end())
 		{
-			return filename;
+			return textureIt->second;
 		}
 	}
+	{
+		texture = std::make_shared<Texture>();
+		std::unique_lock lock(m_mutex);
+		m_textures.try_emplace(filename, texture);
+	}
 
-	return "";
+	if (!texture->LoadTexture(file))
+	{
+		std::unique_lock lock(m_mutex); // Exclusive lock for writing
+
+		m_textures.erase(filename);
+		return nullptr;
+	}
+	texture->SetFilename(filename);
+	return texture;
 }
 
-void TextureManager::AddTexture(const std::string& textureName, std::shared_ptr<Texture> texture)
+std::unordered_map<std::string, std::shared_ptr<Texture>> TextureManager::GetCachedTextures()
 {
-	m_textures[textureName] = texture;
+	std::shared_lock lock(m_mutex); // Shared lock for reading
+
+	return m_textures;
+}
+
+void TextureManager::AddTexture(std::shared_ptr<Texture> texture)
+{
+	std::unique_lock lock(m_mutex); // Exclusive lock for writing
+
+	m_textures.try_emplace(texture->GetFilename(), texture);
 }

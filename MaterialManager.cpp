@@ -1,24 +1,17 @@
 #include "MaterialManager.h"
 #include "TextureManager.h"
 #include "Material.h"
-#include "LineMaterial.h"
-#include <mutex>
 #include "IOManager.h"
 
 MaterialManager::MaterialManager()
 {
 	m_materials["default"] = std::make_shared<Material>();
-	m_materials["default"]->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.bmp"));
-	m_materials["default"]->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.bmp"));
 	m_materials["default"]->SetName("default");
-
-
-	m_materials["line"] = std::make_shared<LineMaterial>();
-	m_materials["line"]->SetName("line");
 }
 
 void MaterialManager::AddMaterial(std::shared_ptr<Material> material)
 {
+	std::unique_lock lock(m_mutex); // Exclusive lock for writing
 	m_materials[material->GetName()] = material;
 }
 
@@ -27,32 +20,31 @@ std::shared_ptr<Material> MaterialManager::GetDefaultMaterial()
 	return m_materials["default"];
 }
 
-std::shared_ptr<Material> MaterialManager::GetLineMaterial()
-{
-	return m_materials["line"];
-}
-
-
 std::shared_ptr<Material> MaterialManager::GetMaterial(const std::string& name)
 {
-	static std::mutex mutex;
-	mutex.lock();
-	auto materialIt = m_materials.find(name);
-	if (materialIt != m_materials.end())
 	{
-		mutex.unlock();
-		return m_materials[name];
-	}
-	m_materials[name] = std::make_shared<Material>();
-	mutex.unlock();
+		std::shared_lock lock(m_mutex); // Shared lock for reading
 
-	if (IOManager::LoadSpectralMaterial(name, m_materials[name]))
-	{
-		return m_materials[name];
+		auto materialIt = m_materials.find(name);
+		if (materialIt != m_materials.end())
+		{
+			return m_materials[name];
+		}
 	}
 
-	m_materials[name]->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.bmp"));
-	m_materials[name]->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.bmp"));
-	m_materials[name]->SetName(name);
-	return m_materials[name];
+	std::shared_ptr<Material> material = std::make_shared<Material>();
+	{
+		std::unique_lock lock(m_mutex); // Exclusive lock for writing
+		m_materials.try_emplace(name, material);
+	}
+	Logger::Info("Loading Material: " + name);
+	if (IOManager::LoadSpectralMaterial(name, material))
+	{
+		return material;
+	}
+
+	material->SetTexture(0, TextureManager::GetInstance()->GetTexture("TemplateGrid_albedo.bmp"));
+	material->SetTexture(1, TextureManager::GetInstance()->GetTexture("TemplateGrid_normal.bmp"));
+	material->SetName(name);
+	return material;
 }
