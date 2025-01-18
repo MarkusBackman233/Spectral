@@ -13,7 +13,7 @@ public:
 
 	Math::Vector2 GetWindowSize();
 
-	static void CreateWindowsLoop(std::function<void()> functionBody);
+	static void CreateWindowsLoop(const std::function<void()>& functionBody);
 
 private:
 	static LRESULT CALLBACK StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

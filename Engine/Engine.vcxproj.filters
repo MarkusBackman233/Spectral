@@ -25,9 +25,6 @@
     <Filter Include="Source Files\Math">
       <UniqueIdentifier>{45f23a1f-c826-47f9-a690-8b43f2234423}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Editor">
-      <UniqueIdentifier>{01fcd1d0-fae2-4fa7-8966-ee4d5815394d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\External">
       <UniqueIdentifier>{38b5ea41-d9cb-47dd-9c40-8b930943c82e}</UniqueIdentifier>
     </Filter>
@@ -45,12 +42,6 @@
     </Filter>
     <Filter Include="Source Files\Utils">
       <UniqueIdentifier>{50820a0d-acbf-4ea8-a331-055007c83f92}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Editor\PropertyWindows">
-      <UniqueIdentifier>{ee028ac7-777b-4ec7-80b5-24c169f2df71}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source Files\Editor\UndoOperations">
-      <UniqueIdentifier>{1013073b-ec40-4425-a49d-58df318bd17b}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\External\Sol2">
       <UniqueIdentifier>{f0404520-0538-48fe-b117-6a371bc825b2}</UniqueIdentifier>
@@ -108,13 +99,7 @@
     <ClCompile Include="Matrix.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
-    <ClCompile Include="Editor.cpp">
-      <Filter>Source Files\Editor</Filter>
-    </ClCompile>
     <ClCompile Include="GameObject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LightComponent.cpp">
@@ -159,13 +144,7 @@
     <ClCompile Include="StringUtils.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="EditorUtils.cpp">
-      <Filter>Source Files\Utils</Filter>
-    </ClCompile>
     <ClCompile Include="ShadowManager.cpp">
-      <Filter>Source Files\Managers</Filter>
-    </ClCompile>
-    <ClCompile Include="ProfilerManager.cpp">
       <Filter>Source Files\Managers</Filter>
     </ClCompile>
     <ClCompile Include="DefaultAssets.cpp">
@@ -213,32 +192,11 @@
     <ClCompile Include="DxMathUtils.cpp">
       <Filter>Source Files\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="ComponentPropertyWindow.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
-    </ClCompile>
-    <ClCompile Include="MaterialPropertyWindow.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
-    </ClCompile>
-    <ClCompile Include="MeshPropertyWindow.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
-    </ClCompile>
-    <ClCompile Include="TexturePropertyWindow.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
-    </ClCompile>
-    <ClCompile Include="PropertyWindow.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
-    </ClCompile>
-    <ClCompile Include="Undo.cpp">
-      <Filter>Source Files\Editor\UndoOperations</Filter>
-    </ClCompile>
     <ClCompile Include="SpectralAssert.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CameraComponent.cpp">
       <Filter>Source Files\Components</Filter>
-    </ClCompile>
-    <ClCompile Include="ScriptPropertyWindow.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
     </ClCompile>
     <ClCompile Include="Script.cpp">
       <Filter>Source Files</Filter>
@@ -255,9 +213,6 @@
     <ClCompile Include="iInput.cpp">
       <Filter>Source Files\Wrappers</Filter>
     </ClCompile>
-    <ClCompile Include="UndoTransform.cpp">
-      <Filter>Source Files\Editor\UndoOperations</Filter>
-    </ClCompile>
     <ClCompile Include="PostProcessing.cpp">
       <Filter>Source Files\Rendering\PostProcessing</Filter>
     </ClCompile>
@@ -269,12 +224,6 @@
     </ClCompile>
     <ClCompile Include="DeferredPipeline.cpp">
       <Filter>Source Files\Rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="PropertyWindowFactory.cpp">
-      <Filter>Source Files\Editor\PropertyWindows</Filter>
-    </ClCompile>
-    <ClCompile Include="ProfileObject.cpp">
-      <Filter>Source Files\Editor</Filter>
     </ClCompile>
     <ClCompile Include="Intersection.cpp">
       <Filter>Source Files\Math</Filter>
@@ -305,12 +254,6 @@
     </ClCompile>
     <ClCompile Include="Vector4.cpp">
       <Filter>Source Files\Math</Filter>
-    </ClCompile>
-    <ClCompile Include="EditorCameraController.cpp">
-      <Filter>Source Files\Editor</Filter>
-    </ClCompile>
-    <ClCompile Include="ObjectSelector.cpp">
-      <Filter>Source Files\Editor</Filter>
     </ClCompile>
     <ClCompile Include="MathFunctions.cpp">
       <Filter>Source Files\Math</Filter>
@@ -380,9 +323,6 @@
     <ClInclude Include="src\IMGUI\imgui.h">
       <Filter>Source Files\External\IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Editor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\IMGUI\ImGuizmo.h">
       <Filter>Source Files\External\IMGUI</Filter>
     </ClInclude>
@@ -449,20 +389,11 @@
     <ClInclude Include="StringUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="EditorUtils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Undo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ShadowManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\External\stb_image_resize.h">
       <Filter>Source Files\External</Filter>
-    </ClInclude>
-    <ClInclude Include="ProfilerManager.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ProfileObject.h">
       <Filter>Header Files</Filter>
@@ -509,27 +440,6 @@
     <ClInclude Include="DxMathUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PropertyWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MeshPropertyWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PropertyWindowFactory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TexturePropertyWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="MaterialPropertyWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ComponentPropertyWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UndoTransform.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SpectralAssert.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -552,9 +462,6 @@
       <Filter>Source Files\External\Sol2</Filter>
     </ClInclude>
     <ClInclude Include="ScriptComponent.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ScriptPropertyWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Script.h">
@@ -600,12 +507,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Vector4.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="EditorCameraController.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ObjectSelector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MathFunctions.h">
@@ -676,11 +577,6 @@
     <FxCompile Include="SkyboxSpecular_PS.hlsl">
       <Filter>Source Files\Shaders</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="icon.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\icon.ico">

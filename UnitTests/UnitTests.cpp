@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "CppUnitTest.h"
-#include "../Spectral/GameObject.h"
-#include "../Spectral/ObjectManager.h"
+#include "../Engine/GameObject.h"
+#include "../Engine/ObjectManager.h"
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
 namespace SpectralUnitTests
@@ -12,7 +12,7 @@ namespace SpectralUnitTests
 		
 		TEST_METHOD(TestName)
 		{
-			auto gameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
+			GameObject* gameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
 
 			std::string name = "Good Name";
 			gameObject->SetName(name);

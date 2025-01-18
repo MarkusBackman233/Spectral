@@ -1,3 +1,6 @@
-Spectral/x64/
+Editor/x64/
+Engine/x64/
+UnitTests/x64/
+Application/x64/
 x64/
 .vs/

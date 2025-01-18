@@ -4,7 +4,6 @@
 #include "ObjectManager.h"
 #include "SimulationStateManager.h"
 #include "InputManager.h"
-
 #ifdef EDITOR
 #include "Editor.h"
 #endif // EDITOR
@@ -20,7 +19,7 @@ int main(int argc, char* args[])
     TimeManager timeManager;
 
     WindowsManager::CreateWindowsLoop(
-    [&] 
+        [&]
     {
         timeManager.Update();
         InputManager::GetInstance()->Update();

@@ -10,7 +10,6 @@ enum class SimulationState
 class SimulationStateManager
 {
 public:
-
 	SimulationStateManager();
 
 	void Update(float deltaTime);

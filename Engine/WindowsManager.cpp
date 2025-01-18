@@ -114,7 +114,7 @@ Math::Vector2 WindowsManager::GetWindowSize()
     return Math::Vector2(static_cast<float>(desktop.right - desktop.left), static_cast<float>(desktop.bottom - desktop.top));
 }
 
-void WindowsManager::CreateWindowsLoop(std::function<void()> functionBody)
+void WindowsManager::CreateWindowsLoop(const std::function<void()>& functionBody)
 {
     MSG msg{};
     while (WM_QUIT != msg.message)
