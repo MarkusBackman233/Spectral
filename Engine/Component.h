@@ -7,7 +7,6 @@ class Component
 public:
 	enum class Type
 	{
-		Physics,
 		Rigidbody,
 		PhysicsShape,
 		Joint,
@@ -18,6 +17,8 @@ public:
 		Camera,
 		Script,
 		CharacterController,
+
+		Num,
 
 		Invalid,
 	};

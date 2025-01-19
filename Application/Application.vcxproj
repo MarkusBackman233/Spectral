@@ -74,6 +74,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\Spectral\Spectral\Editor;C:\Projects\VCLIB\RapidJson\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Projects\Spectral\Spectral\x64\Release;C:\Program Files\Assimp\lib\x64;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\bin\win.x86_64.vc142.mt\release;C:\Users\Markus\source\repos\Lua\x64\Release\;$(LibraryPath)</LibraryPath>
+    <TargetName>$(SolutionName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\Spectral\Spectral\Editor;C:\Projects\VCLIB\RapidJson\include;$(IncludePath)</IncludePath>

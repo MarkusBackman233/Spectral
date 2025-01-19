@@ -149,6 +149,7 @@ void GameObject::RemoveComponent(std::shared_ptr<Component> component)
 
 void GameObject::AddComponent(std::shared_ptr<Component> component)
 {
+	Assert(component != nullptr, "Tried to add a null component");
 	m_components.push_back(component);
 }
 
