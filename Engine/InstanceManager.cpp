@@ -73,7 +73,7 @@ void InstanceManager::CreateInstanceBuffer(
 
 
     std::vector<Math::Matrix> copyMatrices;
-    copyMatrices.resize(initialMatrices.size());
+    copyMatrices.resize(maxInstances);
     memcpy(copyMatrices.data(), initialMatrices.data(), sizeof(Math::Matrix) * initialMatrices.size());
     bufferData.pSysMem = copyMatrices.data();
     bufferData.SysMemPitch = 0;

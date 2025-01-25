@@ -5,10 +5,10 @@
 #include "CameraComponent.h"
 #include "ScriptComponent.h"
 
-ObjectManager::ObjectManager()
+ObjectManager::ObjectManager() : m_currentlyReserved(1000)
 {
     Logger::Info("ObjectManager initialized");
-    m_gameObjects.reserve(10000);
+    m_gameObjects.reserve(m_currentlyReserved);
 }
 
 void ObjectManager::Deinitialize()
@@ -18,7 +18,15 @@ void ObjectManager::Deinitialize()
 
 GameObject* ObjectManager::CreateObject(const std::string& name, bool destroyObjectOnReset /* = false*/)
 {
-	auto& gameObject = m_gameObjects.emplace_back(std::make_unique<GameObject>());
+
+    if (m_gameObjects.size() >= m_currentlyReserved)
+    {
+        m_currentlyReserved += 10000;
+        m_gameObjects.reserve(m_currentlyReserved);
+    }
+
+	auto it = m_gameObjects.emplace(std::make_unique<GameObject>());
+    GameObject* gameObject = it.first->get();
     gameObject->SetName(name);
 
     if (destroyObjectOnReset)
@@ -26,7 +34,7 @@ GameObject* ObjectManager::CreateObject(const std::string& name, bool destroyObj
         gameObject->DestroyOnReset();
     }
 
-    return gameObject.get();
+    return gameObject;
 }
 
 void ObjectManager::Destroy(GameObject* gameObject)
@@ -40,12 +48,11 @@ void ObjectManager::Destroy(GameObject* gameObject)
 
     gameObject->SetParent(nullptr);
 
-    auto iter = std::find_if(m_gameObjects.begin(), m_gameObjects.end(),
-        [gameObject](std::unique_ptr<GameObject>& p) { return p->GetId() == gameObject->GetId(); });
-    
-    if (iter != m_gameObjects.end())
+    auto it = std::find_if(m_gameObjects.begin(), m_gameObjects.end(),
+        [gameObject](const std::unique_ptr<GameObject>& p) { return p->GetId() == gameObject->GetId(); });
+    if (it != m_gameObjects.end())
     {
-        m_gameObjects.erase(iter);
+        m_gameObjects.erase(it);
     }
 }
 

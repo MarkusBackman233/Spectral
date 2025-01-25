@@ -2,6 +2,33 @@
 #include <GameObject.h>
 #include <ObjectManager.h>
 #include <ComponentFactory.h>
+
+TEST(GameObjectTests, Create)
+{
+	GameObject* gameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
+
+	const auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
+
+	auto it = std::find_if(gameObjects.begin(), gameObjects.end(),
+		[gameObject](const std::unique_ptr<GameObject>& p) { return p->GetId() == gameObject->GetId(); });
+
+	EXPECT_TRUE(it != gameObjects.end());
+}
+
+
+TEST(GameObjectTests, Destroy)
+{
+	GameObject* gameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
+	ObjectManager::GetInstance()->Destroy(gameObject);
+
+	const auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
+
+	auto it = std::find_if(gameObjects.begin(), gameObjects.end(),
+		[gameObject](const std::unique_ptr<GameObject>& p) { return p->GetId() == gameObject->GetId(); });
+
+	EXPECT_TRUE(it == gameObjects.end());
+}
+
 TEST(GameObjectTests, SetName) 
 {
 	GameObject* gameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
@@ -34,6 +61,8 @@ TEST(GameObjectTests, SetRotation)
 	EXPECT_TRUE(gameObject->GetRotation().Dot(rotation) > 0.99999f);
 	ObjectManager::GetInstance()->Destroy(gameObject);
 }
+
+
 
 TEST(GameObjectTests, ChildObject)
 {

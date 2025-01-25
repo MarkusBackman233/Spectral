@@ -92,7 +92,7 @@ void Editor::Update(float deltaTime)
     {
         m_objectSelector.HandleRaycastSelection();
         ImGui::ShowStyleEditor();
-        //ImGui::ShowDemoWindow();
+        ImGui::ShowDemoWindow();
         DrawGrid();
         for (auto* selectedGameObject : m_objectSelector.GetSelectedGameObjects())
         {
@@ -116,7 +116,7 @@ void Editor::Update(float deltaTime)
             m_objectSelector.HandleSelectedGameObject(this);
         }
     }
-
+    /*
     if (ImGui::Begin("Profiling"))
     {
         bool pauseCollection = ProfilerManager::GetInstance()->IsCollectionPaused();
@@ -140,7 +140,7 @@ void Editor::Update(float deltaTime)
         }
         ImGui::End();
     }
-
+    */
     if (m_propertyWindow)
     {
         m_propertyWindow->Update();

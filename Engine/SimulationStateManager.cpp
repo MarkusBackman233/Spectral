@@ -23,10 +23,11 @@ void SimulationStateManager::Update(float deltaTime)
     case SimulationState::Running:
         objectManager->Update(deltaTime);
         Physics::Simulate(deltaTime);
-        if (auto cameraObject = objectManager->GetMainCameraGameObject())
+        if (GameObject* cameraObject = objectManager->GetMainCameraGameObject())
         {
             Render::GetCamera()->GetWorldMatrix() = cameraObject->GetWorldMatrix();
             Render::GetCamera()->GetWorldMatrix().OrthoNormalize();
+            break;
         }
         break;
     case SimulationState::Stopped:

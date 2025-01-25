@@ -19,7 +19,7 @@ public:
 	void SetWorldMatrix(const Math::Matrix& worldMatrix);
 	void SetLocalMatrix(const Math::Matrix& localMatrix);
 	void SetPosition(const Math::Vector3& position);
-	Math::Vector3 GetPosition();
+	const Math::Vector3& GetPosition();
 	void SetRotation(const Math::Vector3& rotationInDegrees);
 	void Rotate(const Math::Vector3& rotationInDegrees);
 	Math::Vector3 GetRotation();

@@ -106,9 +106,10 @@ void GameObject::SetLocalMatrixNoUpdate(const Math::Matrix& localMatrix)
 	m_localMatrix = localMatrix;
 }	
 
-Math::Vector3 GameObject::GetPosition()
+const Math::Vector3& GameObject::GetPosition()
 {
-	return m_worldMatrix.GetPosition();
+	//m_worldMatrix.data
+	return *reinterpret_cast<Math::Vector3*>(&m_worldMatrix.data[3][0]);
 }
 
 void GameObject::SetParent(GameObject* newParent)

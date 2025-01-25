@@ -291,13 +291,13 @@ void Script::AddComponentToGameObject(GameObject* gameObject, const std::string&
     if (componentName == "Mesh")
     {
         auto component = ComponentFactory::CreateComponent(gameObject,Component::Type::Mesh);
-        std::static_pointer_cast<MeshComponent>(component)->SetMesh("Default Cube");
+        std::dynamic_pointer_cast<MeshComponent>(component)->SetMesh("Default Cube");
         gameObject->AddComponent(component);
     }    
     else if (componentName == "Rigidbody")
     {
         auto component = ComponentFactory::CreateComponent(gameObject, Component::Type::Rigidbody);
-        std::static_pointer_cast<RigidbodyComponent>(component)->SetPhysicsType(PhysXManager::PhysicsType::DynamicActor);
+        std::dynamic_pointer_cast<RigidbodyComponent>(component)->SetPhysicsType(PhysXManager::PhysicsType::DynamicActor);
         gameObject->AddComponent(component);
     }    
     else if (componentName == "CubeCollider")
