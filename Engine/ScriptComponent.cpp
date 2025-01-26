@@ -4,6 +4,7 @@
 #include "ScriptManager.h"
 #include <Windows.h>
 #include "IOManager.h"
+#include <shellapi.h>
 
 ScriptComponent::ScriptComponent(GameObject* owner)
 	: Component(owner)
@@ -63,7 +64,7 @@ void ScriptComponent::ComponentEditor()
     
     if (ImGui::Button("Open in default text editor##Script"))
     {
-        //ShellExecute(0, 0, (IOManager::ProjectDirectory / (m_script->GetFilename() + std::string(".lua"))).wstring().c_str(), 0, 0, SW_SHOW);
+        ShellExecute(0, 0, (IOManager::ProjectDirectory / (m_script->GetFilename() + std::string(".lua"))).wstring().c_str(), 0, 0, SW_SHOW);
     }
 
     
