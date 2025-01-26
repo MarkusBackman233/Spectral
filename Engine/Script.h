@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 
+#define SOL_LUAJIT 1
 #include "src/External/Sol2/sol.hpp"
 #include "Vector3.h"
 #include "Vector4.h"

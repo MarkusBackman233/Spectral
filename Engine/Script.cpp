@@ -288,21 +288,27 @@ void Script::ReloadScript()
 
 void Script::AddComponentToGameObject(GameObject* gameObject, const std::string& componentName)
 {
+    std::shared_ptr<Component> component = nullptr;
+
     if (componentName == "Mesh")
     {
-        auto component = ComponentFactory::CreateComponent(gameObject,Component::Type::Mesh);
+        component = ComponentFactory::CreateComponent(gameObject,Component::Type::Mesh);
         std::dynamic_pointer_cast<MeshComponent>(component)->SetMesh("Default Cube");
         gameObject->AddComponent(component);
     }    
     else if (componentName == "Rigidbody")
     {
-        auto component = ComponentFactory::CreateComponent(gameObject, Component::Type::Rigidbody);
+        component = ComponentFactory::CreateComponent(gameObject, Component::Type::Rigidbody);
         std::dynamic_pointer_cast<RigidbodyComponent>(component)->SetPhysicsType(PhysXManager::PhysicsType::DynamicActor);
         gameObject->AddComponent(component);
     }    
     else if (componentName == "CubeCollider")
     {
-        auto component = ComponentFactory::CreateComponent(gameObject, Component::Type::PhysicsShape);
+        component = ComponentFactory::CreateComponent(gameObject, Component::Type::PhysicsShape);
         gameObject->AddComponent(component);
+    }
+    if (component != nullptr)
+    {
+        component->Start();
     }
 }

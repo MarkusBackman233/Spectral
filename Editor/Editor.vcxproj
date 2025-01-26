@@ -72,7 +72,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\VCLIB\RapidJson\include;C:\Users\Markus\source\repos\Lua\src;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Projects\Spectral\Spectral\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
