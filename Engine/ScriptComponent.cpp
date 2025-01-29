@@ -57,12 +57,12 @@ void ScriptComponent::ComponentEditor()
     std::string scriptName = m_script ? m_script->GetFilename() : "Null";
     ImGui::PushID(this);
     ImGui::Text(std::string("Script: " + scriptName).c_str());
-    if (ImGui::Button("Edit##Script"))
+    if (ImGui::Button("Select Script##Script"))
     {
         PropertyWindowFactory::SelectScript(this);
     }    
     
-    if (ImGui::Button("Open in default text editor##Script"))
+    if (ImGui::Button("Edit##Script"))
     {
         ShellExecute(0, 0, (IOManager::ProjectDirectory / (m_script->GetFilename() + std::string(".lua"))).wstring().c_str(), 0, 0, SW_SHOW);
     }

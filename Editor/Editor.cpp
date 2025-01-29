@@ -510,7 +510,7 @@ void Editor::GameObjectComponentWindow()
             ImGui::PopStyleColor();
             bool close = true;
             ImGui::PushID(it->get());
-            if (ImGui::CollapsingHeader(it->get()->GetComponentName().c_str(), &close))
+            if (ImGui::CollapsingHeader(it->get()->GetComponentName().c_str(), &close, ImGuiTreeNodeFlags_DefaultOpen))
             {
                 it->get()->ComponentEditor();
             }
