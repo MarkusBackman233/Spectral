@@ -28,7 +28,14 @@ void InstanceManager::Map(ID3D11DeviceContext* context, ID3D11Device* device)
         auto it = m_instanceBuffers.find(mesh);
         if (it == m_instanceBuffers.end())
         {
-            CreateInstanceBuffer(device, mesh, matrices, InitialMaxInstances);
+
+            uint32_t maxInstnaces = InitialMaxInstances;
+            while (maxInstnaces < matrices.size())
+            {
+                maxInstnaces *= 2;
+            }
+
+            CreateInstanceBuffer(device, mesh, matrices, maxInstnaces);
             continue;
         }
 
@@ -53,6 +60,7 @@ void InstanceManager::Map(ID3D11DeviceContext* context, ID3D11Device* device)
     }
     m_pendingInstances.clear();
 }
+
 
 void InstanceManager::CreateInstanceBuffer(
     ID3D11Device* device, 

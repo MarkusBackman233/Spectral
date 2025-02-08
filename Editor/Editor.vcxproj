@@ -76,7 +76,7 @@
     <LibraryPath>C:\Projects\Spectral\Spectral\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\VCLIB\RapidJson\include;C:\Users\Markus\source\repos\Lua\src;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

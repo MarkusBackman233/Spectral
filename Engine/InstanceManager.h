@@ -23,6 +23,8 @@ public:
 	const std::unordered_map<std::shared_ptr<Mesh>, InstanceData>& GetInstances() const;
 private:
 
+	uint32_t GetMaxInstances(uint32_t currentMax);
+
 	void CreateInstanceBuffer(
 		ID3D11Device* device, 
 		const std::shared_ptr<Mesh>& mesh, 
