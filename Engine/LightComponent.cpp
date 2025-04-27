@@ -56,20 +56,15 @@ void LightComponent::SetLight(std::shared_ptr<Light> light)
 	m_light = std::make_shared<Light>(*light.get());
 }
 
-void LightComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object LightComponent::SaveComponent()
 {
+	Json::Object object;
+	object.emplace("Enabled", m_light->Enabled);
+	object.emplace("Type", (int)m_light->Type);
 
-	object.AddMember("Enabled", m_light->Enabled,allocator);
-	object.AddMember("Type", (int)m_light->Type,allocator);
-
-	rapidjson::Value colorArray(rapidjson::kArrayType);
-	colorArray.PushBack(m_light->Color.r,allocator);
-	colorArray.PushBack(m_light->Color.g,allocator);
-	colorArray.PushBack(m_light->Color.b,allocator);
-	colorArray.PushBack(m_light->Color.a,allocator);
-
-	object.AddMember("Color", colorArray,allocator);
-	object.AddMember("Attenuation", m_light->Attenuation,allocator);
+	object.emplace("Color", Json::Array{ m_light->Color.r, m_light->Color.g ,m_light->Color.b ,m_light->Color.a });
+	object.emplace("Attenuation", m_light->Attenuation);
+	return std::move(object);
 }
 
 void LightComponent::LoadComponent(const rapidjson::Value& object)

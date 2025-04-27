@@ -182,15 +182,17 @@ void TerrainComponent::DisplayComponentIcon()
 }
 #endif
 
-void TerrainComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object TerrainComponent::SaveComponent()
 {
+    Json::Object object;
+
     m_mesh->SetName("UserTerrain");
 
-    object.AddMember("Terrain Name", rapidjson::Value(m_mesh->GetName().c_str(), allocator), allocator);
+    object.emplace("Terrain Name", m_mesh->GetName());
     IOManager::SaveSpectralModel(GetMesh());
-    object.AddMember("Material", rapidjson::Value(m_mesh->GetMaterial()->GetName().c_str(), allocator), allocator);
+    object.emplace("Material", m_mesh->GetMaterial()->GetName());
 
-
+    return std::move(object);
 }
 
 void TerrainComponent::LoadComponent(const rapidjson::Value& object)

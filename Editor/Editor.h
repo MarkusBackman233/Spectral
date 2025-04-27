@@ -31,7 +31,7 @@ public:
 	void Render();
 	void Update(float deltaTime);
 
-	void HandleDropFile(std::string filename);
+	void HandleDropFile(const std::filesystem::path& filename);
 
 	void GameObjectListItem(GameObject* gameObject);
 

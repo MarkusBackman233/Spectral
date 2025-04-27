@@ -8,6 +8,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include <filesystem>
+#include "Json.h"
 
 struct aiScene;
 struct aiMesh;
@@ -136,12 +137,13 @@ public:
 
 	static const std::vector<std::string> SupportedTextureFiles;
 	static const std::vector<std::string> SupportedMeshFiles;
+	static const std::vector<std::string> SupportedAudioFiles;
 
 	static void SetExecutableDirectiory();
-	static bool LoadProject();
+	static bool LoadProject(std::optional<std::string> forceProject = std::nullopt);
 
-	static bool LoadFBX(const std::string& filename);
-	static bool LoadTexture(const std::string& filename);
+	static bool LoadFBX(const std::filesystem::path& filename);
+	//static bool LoadTexture(const std::string& filename);
 	static bool LoadTexture(const std::filesystem::path& file);
 
 	static void SaveSpectralModel(std::shared_ptr<Mesh> mesh);
@@ -159,7 +161,7 @@ public:
 	static std::string ReadFromIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name);
 
 private: 
-	static void SaveGameObject(rapidjson::Value& object, GameObject* gameObject, rapidjson::Document::AllocatorType& allocator);
+	static Json::Object SaveGameObject(GameObject* gameObject);
 	static void LoadGameObject(const rapidjson::Value& object, GameObject* parent);
 
 	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject);

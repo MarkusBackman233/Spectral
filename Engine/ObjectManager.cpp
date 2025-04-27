@@ -56,6 +56,50 @@ void ObjectManager::Destroy(GameObject* gameObject)
     }
 }
 
+void ObjectManager::RegisterComponent(std::shared_ptr<Component> component)
+{
+    std::shared_lock lock(m_getObjectsMutex); // Shared lock for reading
+    auto type = component->GetComponentType();
+
+    if (m_components.find(component->GetComponentType()) == m_components.end())
+    {
+        m_components[type] = std::vector<std::weak_ptr<Component>>();
+    }
+
+    m_components[type].push_back(component);
+}
+
+void ObjectManager::UnregisterComponent(std::shared_ptr<Component> component)
+{
+    auto type = component->GetComponentType();
+    std::unique_lock lock(m_getObjectsMutex); // Exclusive lock for writing
+    auto it = m_components.find(type);
+    if (it != m_components.end()) {
+        auto& componentList = it->second;
+
+        componentList.erase(
+            std::remove_if(componentList.begin(), componentList.end(),
+                [&component](const std::weak_ptr<Component>& wptr) {
+            auto sptr = wptr.lock();
+            return sptr == nullptr || sptr == component;
+        }),
+            componentList.end()
+        );
+    }
+}
+
+std::vector<std::weak_ptr<Component>> ObjectManager::GetComponentsOfType(Component::Type type)
+{
+    std::unique_lock lock(m_getObjectsMutex); // Exclusive lock for writing
+
+    auto it = m_components.find(type);
+    if (it != m_components.end())
+    {
+        return it->second;
+    }
+    return std::vector<std::weak_ptr<Component>>();
+}
+
 void ObjectManager::Start()
 {
     for (auto& object : m_gameObjects) // need to run script start before other component starts
@@ -132,13 +176,11 @@ void ObjectManager::Render()
 
 GameObject* ObjectManager::GetMainCameraGameObject()
 {
-    const auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
-    for (const auto& gameObject : gameObjects)
+    auto cameras = ObjectManager::GetInstance()->GetComponentsOfType(Component::Type::Camera);
+    for (auto& component : cameras)
     {
-        if (const auto& cameraComponent = gameObject->GetComponentOfType<CameraComponent>())
-        {
-            return gameObject.get();
-        }
+        return component.lock()->GetOwner();
     }
     return nullptr;
+
 }

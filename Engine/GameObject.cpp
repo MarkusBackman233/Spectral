@@ -7,11 +7,13 @@
 #include "TextureManager.h"
 #include "MeshComponent.h"
 #include "CharacterControllerComponent.h"
+#include "AudioSourceComponent.h"
 #include "random"
 #include "limits"
 #include "RigidbodyComponent.h"
 #include "MathFunctions.h"
 #include "Editor.h"
+#include "ObjectManager.h"
 
 GameObject::GameObject()
 	: m_components{}
@@ -27,7 +29,10 @@ GameObject::GameObject()
 
 GameObject::~GameObject()
 {
-
+	for (auto& component : m_components)
+	{
+		ObjectManager::GetInstance()->UnregisterComponent(component);
+	}
 }
 
 void GameObject::SetWorldMatrix(const Math::Matrix& worldMatrix)
@@ -192,6 +197,11 @@ void GameObject::RemoveChild(GameObject* gameObject)
 CharacterControllerComponent* GameObject::GetCharacterControllerComponent() const
 {
 	return GetComponentOfType<CharacterControllerComponent>().get();
+}
+
+AudioSourceComponent* GameObject::GetAudioSourceComponent() const
+{
+	return GetComponentOfType<AudioSourceComponent>().get();
 }
 
 void GameObject::SetName(const std::string& name)

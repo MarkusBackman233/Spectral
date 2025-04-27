@@ -1,5 +1,4 @@
 #include "PerspectiveCamera.h"
-#include "iRender.h"
 #include "MathFunctions.h"
 
 PerspectiveCamera::PerspectiveCamera(float fovDegrees, float nearClip, float farClip, Math::Vector2 size)

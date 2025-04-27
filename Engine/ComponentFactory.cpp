@@ -10,16 +10,19 @@
 #include "ScriptComponent.h"
 #include "CharacterControllerComponent.h"
 #include "JointComponent.h"
-
+#include "AudioSourceComponent.h"
+#include "ObjectManager.h"
 // Use if component has a duplicate constructor
-#define CREATE_OR_DUPLICATE_COMPONENT(componentType,componentClass) \
+#define CREATE_OR_DUPLICATE_COMPONENT(component, componentType,componentClass) \
 case componentType:                                                 \
-     return duplicateComponent ? std::make_shared<componentClass>(gameObject, static_cast<componentClass*>(duplicateComponent.get())) : std::make_shared<componentClass>(gameObject)
+    component = duplicateComponent ? std::make_shared<componentClass>(gameObject, static_cast<componentClass*>(duplicateComponent.get())) : std::make_shared<componentClass>(gameObject); \
+    break
 
 // Use if component does not have a duplicate constructor
-#define CREATE_COMPONENT_NO_DUPLICATE(componentType,componentClass) \
+#define CREATE_COMPONENT_NO_DUPLICATE(component, componentType, componentClass) \
 case componentType:                                    \
-     return std::make_shared<componentClass>(gameObject)
+    component = std::make_shared<componentClass>(gameObject); \
+    break
 
 const std::unordered_map<Component::Type, std::string> ComponentFactory::ComponentTypes =
 {
@@ -33,6 +36,7 @@ const std::unordered_map<Component::Type, std::string> ComponentFactory::Compone
     {Component::Type::Camera,"Camera Component"},
     {Component::Type::Script,"Script Component"},
     {Component::Type::CharacterController,"Character Controller Component"},
+    {Component::Type::AudioSource,"Audio Source Component"},
 };
 
 const std::unordered_map<std::string, Component::Type> ComponentFactory::ComponentNames =
@@ -47,25 +51,28 @@ const std::unordered_map<std::string, Component::Type> ComponentFactory::Compone
     {"Camera Component",Component::Type::Camera},
     {"Script Component",Component::Type::Script},
     {"Character Controller Component",Component::Type::CharacterController},
+    {"Audio Source Component",Component::Type::AudioSource},
 };
 
 
 std::shared_ptr<Component> ComponentFactory::CreateComponent(GameObject* gameObject, Component::Type componentType, const std::shared_ptr<Component>& duplicateComponent)
 {
+    std::shared_ptr<Component> component = nullptr;
     switch (componentType)
     {
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::Rigidbody, RigidbodyComponent);
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::Light, LightComponent);
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::PhysicsShape, PhysicsShapeComponent);
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::Mesh, MeshComponent);
-    CREATE_COMPONENT_NO_DUPLICATE(Component::Type::Particle, ParticleComponent);
-    CREATE_COMPONENT_NO_DUPLICATE(Component::Type::Terrain, TerrainComponent);
-    CREATE_COMPONENT_NO_DUPLICATE(Component::Type::Camera, CameraComponent);
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::Script, ScriptComponent);
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::CharacterController, CharacterControllerComponent);
-    CREATE_OR_DUPLICATE_COMPONENT(Component::Type::Joint, JointComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::Rigidbody, RigidbodyComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::Light, LightComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::PhysicsShape, PhysicsShapeComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::Mesh, MeshComponent);
+    CREATE_COMPONENT_NO_DUPLICATE(component, Component::Type::Particle, ParticleComponent);
+    CREATE_COMPONENT_NO_DUPLICATE(component, Component::Type::Terrain, TerrainComponent);
+    CREATE_COMPONENT_NO_DUPLICATE(component, Component::Type::Camera, CameraComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::Script, ScriptComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::CharacterController, CharacterControllerComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::Joint, JointComponent);
+    CREATE_OR_DUPLICATE_COMPONENT(component, Component::Type::AudioSource, AudioSourceComponent);
     }
 
-
-    return nullptr;
+    ObjectManager::GetInstance()->RegisterComponent(component);
+    return component;
 }

@@ -40,9 +40,9 @@ void JointComponent::Render()
 	Render::DrawLine(m_owner->GetWorldMatrix().GetPosition(), m_owner->GetWorldMatrix().GetPosition() + m_owner->GetWorldMatrix().GetRight());
 }
 
-void JointComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object JointComponent::SaveComponent()
 {
-	object.AddMember("Joint Type", rapidjson::Value(JointTypeToString.at(m_jointType).c_str(), allocator), allocator);
+	return Json::Object{ {"Joint Type ", JointTypeToString.at(m_jointType)} };
 }
 
 void JointComponent::LoadComponent(const rapidjson::Value& object)

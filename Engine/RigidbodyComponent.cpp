@@ -88,13 +88,16 @@ void RigidbodyComponent::Update(float deltaTime)
 	}
 }
 
-void RigidbodyComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object RigidbodyComponent::SaveComponent()
 {
-	object.AddMember("Physics Type", GetPhysicsType(), allocator);
+	Json::Object object;
+	object.emplace("Physics Type", (int)GetPhysicsType());
 	if (auto dynamicActor = m_actor->is<PxRigidDynamic>())
 	{
-		object.AddMember("Mass", dynamicActor->getMass(), allocator);
+		object.emplace("Mass", dynamicActor->getMass());
 	}
+
+	return std::move(object);
 }
 
 void RigidbodyComponent::LoadComponent(const rapidjson::Value& object)

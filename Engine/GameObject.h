@@ -7,6 +7,7 @@ class Component;
 class Mesh;
 class Triangle;
 class CharacterControllerComponent;
+class AudioSourceComponent;
 class ObjectManager;
 
 class GameObject
@@ -53,6 +54,7 @@ public:
 
 	// hax for lua script getter
 	CharacterControllerComponent* GetCharacterControllerComponent() const;
+	AudioSourceComponent*		  GetAudioSourceComponent() const;
 
 	void SetName(const std::string& name);
 	const std::string& GetName() { return m_name; }

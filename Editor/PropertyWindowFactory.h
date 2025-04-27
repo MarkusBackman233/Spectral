@@ -7,6 +7,8 @@ class Material;
 class GameObject;
 class Script;
 class ScriptComponent;
+class AudioSourceComponent;
+
 
 class PropertyWindowFactory
 {
@@ -16,6 +18,7 @@ public:
 	static void SelectMaterial(std::shared_ptr<Mesh>& selectMesh);
 	static void SelectComponent(GameObject* gameObject);
 	static void SelectScript(ScriptComponent* selectScriptComponent);
+	static void SelectAudioSource(AudioSourceComponent* audioSourceComponent);
 };
 
 #endif

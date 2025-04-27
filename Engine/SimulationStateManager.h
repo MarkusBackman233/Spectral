@@ -1,4 +1,8 @@
 #pragma once
+
+#include "Horizon.h"
+
+
 enum class SimulationState
 {
 	Starting,
@@ -18,4 +22,7 @@ public:
 
 private:
 	bool m_wasRunning;
+
+
+	Horizon::Actor* m_actor;
 };

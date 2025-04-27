@@ -79,7 +79,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\Editor;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\Editor;C:\Projects\Horizon;C:\Projects\VCLIB\steamaudio\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\bin\win.x86_64.vc142.mt\debug;C:\Program Files\Assimp\lib\x64;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\x64\Debug;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SourcePath)</SourcePath>
     <GenerateManifest>false</GenerateManifest>
@@ -140,6 +140,9 @@
     <Manifest>
       <AdditionalManifestFiles>$(ProjectDir)src\icon.ico; $(ProjectDir)src\Assets\TemplateGrid_albedo.png; %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
+    <PostBuildEvent>
+      <Command>xcopy /Y "C:\Projects\Horizon\x64\Debug\Horizon.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -162,6 +165,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AudioManager.cpp" />
+    <ClCompile Include="AudioSource.cpp" />
+    <ClCompile Include="AudioSourceComponent.cpp" />
     <ClCompile Include="CameraComponent.cpp" />
     <ClCompile Include="CharacterControllerComponent.cpp" />
     <ClCompile Include="Component.cpp" />
@@ -183,6 +189,7 @@
     <ClCompile Include="iPhysics.cpp" />
     <ClCompile Include="iRender.cpp" />
     <ClCompile Include="JointComponent.cpp" />
+    <ClCompile Include="Json.cpp" />
     <ClCompile Include="LightComponent.cpp" />
     <ClCompile Include="LineRenderer.cpp" />
     <ClCompile Include="Logger.cpp" />
@@ -237,6 +244,10 @@
     <ClCompile Include="WindowsManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AudioFile.h" />
+    <ClInclude Include="AudioManager.h" />
+    <ClInclude Include="AudioSource.h" />
+    <ClInclude Include="AudioSourceComponent.h" />
     <ClInclude Include="CameraComponent.h" />
     <ClInclude Include="CharacterControllerComponent.h" />
     <ClInclude Include="Component.h" />
@@ -259,6 +270,7 @@
     <ClInclude Include="iPhysics.h" />
     <ClInclude Include="iRender.h" />
     <ClInclude Include="JointComponent.h" />
+    <ClInclude Include="Json.h" />
     <ClInclude Include="LightComponent.h" />
     <ClInclude Include="LineRenderer.h" />
     <ClInclude Include="Logger.h" />

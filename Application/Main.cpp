@@ -8,12 +8,21 @@
 #include "Editor.h"
 #endif // EDITOR
 
+#include <Horizon.h>
+#include <AudioManager.h>
+
+
 int main(int argc, char* args[])
 {
-    if (IOManager::LoadProject() == false)
+    Horizon::InitializePhysics();
+
+    bool projectLoaded = argc > 1 ? IOManager::LoadProject(std::string(args[1])) : IOManager::LoadProject();
+
+    if (projectLoaded == false)
     {
         return EXIT_SUCCESS;
     }
+    
 
     SimulationStateManager stateManager;
     TimeManager timeManager;
@@ -33,6 +42,7 @@ int main(int argc, char* args[])
         RenderManager::GetInstance()->Present();
     });
 
+    AudioManager::GetInstance()->Deinitialize();
     ObjectManager::GetInstance()->Deinitialize();
     return EXIT_SUCCESS;
 }

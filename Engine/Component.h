@@ -1,11 +1,12 @@
 #pragma once
 #include "pch.h"
 #include "rapidjson/document.h"
+#include "Json.h"
 class GameObject;
 class Component
 {
 public:
-	enum class Type
+	enum class Type : uint8_t
 	{
 		Rigidbody,
 		PhysicsShape,
@@ -17,6 +18,7 @@ public:
 		Camera,
 		Script,
 		CharacterController,
+		AudioSource,
 
 		Num,
 
@@ -32,15 +34,15 @@ public:
 	virtual void Update(float deltaTime) {};
 	virtual void Render() {};
 	
-	virtual void SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator) {};
-	virtual void LoadComponent(const rapidjson::Value& object) {};
+	virtual Json::Object SaveComponent() { return Json::Object(); }
+	virtual void LoadComponent(const rapidjson::Value& object) {}
 
 #ifdef EDITOR
 	virtual void ComponentEditor() {};
 	virtual void DisplayComponentIcon() {};
 #endif // EDITOR
 
-	GameObject* GetOwner(GameObject* owner) { return m_owner; }
+	GameObject* GetOwner() { return m_owner; }
 
 	virtual std::string GetComponentName();
 

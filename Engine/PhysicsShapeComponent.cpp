@@ -38,9 +38,13 @@ void PhysicsShapeComponent::Start()
 	}
 }
 
-void PhysicsShapeComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object PhysicsShapeComponent::SaveComponent()
 {
-	object.AddMember("Shape Type", GetShapeType(), allocator);
+	Json::Object object;
+
+	object.emplace("Shape Type", (int)GetShapeType());
+
+	return std::move(object);
 }
 
 void PhysicsShapeComponent::LoadComponent(const rapidjson::Value& object)

@@ -12,7 +12,7 @@
 #include "MeshComponent.h"
 #include "iPhysics.h"
 #include "RigidbodyComponent.h"
-
+#include "AudioSourceComponent.h"
 Script::Script(const std::string& filename, bool newScript)
 	: m_filename(filename)
 {
@@ -46,6 +46,7 @@ Script::Script(const std::string& filename, bool newScript)
 
             m_lua.new_usertype<GameObject>("GameObject",
                 "GetCharacterControllerComponent", &GameObject::GetCharacterControllerComponent,
+                "GetAudioSourceComponent", &GameObject::GetAudioSourceComponent,
                 "GetTransform", &GameObject::GetWorldMatrix,
                 "SetTransform", &GameObject::SetWorldMatrix,
                 "GetPosition", &GameObject::GetPosition,
@@ -58,6 +59,11 @@ Script::Script(const std::string& filename, bool newScript)
             m_lua.new_usertype<CharacterControllerComponent>("CharacterControllerComponent",
                 "Move", &CharacterControllerComponent::Move,
                 "IsOnGround", &CharacterControllerComponent::IsOnGround
+            );
+
+
+            m_lua.new_usertype<AudioSourceComponent>("AudioSourceComponent",
+                "PlayAudio", &AudioSourceComponent::PlayAudio
             );
 
             m_lua.new_usertype<Math::Vector3>("Vector3",

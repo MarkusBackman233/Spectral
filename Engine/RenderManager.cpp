@@ -49,7 +49,6 @@ void RenderManager::OnWindowResize()
     m_camera->UpdateAspectRatio(windowSize);
 }
 
-
 void RenderManager::Render()
 {
     LockedContext lockedContext = m_deviceResources.GetLockedDeviceContext();
@@ -65,6 +64,8 @@ void RenderManager::Render()
     m_pbrRender.Process(context, m_deviceResources, m_deferredPipeline, m_skyboxManager, m_shadowManager, m_SSAO);
     m_FXAA.Process(context, m_deviceResources);
     m_lineRenderer.Render(context, m_deviceResources);
+
+
     //m_guizmoRenderer.Render(context, m_deviceResources);
 }
 

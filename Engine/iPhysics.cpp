@@ -5,6 +5,7 @@ namespace Physics
 {
 	void Simulate(float deltaTime)
 	{
+
 		PhysXManager::GetInstance()->TickSimulation(deltaTime);
 	}
 	RaycastHit Raycast(const Math::Vector3& origin, const Math::Vector3& direction, float maxDistance)

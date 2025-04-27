@@ -72,8 +72,9 @@ void CharacterControllerComponent::Update(float deltaTime)
     //m_isOnGround = hit.hasHit;
 }
 
-void CharacterControllerComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object CharacterControllerComponent::SaveComponent()
 {
+    return Json::Object();
 	//object.AddMember("Physics Type", GetPhysicsType(), allocator);
 }
 

@@ -27,12 +27,16 @@ std::string StringUtils::StringToLower(const std::string& string)
 
 std::wstring StringUtils::StringToWideString(const std::string& string)
 {
-    auto length = (int)string.length();
-    size_t reqLength = ::MultiByteToWideChar(CP_UTF8, 0, string.c_str(), length, 0, 0);
-    std::wstring ret(reqLength, L'\0');
-    auto lengthRet = (int)ret.length();
-    ::MultiByteToWideChar(CP_UTF8, 0, string.c_str(), length, &ret[0], lengthRet);
-    return ret;
+    int length = MultiByteToWideChar(CP_UTF8, 0, string.c_str(), -1, nullptr, 0);
+    if (length == 0) {
+        throw std::runtime_error("Conversion from UTF-8 to UTF-16 failed");
+    }
+
+    // Create a wstring and perform the conversion
+    std::wstring wideStr(length - 1, L'\0');  // -1 to exclude the null terminator
+    MultiByteToWideChar(CP_UTF8, 0, string.c_str(), -1, &wideStr[0], length);
+
+    return wideStr;
 }
 
 std::string StringUtils::WideStringToString(const std::wstring& string)

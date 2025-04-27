@@ -63,17 +63,19 @@ void MeshComponent::Update(float deltaTime)
 
 }
 
-void MeshComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object MeshComponent::SaveComponent()
 {
+    Json::Object object;
     if (m_mesh)
     {
-        object.AddMember("Mesh", rapidjson::Value(m_mesh->GetName().c_str(), allocator), allocator);
-        object.AddMember("Material", rapidjson::Value(m_mesh->GetMaterial()->GetName().c_str(), allocator), allocator);
+        object.emplace("Mesh", m_mesh->GetName());
+        object.emplace("Material", m_mesh->GetMaterial()->GetName());
     }
     else
     {
-        object.AddMember("Mesh", rapidjson::Value("NoName", allocator), allocator);
+        object.emplace("Mesh", "NoName");
     }
+    return std::move(object);
 }
 
 void MeshComponent::LoadComponent(const rapidjson::Value& object)

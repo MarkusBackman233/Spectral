@@ -64,7 +64,7 @@ public:
 	std::shared_ptr<Light> GetLight() { return m_light; }
 	void SetLight(std::shared_ptr<Light> light);
 
-	void SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator) override;
+	Json::Object SaveComponent() override;
 
 	void LoadComponent(const rapidjson::Value& object) override;
 

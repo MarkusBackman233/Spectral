@@ -17,7 +17,7 @@ public:
 	void Start() override;
 	void Reset() override;
 	void Update(float deltaTime) override;
-	void SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator) override;
+	Json::Object SaveComponent() override;
 	void LoadComponent(const rapidjson::Value& object) override;
 
 	physx::PxRigidActor* GetActor() { return m_actor; }

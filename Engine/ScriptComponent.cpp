@@ -28,16 +28,20 @@ void ScriptComponent::Update(float deltaTime)
     m_script->Update(deltaTime);
 }
 
-void ScriptComponent::SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator)
+Json::Object ScriptComponent::SaveComponent()
 {
+    Json::Object object;
+
     if (m_script.get() != nullptr)
     {
-        object.AddMember("Script", rapidjson::Value(m_script->GetFilename().c_str(), allocator), allocator);
+        object.emplace("Script", m_script->GetFilename());
     }
     else
     {
-        object.AddMember("Script", "null", allocator);
+        object.emplace("Script", "null");
     }
+
+    return std::move(object);
 }
 
 void ScriptComponent::LoadComponent(const rapidjson::Value& object)

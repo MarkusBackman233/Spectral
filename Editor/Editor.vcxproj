@@ -76,7 +76,7 @@
     <LibraryPath>C:\Projects\Spectral\Spectral\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Projects\Spectral\Spectral\Engine;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\VCLIB\steamaudio\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AudioSourcePropertyWindow.h" />
     <ClInclude Include="ComponentPropertyWindow.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="EditorCameraController.h" />
@@ -170,6 +171,7 @@
     <ClInclude Include="UndoTransform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AudioSourcePropertyWindow.cpp" />
     <ClCompile Include="ComponentPropertyWindow.cpp" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorCameraController.cpp" />

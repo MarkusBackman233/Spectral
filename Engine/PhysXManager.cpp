@@ -124,7 +124,7 @@ void PhysXManager::TickSimulation(float deltaTime)
 		accumulatedTime -= fixedTimeStep;
 		m_lastSimulationTick = m_accumulatedTime;
 	}
-
+/*
 #ifdef EDITOR
 	if (Editor::GetInstance()->IsStarted() == false)
 	{
@@ -136,6 +136,7 @@ void PhysXManager::TickSimulation(float deltaTime)
 		}
 	}
 #endif
+*/
 }
 
 PxRigidActor* PhysXManager::CreateActor(PhysicsType type, const Math::Matrix& transform)

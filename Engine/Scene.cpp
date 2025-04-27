@@ -4,9 +4,9 @@
 #include "iRender.h"
 #include "IOManager.h"
 
-
 #include "src/External/stb_image.h"
 #include "src/External/DDSTextureLoader/DDSTextureLoader11.h"
+#include "Component.h"
 
 Scene::Scene()
 {
@@ -44,15 +44,15 @@ void Scene::LoadSceneSkybox()
 
 Light* Scene::GetSun()
 {
-	const auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
-	for (const auto& gameObject : gameObjects)
+	
+	auto lights = ObjectManager::GetInstance()->GetComponentsOfType(Component::Type::Light);
+	for (auto& component : lights)
 	{
-		if (const auto& lightComponent = gameObject->GetComponentOfType<LightComponent>())
+		auto lightComponent = std::dynamic_pointer_cast<LightComponent>(component.lock());
+			
+		if (lightComponent->GetLight()->Type == Light::LightType::Directional)
 		{
-			if (lightComponent->GetLight()->Type == Light::LightType::Directional)
-			{
-				return lightComponent->GetLight().get();
-			}
+			return lightComponent->GetLight().get();
 		}
 	}
 	return nullptr;

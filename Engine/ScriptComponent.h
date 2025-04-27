@@ -20,7 +20,7 @@ public:
     void Update(float deltaTime);
 
 
-    void SaveComponent(rapidjson::Value& object, rapidjson::Document::AllocatorType& allocator) override;
+    Json::Object SaveComponent() override;
     void LoadComponent(const rapidjson::Value& object) override;
 
 #ifdef EDITOR

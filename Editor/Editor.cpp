@@ -147,13 +147,13 @@ void Editor::Update(float deltaTime)
     }
 }
 
-void Editor::HandleDropFile(std::string filename)
+void Editor::HandleDropFile(const std::filesystem::path& filename)
 {
-    Logger::Info("Loading drop file: " + StringUtils::StripPathFromFilename(filename));
-
+    Logger::Info("Loading drop file: " + filename.filename().string());
+    
     for (auto& filetype : IOManager::SupportedTextureFiles)
     {
-        if (StringUtils::StringContainsCaseInsensitive(filename, filetype))
+        if (StringUtils::StringContainsCaseInsensitive(filename.extension().string(), filetype))
         {
             auto DropfileTask = Concurrency::create_task(
                 [filename]()
@@ -167,7 +167,7 @@ void Editor::HandleDropFile(std::string filename)
 
     for (auto& filetype : IOManager::SupportedMeshFiles)
     {
-        if (StringUtils::StringContainsCaseInsensitive(filename, filetype))
+        if (StringUtils::StringContainsCaseInsensitive(filename.extension().string(), filetype))
         {
             auto DropfileTask = Concurrency::create_task(
                 [filename]()

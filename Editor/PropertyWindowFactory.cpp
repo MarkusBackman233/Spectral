@@ -7,11 +7,13 @@
 #include "MaterialPropertyWindow.h"
 #include "ComponentPropertyWindow.h"
 #include "ScriptPropertyWindow.h"
+#include "AudioSourcePropertyWindow.h"
 #include "Texture.h"
 #include "Material.h"
 #include "ComponentFactory.h"
 #include "GameObject.h"
 #include "ScriptComponent.h"
+#include "AudioSourceComponent.h"
 
 void PropertyWindowFactory::SelectMesh(std::shared_ptr<Mesh>& selectMesh)
 {
@@ -54,6 +56,17 @@ void PropertyWindowFactory::SelectComponent(GameObject* gameObject)
             [gameObject](Component::Type type)
     {
         gameObject->AddComponent(ComponentFactory::CreateComponent(gameObject, type));
+    }
+    ));
+}
+
+void PropertyWindowFactory::SelectAudioSource(AudioSourceComponent* audioSourceComponent)
+{
+    Editor::GetInstance()->SetPropertyWindow(
+        std::make_shared<AudioSourcePropertyWindow>(
+            [audioSourceComponent](std::shared_ptr<AudioSource> audioSource)
+    {
+        audioSourceComponent->SetAudioSource(audioSource);
     }
     ));
 }

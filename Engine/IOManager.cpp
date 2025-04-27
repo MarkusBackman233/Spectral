@@ -33,6 +33,8 @@
 #include "EditorCameraController.h"
 #include "ProjectBrowserManager.h"
 
+#include "AudioManager.h"
+
 std::string IOManager::IniFailedToFindItem = "NotFound";
 
 std::string IOManager::ProjectName = "";
@@ -46,6 +48,7 @@ std::string IOManager::SpectralMaterialExtention = ".spmt";
 
 const std::vector<std::string> IOManager::SupportedTextureFiles = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga" };
 const std::vector<std::string> IOManager::SupportedMeshFiles = { ".fbx" ,".blend", ".obj", ".gltf" };
+const std::vector<std::string> IOManager::SupportedAudioFiles = { ".wav" };
 
 void IOManager::SetExecutableDirectiory()
 {
@@ -54,10 +57,17 @@ void IOManager::SetExecutableDirectiory()
     IOManager::ExecutableDirectory = std::filesystem::path(path).parent_path();
 }
 
-bool IOManager::LoadProject()
+bool IOManager::LoadProject(std::optional<std::string> forceProject /*= std::nullopt*/)
 {
     SetExecutableDirectiory();
 #ifdef EDITOR
+    if (forceProject.has_value())
+    {
+        IOManager::ProjectDirectory = forceProject.value();
+        IOManager::CollectProjectFiles();
+        IOManager::LoadSpectralScene("asd.json");
+    }
+    else
     {
         ProjectBrowserManager projectBrowserManager;// Will wait here until a project is selected and loaded;
         if (projectBrowserManager.HasLoadedProject() == false)
@@ -75,11 +85,11 @@ bool IOManager::LoadProject()
     return true;
 }
 
-bool IOManager::LoadFBX(const std::string& filename)
+bool IOManager::LoadFBX(const std::filesystem::path& filename)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(filename, aiProcess_PreTransformVertices | aiProcess_FixInfacingNormals | aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
-    auto strippedFilename = StringUtils::StripPathFromFilename(filename);
+    const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PreTransformVertices | aiProcess_FixInfacingNormals | aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    auto strippedFilename = filename.filename().string();
     if (scene == nullptr)
     {
         Logger::Error("Could not load model: " + strippedFilename);
@@ -96,7 +106,7 @@ bool IOManager::LoadFBX(const std::string& filename)
     IOManager::ProcessNode(strippedFilename, std::filesystem::path(filename).parent_path(), scene->mRootNode, scene, rootObject, Math::Matrix());
     return true;
 }
-
+/*
 bool IOManager::LoadTexture(const std::string& filename)
 {
     namespace fs = std::filesystem;
@@ -116,7 +126,7 @@ bool IOManager::LoadTexture(const std::string& filename)
     TextureManager::GetInstance()->GetTexture(StringUtils::StripPathFromFilename(filename));
     return true;
 }
-
+*/
 bool IOManager::LoadTexture(const std::filesystem::path& file)
 {
     namespace fs = std::filesystem;
@@ -167,46 +177,26 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
 {
     Scene& scene = SceneManager::GetInstance()->GetCurrentScene();
 
-    rapidjson::Document document;
-    document.SetObject();
+    Json::Object obj;
+    obj.emplace("SceneName", sceneName);
+    const auto& lightingSettings = scene.GetLightingSettings();
 
-    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+    auto ambientLight = lightingSettings.AmbientLight;
+    obj.emplace("AmbientLight", Json::Array{ ambientLight.x,ambientLight.y,ambientLight.z,ambientLight.w });
 
-    document.AddMember("SceneName", rapidjson::Value(sceneName.c_str(), allocator), allocator);
+    auto cameraPos = Render::GetCameraPosition();
+    obj.emplace("LastCameraPosition", Json::Array{ cameraPos.x,cameraPos.y,cameraPos.z });
 
-    {
-        auto ambientLight = scene.GetLightingSettings().AmbientLight;
-        rapidjson::Value colorArray(rapidjson::kArrayType);
-        colorArray.PushBack(ambientLight.x, allocator);
-        colorArray.PushBack(ambientLight.y, allocator);
-        colorArray.PushBack(ambientLight.z, allocator);
-        colorArray.PushBack(ambientLight.w, allocator);
-        document.AddMember("AmbientLight", colorArray, allocator);
-    }    
-    {
-        auto cameraPos = Render::GetCameraPosition();
-        rapidjson::Value cameraPosArray(rapidjson::kArrayType);
-        cameraPosArray.PushBack(cameraPos.x, allocator);
-        cameraPosArray.PushBack(cameraPos.y, allocator);
-        cameraPosArray.PushBack(cameraPos.z, allocator);
-        document.AddMember("LastCameraPosition", cameraPosArray, allocator);
-    }
-    {
-        auto fogColor = scene.GetLightingSettings().FogColor;
-        rapidjson::Value colorArray(rapidjson::kArrayType);
-        colorArray.PushBack(fogColor.x, allocator);
-        colorArray.PushBack(fogColor.y, allocator);
-        colorArray.PushBack(fogColor.z, allocator);
-        colorArray.PushBack(fogColor.w, allocator);
-        document.AddMember("FogColor", colorArray, allocator);
-    }    
-    document.AddMember("CameraDistance", scene.GetLightingSettings().CameraDistance, allocator);
-    document.AddMember("ShadowCameraSize", scene.GetLightingSettings().ShadowCameraSize, allocator);
-    document.AddMember("NearDepth", scene.GetLightingSettings().NearDepth, allocator);
-    document.AddMember("FarDepth", scene.GetLightingSettings().FarDepth, allocator);
+    auto fogColor = lightingSettings.FogColor;
+    obj.emplace("FogColor", Json::Array{ fogColor.x,fogColor.y,fogColor.z,fogColor.w });
+
+    obj.emplace("CameraDistance", lightingSettings.CameraDistance);
+    obj.emplace("ShadowCameraSize", lightingSettings.ShadowCameraSize);
+    obj.emplace("NearDepth", lightingSettings.NearDepth);
+    obj.emplace("FarDepth", lightingSettings.FarDepth);
 
    
-    rapidjson::Value gameObjects(rapidjson::kArrayType);
+    Json::Array gameObjects;
     std::vector<GameObject*> rootGameObjects;
 
     for (const auto& gameObject : ObjectManager::GetInstance()->GetGameObjects())
@@ -224,28 +214,11 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
 
     for (const auto& gameObject : rootGameObjects)
     {
-        rapidjson::Value object(rapidjson::kObjectType);
-        SaveGameObject(object, gameObject, allocator);
-        gameObjects.PushBack(object, allocator);
+        gameObjects.push_back(SaveGameObject(gameObject));
     }
 
-    document.AddMember("GameObjects", gameObjects, allocator);
-    rapidjson::StringBuffer buffer;
-    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-    document.Accept(writer);
-
-    // Output the JSON to a file
-
-    
-    std::ofstream ofs(GetPath(sceneName, ".json"));
-    if (ofs.is_open()) {
-        ofs << buffer.GetString();
-        ofs.close();
-    }
-    else {
-        Logger::Error("Could not open file for writing.");
-    }
-
+    obj.emplace("GameObjects", gameObjects);
+    Json::Serialize(obj, GetPath(sceneName, ".json").string());
 
     Logger::Info("Completed Saving Scene: " + sceneName);
 #ifdef EDITOR
@@ -498,6 +471,10 @@ void IOManager::CollectProjectFiles()
             IOManager::LoadSpectralModel(filename.substr(0, lastindex), mesh);
             ModelManager::GetInstance()->AddMesh(filename.substr(0, lastindex), mesh);
         }
+        else if (file.path().extension() == SupportedAudioFiles[0])
+        {
+            AudioManager::GetInstance()->GetAudioSource(file.path());
+        }
         else
         {
             for (auto& filetype : SupportedTextureFiles)
@@ -532,57 +509,57 @@ std::string IOManager::ReadFromIniFile(const std::filesystem::path& iniPath, con
 }
 
 
-void IOManager::SaveGameObject(rapidjson::Value& object, GameObject* gameObject, rapidjson::Document::AllocatorType& allocator)
+Json::Object IOManager::SaveGameObject(GameObject* gameObject)
 {
-    object.AddMember("Name", rapidjson::Value(gameObject->GetName().c_str(), allocator), allocator);
+    Json::Object obj;
+    obj.emplace("Name", gameObject->GetName());
     {
-        rapidjson::Value matrixArray(rapidjson::kArrayType);
+        Json::Array mat;
         const auto &matrix = gameObject->GetWorldMatrix();
         for (size_t r = 0; r < 4; r++)
         {
             for (size_t c = 0; c < 4; c++)
             {
-                matrixArray.PushBack(matrix.data[r][c], allocator);
+                mat.push_back(matrix.data[r][c]);
             }
         }
-        object.AddMember("Matrix", matrixArray, allocator);
+        obj.emplace("Matrix", mat);
     }
     {
-        rapidjson::Value matrixArray(rapidjson::kArrayType);
-        const auto& matrix = gameObject->GetLocalMatrix();
+        Json::Array mat;
+        const auto &matrix = gameObject->GetLocalMatrix();
         for (size_t r = 0; r < 4; r++)
         {
             for (size_t c = 0; c < 4; c++)
             {
-                matrixArray.PushBack(matrix.data[r][c], allocator);
+                mat.push_back(matrix.data[r][c]);
             }
         }
-        object.AddMember("LocalMatrix", matrixArray, allocator);
+        obj.emplace("LocalMatrix", mat);
     }
     {
-        rapidjson::Value componentsArray(rapidjson::kArrayType);
+        Json::Array componentsArray;
         for (const auto& comonent : gameObject->GetComponents())
         {
-
-            rapidjson::Value componentObject(rapidjson::kObjectType);
-            componentObject.AddMember("Name", rapidjson::Value(comonent->GetComponentName().c_str(), allocator), allocator);
-            comonent->SaveComponent(componentObject, allocator);
-            componentsArray.PushBack(componentObject, allocator);
+            auto componentObject = comonent->SaveComponent();
+            componentObject.emplace("Name", comonent->GetComponentName());
+            componentsArray.push_back(componentObject);
         }
-        object.AddMember("Components", componentsArray, allocator);
+        obj.emplace("Components", componentsArray);
     }
 
     {
-        rapidjson::Value childrenArray(rapidjson::kArrayType);
+        Json::Array childrenArray;
         for (auto& child : gameObject->GetChildren())
         {
-            rapidjson::Value childObject(rapidjson::kObjectType);
-            SaveGameObject(childObject, child, allocator);
-            childrenArray.PushBack(childObject,allocator);
+            auto childObject = SaveGameObject(child);
+            childrenArray.push_back(childObject);
         }
-        object.AddMember("Children", childrenArray, allocator);
+        obj.emplace("Children", childrenArray);
     }
+    return std::move(obj);
 }
+
 
 void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* parent)
 {

@@ -156,7 +156,7 @@ LRESULT CALLBACK WindowsManager::StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM w
         InputManager::GetInstance()->RegisterInput(static_cast<InputId>(wParam), InputManager::KeyState::Pressed);
         break;
     case WM_SYSKEYUP:
-        InputManager::GetInstance()->RegisterInput(static_cast<InputId>(wParam), InputManager::KeyState::Pressed);
+        InputManager::GetInstance()->RegisterInput(static_cast<InputId>(wParam), InputManager::KeyState::Released);
         break;
     case WM_KEYDOWN:
         InputManager::GetInstance()->RegisterInput(static_cast<InputId>(wParam), InputManager::KeyState::Pressed);
@@ -166,17 +166,26 @@ LRESULT CALLBACK WindowsManager::StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM w
         break;
     case WM_LBUTTONDOWN:
         InputManager::GetInstance()->RegisterInput(InputId::Mouse1, InputManager::KeyState::Pressed);
+        break;    
+    case WM_LBUTTONDBLCLK:
+        InputManager::GetInstance()->RegisterInput(InputId::Mouse1, InputManager::KeyState::Pressed);
         break;
     case WM_LBUTTONUP:
         InputManager::GetInstance()->RegisterInput(InputId::Mouse1, InputManager::KeyState::Released);
         break;
     case WM_RBUTTONDOWN:
         InputManager::GetInstance()->RegisterInput(InputId::Mouse2, InputManager::KeyState::Pressed);
+        break;    
+    case WM_RBUTTONDBLCLK:
+        InputManager::GetInstance()->RegisterInput(InputId::Mouse2, InputManager::KeyState::Pressed);
         break;
     case WM_RBUTTONUP:
         InputManager::GetInstance()->RegisterInput(InputId::Mouse2, InputManager::KeyState::Released);
         break;
     case WM_MBUTTONDOWN:
+        InputManager::GetInstance()->RegisterInput(InputId::Mouse3, InputManager::KeyState::Pressed);
+        break;    
+    case WM_MBUTTONDBLCLK:
         InputManager::GetInstance()->RegisterInput(InputId::Mouse3, InputManager::KeyState::Pressed);
         break;
     case WM_MBUTTONUP:
