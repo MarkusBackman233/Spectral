@@ -17,14 +17,6 @@ public:
 
 	void Deinitialize();
 
-	std::shared_ptr<AudioSource> GetAudioSource(const std::filesystem::path& file);
-
-	std::unordered_map<std::string, std::shared_ptr<AudioSource>> GetCachedAudioSources();
-
-	void AddAudioSource(std::shared_ptr<AudioSource> AudioSource);
-
-
-
 	int GetFrameSize() { return m_frameSize; }
 
 	IPLContext GetContext() { return m_context; }

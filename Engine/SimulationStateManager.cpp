@@ -3,93 +3,81 @@
 #include "ObjectManager.h"
 #include "iPhysics.h"
 #include "iRender.h"
-#include "MathFunctions.h"
-#include <BoxShape.h>
-#include "AudioManager.h"
+#include "NavigationManager.h"
 
 SimulationStateManager::SimulationStateManager()
     : m_wasRunning(false)
 {
-    //m_actor = Horizon::CreateDynamicActor(Horizon::Transform(Horizon::Vec3(0.0f, 5.0f, 0.0f)));
-    //{
-    //    auto shape = m_actor->AddShape(Horizon::ShapeType::Box);
-    //    shape->SetLocalPose(Horizon::Transform(Horizon::Vec3(0.0f, 1.0f, 0.0f)));
-    //    dynamic_cast<Horizon::BoxShape*>(shape)->SetHalfExtents(Horizon::Vec3(3,1,5));
-    //}    
-    //{
-    //    auto shape = m_actor->AddShape(Horizon::ShapeType::Box);
-    //    shape->SetLocalPose(Horizon::Transform(Horizon::Vec3(0.0f, -1.0f, 0.0f)));
-    //    dynamic_cast<Horizon::BoxShape*>(shape)->SetHalfExtents(Horizon::Vec3(3, 1, 5));
-    //}
-    AudioManager::GetInstance();
 }
 
 void SimulationStateManager::Update(float deltaTime)
 {
     auto objectManager = ObjectManager::GetInstance();
-    /*
-    for (auto& shape : m_actor->GetShapes())
-    {
-
-        auto pose = m_actor->GetPose() * shape->GetLocalPose();
-
-        Math::Vector3 center(pose.pos.x, pose.pos.y, pose.pos.z);
-        Horizon::Quat rotation = pose.quat;
-        Horizon::Vec3 halfExtents = dynamic_cast<Horizon::BoxShape*>(shape)->GetHalfExtents();
-        float h = 0.5f;
-        Math::Vector3 localCorners[8] = {
-            Math::Vector3(-halfExtents.x, -halfExtents.y, -halfExtents.z),
-            Math::Vector3(halfExtents.x, -halfExtents.y, -halfExtents.z),
-            Math::Vector3(halfExtents.x,  halfExtents.y, -halfExtents.z),
-            Math::Vector3(-halfExtents.x,  halfExtents.y, -halfExtents.z),
-            Math::Vector3(-halfExtents.x, -halfExtents.y,  halfExtents.z),
-            Math::Vector3(halfExtents.x, -halfExtents.y,  halfExtents.z),
-            Math::Vector3(halfExtents.x,  halfExtents.y,  halfExtents.z),
-            Math::Vector3(-halfExtents.x,  halfExtents.y,  halfExtents.z)
-        };
-
-        Math::Vector3 worldCorners[8];
-        for (int i = 0; i < 8; ++i)
-        {
-            Horizon::Vec3 rotated = rotation.RotateVector( Horizon::Vec3(localCorners[i].x, localCorners[i].y, localCorners[i].z));
-            worldCorners[i] = center + Math::Vector3(rotated.x, rotated.y, rotated.z);
-        }
-
-        // Draw edges
-        Render::DrawLine(worldCorners[0], worldCorners[1]);
-        Render::DrawLine(worldCorners[1], worldCorners[2]);
-        Render::DrawLine(worldCorners[2], worldCorners[3]);
-        Render::DrawLine(worldCorners[3], worldCorners[0]);
-        Render::DrawLine(worldCorners[4], worldCorners[5]);
-        Render::DrawLine(worldCorners[5], worldCorners[6]);
-        Render::DrawLine(worldCorners[6], worldCorners[7]);
-        Render::DrawLine(worldCorners[7], worldCorners[4]);
-        Render::DrawLine(worldCorners[0], worldCorners[4]);
-        Render::DrawLine(worldCorners[1], worldCorners[5]);
-        Render::DrawLine(worldCorners[2], worldCorners[6]);
-        Render::DrawLine(worldCorners[3], worldCorners[7]);
-    }
-
-    */
+  
     switch (GetSimulationState())
     {
     case SimulationState::Starting:
+        NavigationManager::GetInstance()->GenerateNavMesh();
         objectManager->Start();
         break;
     case SimulationState::Resetting:
         objectManager->Reset();
-        //m_actor->SetPose(Horizon::Transform(Horizon::Vec3(0.0f, 5.0f, 0.0f)));
-        //m_actor->Reset();
         break;
     case SimulationState::Running:
         objectManager->Update(deltaTime);
+        NavigationManager::GetInstance()->m_crowd->update(deltaTime, nullptr);
         Physics::Simulate(deltaTime);
-        Horizon::Simulate(deltaTime);
+        
         if (GameObject* cameraObject = objectManager->GetMainCameraGameObject())
         {
             Render::GetCamera()->GetWorldMatrix() = cameraObject->GetWorldMatrix();
             Render::GetCamera()->GetWorldMatrix().OrthoNormalize();
-            break;
+        }
+
+        {
+            const auto navMesh = NavigationManager::GetInstance()->m_navMesh;
+            for(int i = 0; i < navMesh->getMaxTiles(); ++i)
+            {
+                const dtMeshTile* tile = navMesh->getTileG(i);
+
+                const dtPoly* polys = tile->polys;
+                const float* verts = tile->verts;
+                const dtPolyDetail* detailMeshes = tile->detailMeshes;
+                const float* detailVerts = tile->detailVerts;
+
+                for (int j = 0; j < tile->header->polyCount; ++j)
+                {
+                    const dtPoly& p = polys[j];
+                    if (p.getType() != DT_POLYTYPE_GROUND) continue; // skip off-mesh connections
+
+                    const dtPolyDetail& pd = detailMeshes[j];
+
+                    for (int k = 0; k < pd.triCount; ++k)
+                    {
+                        const unsigned char* t = &tile->detailTris[(pd.triBase + k) * 4];
+
+                        Math::Vector3 tri[3];
+                        for (int m = 0; m < 3; ++m)
+                        {
+                            const int vertIndex = t[m];
+                            const float* v;
+
+                            if (vertIndex < pd.vertCount)
+                                v = &detailVerts[(pd.vertBase + vertIndex) * 3];
+                            else
+                                v = &verts[p.verts[vertIndex - pd.vertCount] * 3];
+
+                            tri[m] = Math::Vector3(v[0], v[1], v[2]);
+                        }
+
+                        // Draw triangle as lines
+                        Render::DrawLine(tri[0], tri[1]);
+                        Render::DrawLine(tri[1], tri[2]);
+                        Render::DrawLine(tri[2], tri[0]);
+                    }
+                }
+            }
+
         }
         break;
     case SimulationState::Stopped:

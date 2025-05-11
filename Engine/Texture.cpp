@@ -18,8 +18,10 @@ bool Texture::LoadTexture(unsigned char* bytes, const Math::Vector2i& size)
 }
 
 
-bool Texture::LoadTexture(const std::filesystem::path& file)
+bool Texture::Load(const std::filesystem::path& file)
 {
+
+
 	auto stringFilename = file.string();
 
 	Logger::Info("Loading Texture: " + stringFilename);
@@ -51,15 +53,23 @@ bool Texture::LoadTexture(const std::filesystem::path& file)
 	return true;
 }
 
-std::string Texture::GetFilename()
+bool Texture::LoadFromResource(unsigned char* bytes, size_t size)
 {
-	return m_filename;
+	int width, height, channels;
+
+	unsigned char* image = stbi_load_from_memory(
+		bytes,
+		size,
+		&width, &height, &channels, 0
+	);
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
+	Render::CreateTexture(image, Math::Vector2i(width, height), texture);
+	stbi_image_free(image);
+	GenerateMips(texture.Get());
+	return true;
 }
 
-void Texture::SetFilename(const std::string& filename)
-{
-	m_filename = filename;
-}
+
 
 
 void Texture::GenerateMips(ID3D11Texture2D* texture)

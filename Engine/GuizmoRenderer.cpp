@@ -3,8 +3,8 @@
 #include "iRender.h"
 #include "Vector3.h"
 #include "Matrix.h"
-#include "Editor.h"
 #include "ProfilerManager.h"
+#include "Texture.h"
 
 GuizmoRenderer::GuizmoRenderer()
 {
@@ -21,8 +21,8 @@ void GuizmoRenderer::CreateResources(ID3D11Device* device)
     Render::CreateVertexShader(device, "Guizmo_VS.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout);
     Render::CreatePixelShader(device, "Guizmo_PS.cso", &m_pPixelShader);
 
-    Render::CreateConstantBuffer(device, sizeof(Math::Vector4), m_pVertexConstantBufferData);
-    Render::CreateConstantBuffer(device, sizeof(Math::Matrix), m_pPixelConstantBufferData);
+    Render::CreateConstantBuffer(device, sizeof(Math::Matrix), m_pVertexConstantBufferData);
+    Render::CreateConstantBuffer(device, sizeof(Math::Vector4), m_pPixelConstantBufferData);
 
     std::vector<GuizmoRenderer::Vertex> vertices =
     { 
@@ -41,7 +41,7 @@ void GuizmoRenderer::Render(ID3D11DeviceContext* context, const DeviceResources&
     ProfileFunction
     context->ClearDepthStencilView(deviceResources.GetDepthStencil(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
+    context->RSSetState(deviceResources.GetNoCullingRasterizer());
     for (const auto& [texture, guizmos] : m_guizmosToDraw)
     {
         for (const auto& [position, color] : guizmos)
@@ -53,28 +53,24 @@ void GuizmoRenderer::Render(ID3D11DeviceContext* context, const DeviceResources&
             UINT stride = sizeof(GuizmoRenderer::Vertex);
             UINT offset = 0;
 
-            const Math::Vector3 viewDirection = (Render::GetCameraPosition() - position).GetNormal();
+            auto camMat = Render::GetCamera()->GetWorldMatrix();
+            camMat.SetPosition(Math::Vector3(0.0f, 0.0f, 0.0f));
+            float width = 0.5f;
 
-            Math::Vector3 up(0.0f, 1.0f, 0.0f);
-            if (fabs(viewDirection.y) > 0.99f) {
-                up = Math::Vector3(1.0f, 0.0f, 0.0f);
-            }
+            Math::Vector3 r = camMat.GetRight() * width;
+            Math::Vector3 up = camMat.GetUp() * width;
 
-            Math::Vector3 right = viewDirection.Cross(up).GetNormal();
-            up = right.Cross(viewDirection).GetNormal();
+            Math::Vector3 corner1 = position + Math::Vector3(-0.5f, -0.5f, 0.0f).Transform(camMat);
+            Math::Vector3 corner2 = position + Math::Vector3(0.5f, -0.5f, 0.0f).Transform(camMat);
+            Math::Vector3 corner3 = position + Math::Vector3(0.5f,  0.5f, 0.0f).Transform(camMat);
+            Math::Vector3 corner4 = position + Math::Vector3(-0.5f,  0.5f, 0.0f).Transform(camMat);
 
-            const float halfWidth = 0.5f;
-
-            const Math::Vector3 corner1 = position + (right * halfWidth) + (up * halfWidth);
-            const Math::Vector3 corner2 = position - (right * halfWidth) + (up * halfWidth);
-            const Math::Vector3 corner3 = position - (right * halfWidth) - (up * halfWidth);
-            const Math::Vector3 corner4 = position + (right * halfWidth) - (up * halfWidth);
 
             const std::vector<GuizmoRenderer::Vertex> vertices = {
-                { Math::Vector3(corner1.x, corner1.y, corner1.z), Math::Vector2(0.0f, 1.0f) },
-                { Math::Vector3(corner2.x, corner2.y, corner2.z), Math::Vector2(1.0f, 1.0f) },
-                { Math::Vector3(corner3.x, corner3.y, corner3.z), Math::Vector2(1.0f, 0.0f) },
-                { Math::Vector3(corner4.x, corner4.y, corner4.z), Math::Vector2(0.0f, 0.0f) }
+                { corner1, Math::Vector2(0.0f, 1.0f) },
+                { corner2, Math::Vector2(1.0f, 1.0f) },
+                { corner3, Math::Vector2(1.0f, 0.0f) },
+                { corner4, Math::Vector2(0.0f, 0.0f) },
             };
 
 
@@ -87,7 +83,9 @@ void GuizmoRenderer::Render(ID3D11DeviceContext* context, const DeviceResources&
         }
 
     }
+
     m_guizmosToDraw.clear();
+    context->RSSetState(deviceResources.GetNoCullingRasterizer());
 }
 
 void GuizmoRenderer::AddGuizmo(std::shared_ptr<Texture> texture, const Math::Vector3& position, const Math::Vector4& color)

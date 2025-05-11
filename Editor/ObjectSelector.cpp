@@ -11,6 +11,7 @@
 #include "LightComponent.h"
 #include "Editor.h"
 #include "UndoTransform.h"
+#include "AudioSourceComponent.h"
 
 using namespace Spectral;
 
@@ -188,7 +189,7 @@ void ObjectSelector::HandleRaycastSelection()
         {
             mesh = terrainComponent->GetMesh();
         }
-        else if (auto lightComponent = object->GetComponentOfType<LightComponent>())
+        else if (object->GetComponentOfType<LightComponent>() || object->GetComponentOfType<AudioSourceComponent>())
         {
             float distance = 0.0f;
             if (Intersection::BoundingSphere(object->GetWorldMatrix(), 0.5f, rayOrigin, rayDirection, distance))

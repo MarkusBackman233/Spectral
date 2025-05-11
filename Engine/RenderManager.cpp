@@ -23,13 +23,14 @@ RenderManager::RenderManager()
     m_lineRenderer.CreateResources(device);
     m_FXAA.CreateResources(device);
     m_guizmoRenderer.CreateResources(device);
-    ID3D11SamplerState* samplers[4] = {
+    ID3D11SamplerState* samplers[5] = {
         m_deviceResources.GetDefaultSamplerState(),
         m_shadowManager.GetShadowCompareSamplerState(),
         m_skyboxManager.GetCubeSamplerState(),
-        m_deviceResources.GetClampSamplerState()
+        m_deviceResources.GetClampSamplerState(),
+        m_deviceResources.GetPointSamplerState()
     };
-    context->PSSetSamplers(0, 4, samplers);
+    context->PSSetSamplers(0, 5, samplers);
     m_camera = std::make_unique<PerspectiveCamera>(75.0f, 0.1f, 1000.0f, windowSize);
 }
 
@@ -66,7 +67,10 @@ void RenderManager::Render()
     m_lineRenderer.Render(context, m_deviceResources);
 
 
-    //m_guizmoRenderer.Render(context, m_deviceResources);
+    m_guizmoRenderer.Render(context, m_deviceResources);
+
+    //ID3D11RenderTargetView* nulltargets[] = { nullptr };
+    //context->OMSetRenderTargets(1, nulltargets, nullptr);
 }
 
 void RenderManager::Present()

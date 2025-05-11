@@ -5,7 +5,6 @@
 #include "Texture.h"
 #include "Logger.h"
 #include "IOManager.h"
-#include "ModelManager.h"
 #include "Material.h"
 #include "SceneManager.h"
 #include "Matrix.h"

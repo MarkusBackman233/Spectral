@@ -1,22 +1,10 @@
 #include "AudioManager.h"
-#include <algorithm>
-#include <fstream>
 #include <vector>
-#include "IOManager.h"
 #include <ostream>
-
 #include <combaseapi.h>
-
-
-#include <comdef.h> // For _com_error
-#include <wrl/client.h>
 #include <thread>
-#include <ppltasks.h>
-
 #include "iRender.h"
-
 #include "AudioSourceComponent.h"
-
 #include "ObjectManager.h"
 
 
@@ -182,53 +170,6 @@ void AudioManager::Deinitialize()
     iplContextRelease(&m_context);
 }
 
-std::shared_ptr<AudioSource> AudioManager::GetAudioSource(const std::filesystem::path& file)
-{
-    std::shared_ptr<AudioSource> audioSource(nullptr);
-    std::string filename = file.filename().string();
-
-    {
-        std::shared_lock lock(m_audioSourceLoadingMutex); // Shared lock for reading
-
-        auto textureIt = m_audioSources.find(filename);
-        if (textureIt != m_audioSources.end())
-        {
-            return textureIt->second;
-        }
-    }
-    {
-        audioSource = std::make_shared<AudioSource>();
-        std::unique_lock lock(m_audioSourceLoadingMutex);
-        m_audioSources.try_emplace(filename, audioSource);
-    }
-
-    if (!audioSource->Load(file))
-    {
-        std::unique_lock lock(m_audioSourceLoadingMutex); // Exclusive lock for writing
-
-        m_audioSources.erase(filename);
-        return nullptr;
-    }
-    audioSource->m_fileName = filename;
-    return audioSource;
-}
-
-std::unordered_map<std::string, std::shared_ptr<AudioSource>> AudioManager::GetCachedAudioSources()
-{
-    std::shared_lock lock(m_audioSourceLoadingMutex); // Shared lock for reading
-
-    return m_audioSources;
-}
-
-void AudioManager::AddAudioSource(std::shared_ptr<AudioSource> audioSource)
-{
-    std::unique_lock lock(m_audioSourceLoadingMutex); // Exclusive lock for writing
-
-    m_audioSources.try_emplace(audioSource->m_fileName, audioSource);
-}
-
-
-
 void AudioManager::ProcessAudioThread(std::stop_token stopToken)
 {
 
@@ -285,9 +226,9 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
             m_attenuationBufferStereo.numSamples = currentFramesAvailable;
             m_binauralBuffer.numSamples = currentFramesAvailable;
             auto settings = audioComp->GetSettings();
-            auto& samples = audioSource->m_audioFile.samples;
+            auto& samples = audioSource->GetAudioFile().samples;
 
-            int channels = static_cast<int>(audioSource->m_audioFile.samples.size());
+            int channels = static_cast<int>(audioSource->GetAudioFile().samples.size());
             std::vector<float> outputaudioframe(2 * GetFrameSize(), 0.0f);
 
 

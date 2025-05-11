@@ -1,30 +1,34 @@
 #include "Mesh.h"
-#include "MaterialManager.h"
 #include "iRender.h"
+#include "IOManager.h"
+
 Mesh::Mesh()
 {
-	m_material = MaterialManager::GetInstance()->GetDefaultMaterial();
 }
 
-void Mesh::SetMaterial(std::shared_ptr<Material> material)
+bool Mesh::Load(const std::filesystem::path& file)
 {
-	m_material = material; 
+	Logger::Info(std::string("Loading Model: ") + file.filename().string());
+	ReadObject readObject(file);
+	if (!readObject.GetFile().is_open())
+	{
+		return false;
+	}
+	readObject.Read(m_filename);
+	readObject.Read(vertexes);
+	readObject.Read(indices32);
+
+	CalculateBoundingBox();
+	CreateVertexAndIndexBuffer(Render::GetDevice());
+	return true;
 }
+
+
 
 void Mesh::CreateVertexAndIndexBuffer(ID3D11Device* device)
 {
 	m_pVertexBuffer = Render::CreateVertexBuffer(device, vertexes);
 	m_pIndexBuffer = Render::CreateIndexBuffer(device, indices32);
-}
-
-void Mesh::SetName(const std::string& name)
-{
-	m_meshName = name;
-}
-
-std::string& Mesh::GetName()
-{
-	return m_meshName;
 }
 
 void Mesh::CalculateBoundingBox()

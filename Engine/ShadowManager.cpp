@@ -103,12 +103,12 @@ void ShadowManager::DrawShadowDepth(ID3D11DeviceContext* context, const Instance
     UINT strideInstance = sizeof(Math::Matrix);
 
     const auto& instances = instanceManager.GetInstances();
-    for (const auto& [mesh, matrixes] : instances)
+    for (const auto& [instance, matrixes] : instances)
     {
-        context->IASetVertexBuffers(0, 1, mesh->m_pVertexBuffer.GetAddressOf(), &stride, &offset);
-        context->IASetIndexBuffer(mesh->m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+        context->IASetVertexBuffers(0, 1, instance.Mesh->m_pVertexBuffer.GetAddressOf(), &stride, &offset);
+        context->IASetIndexBuffer(instance.Mesh->m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
         context->IASetVertexBuffers(1, 1, matrixes.Buffer.GetAddressOf(), &strideInstance, &offset);
-        context->DrawIndexedInstanced(static_cast<UINT>(mesh->indices32.size()), matrixes.CurrentInstanceCount, 0, 0, 0);
+        context->DrawIndexedInstanced(static_cast<UINT>(instance.Mesh->indices32.size()), matrixes.CurrentInstanceCount, 0, 0, 0);
     }
 }
 

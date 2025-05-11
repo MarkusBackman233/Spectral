@@ -1,11 +1,9 @@
 #pragma once
-#include <pch.h>
-#include <phonon.h>
 #include "AudioFile.h"
+#include "LoadableResource.h"
 
 
-
-class AudioSource
+class AudioSource : public Resource
 {
 public:
 
@@ -22,11 +20,12 @@ public:
 
 	};
 
-	bool Load(const std::filesystem::path& file);
 
+	AudioFile<float>& GetAudioFile();
 
-	std::string m_fileName;
+	bool Load(const std::filesystem::path& file) override;
 
+private:
 
 	AudioFile<float> m_audioFile;
 };

@@ -1,8 +1,10 @@
 #pragma once
 #include <d3d11.h>
-#include "wrl.h"
-#include "Material.h"
-#include "Matrix.h"
+#include "Vector4.h"
+#include "Vector2.h"
+#include <wrl/client.h>
+
+
 class Texture;
 class DeviceResources;
 

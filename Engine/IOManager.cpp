@@ -1,16 +1,13 @@
 #include "IOManager.h"
 #include <iostream>
 #include "Mesh.h"
-#include "TextureManager.h"
 #include "iRender.h"
 #include "ObjectManager.h"
 #include "Logger.h"
 #include "Matrix.h"
 #include <filesystem>
-#include "ModelManager.h"
 #include "ComponentFactory.h"
 #include <ppltasks.h>
-#include "MaterialManager.h"
 #include "StringUtils.h"
 #include "RenderManager.h"
 #include "SceneManager.h"
@@ -34,6 +31,7 @@
 #include "ProjectBrowserManager.h"
 
 #include "AudioManager.h"
+#include "ResourceManager.h"
 
 std::string IOManager::IniFailedToFindItem = "NotFound";
 
@@ -42,9 +40,9 @@ std::string IOManager::ProjectName = "";
 std::filesystem::path IOManager::ProjectDirectory = "";
 std::filesystem::path IOManager::ExecutableDirectory = "";
 
-std::string IOManager::SpectralModelExtention = ".spm";
-std::string IOManager::SpectralSceneExtention = ".sps";
-std::string IOManager::SpectralMaterialExtention = ".spmt";
+std::string IOManager::SpectralModelExtention = ".model";
+std::string IOManager::SpectralSceneExtention = ".scene";
+std::string IOManager::SpectralMaterialExtention = ".material";
 
 const std::vector<std::string> IOManager::SupportedTextureFiles = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga" };
 const std::vector<std::string> IOManager::SupportedMeshFiles = { ".fbx" ,".blend", ".obj", ".gltf" };
@@ -89,7 +87,7 @@ bool IOManager::LoadFBX(const std::filesystem::path& filename)
 {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PreTransformVertices | aiProcess_FixInfacingNormals | aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
-    auto strippedFilename = filename.filename().string();
+    std::string strippedFilename(filename.filename().string().c_str());
     if (scene == nullptr)
     {
         Logger::Error("Could not load model: " + strippedFilename);
@@ -143,32 +141,39 @@ bool IOManager::LoadTexture(const std::filesystem::path& file)
     {
         Logger::Error(e.what());
     }
+    auto texture = ResourceManager::GetInstance()->GetResource<Texture>(file);
 
-    TextureManager::GetInstance()->GetTexture(file);
-    return true;
+
+    return texture != nullptr;
 }
 
-bool IOManager::LoadSpectralModel(const std::string& filename, std::shared_ptr<Mesh>& mesh)
+bool IOManager::LoadAudioSource(const std::filesystem::path& file)
 {
-    Logger::Info("Loading Model: " + filename);
-    ReadObject readObject(GetPath(filename, SpectralModelExtention));
-    if (!readObject.GetFile().is_open()) 
-    {
-        return false;
-    }
-    readObject.Read(mesh->GetName());
-    readObject.Read(mesh->vertexes);
-    readObject.Read(mesh->indices32);
+    namespace fs = std::filesystem;
 
-    mesh->CalculateBoundingBox();
-    mesh->CreateVertexAndIndexBuffer(Render::GetDevice());
-    return true;
+    fs::path targetParent = IOManager::ProjectDirectory;
+    auto target = targetParent / file.filename();
+
+    try
+    {
+        fs::create_directories(targetParent);
+        fs::copy_file(file, target, fs::copy_options::overwrite_existing);
+    }
+    catch (std::exception& e)
+    {
+        Logger::Error(e.what());
+    }
+    auto audioSource = ResourceManager::GetInstance()->GetResource<AudioSource>(file);
+
+
+    return audioSource != nullptr;
 }
+
 
 void IOManager::SaveSpectralModel(std::shared_ptr<Mesh> mesh)
 {
-    WriteObject writeObject(GetPath(mesh->GetName(), SpectralModelExtention));
-    writeObject.Write(mesh->GetName());
+    WriteObject writeObject(ProjectDirectory / mesh->GetFilename());
+    writeObject.Write(mesh->GetFilename());
     writeObject.Write(mesh->vertexes);
     writeObject.Write(mesh->indices32);
 }
@@ -207,7 +212,8 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
         }
     }    
     
-    for (const auto& [materialName, material] : MaterialManager::GetInstance()->GetMaterials())
+    auto materials = ResourceManager::GetInstance()->GetResources<Material>();
+    for (const auto& material : materials)
     {
         SaveSpectralMaterial(material);
     }
@@ -222,8 +228,9 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
 
     Logger::Info("Completed Saving Scene: " + sceneName);
 #ifdef EDITOR
-    auto projectIniFile = ProjectDirectory / std::string("Spectral_Project.ini");
-    WriteToIniFile(projectIniFile, "Project", "LastScene", sceneName + ".json");
+    Json projectDescription = Json::ParseFile(ProjectDirectory / "Project_Description.json");
+    projectDescription.AsObjectRef().emplace("LastScene", sceneName + ".json");
+    Json::Serialize(projectDescription, ProjectDirectory / "Project_Description.json");
 #endif // EDITOR
 }
 
@@ -233,9 +240,6 @@ bool IOManager::LoadSpectralScene(const std::string& filename)
     std::string jsonData;
     try {
         std::ifstream file(ProjectDirectory / filename);
-        if (!file.is_open()) {
-            throw std::runtime_error("Could not open file: " + filename);
-        }
 
         std::stringstream buffer;
         buffer << file.rdbuf();
@@ -312,8 +316,10 @@ bool IOManager::LoadSpectralScene(const std::string& filename)
 
 
 #ifdef EDITOR
-    auto projectIniFile = ProjectDirectory / std::string("Spectral_Project.ini");
-    WriteToIniFile(projectIniFile,"Project","LastScene",filename);
+    Json projectDescription = Json::ParseFile(ProjectDirectory / "Project_Description.json");
+
+    projectDescription.AsObjectRef().emplace("LastScene", filename);
+    Json::Serialize(projectDescription, ProjectDirectory / "Project_Description.json");
 #endif // EDITOR
 
 
@@ -337,7 +343,7 @@ void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
     };
 
 
-    document.AddMember("Name", rapidjson::Value(material->GetName().c_str(), allocator), allocator);
+    document.AddMember("Name", rapidjson::Value(material->GetFilename().c_str(), allocator), allocator);
     document.AddMember("Albedo", rapidjson::Value(SaveTextureFilename(material->GetTexture(Material::BaseColor)).c_str(), allocator), allocator);
     document.AddMember("Normal", rapidjson::Value(SaveTextureFilename(material->GetTexture(Material::Normal)).c_str(), allocator), allocator);
     document.AddMember("Roughness", rapidjson::Value(SaveTextureFilename(material->GetTexture(Material::Roughness)).c_str(), allocator), allocator);
@@ -346,6 +352,7 @@ void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
     document.AddMember("RougnessFloat", material->GetMaterialSettings().Roughness, allocator);
     document.AddMember("MetallicFloat", material->GetMaterialSettings().Metallic, allocator);
     document.AddMember("BackfaceCulling", material->GetMaterialSettings().BackfaceCulling, allocator);
+    document.AddMember("LinearFiltering", material->GetMaterialSettings().LinearFiltering, allocator);
     {
         auto color = material->GetMaterialSettings().Color;
         rapidjson::Value colorArray(rapidjson::kArrayType);
@@ -360,7 +367,7 @@ void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     document.Accept(writer);
     
-    std::ofstream ofs(GetPath(material->GetName(), SpectralMaterialExtention));
+    std::ofstream ofs(ProjectDirectory / material->GetFilename());
     if (ofs.is_open()) {
         ofs << buffer.GetString();
         ofs.close();
@@ -370,81 +377,7 @@ void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
     }
 }
 
-bool IOManager::LoadSpectralMaterial(const std::string& filename, std::shared_ptr<Material>& material)
-{
-    std::string jsonData;
-    try {
-        std::ifstream file(GetPath(filename, SpectralMaterialExtention));
-        if (!file.is_open()) {
-            throw std::runtime_error("Could Not load Material: " + filename);
-        }
 
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-
-        jsonData = buffer.str();
-
-    }
-    catch (const std::exception& e) {
-        Logger::Error(e.what());
-        return false;
-    }
-
-    rapidjson::Document document;
-    if (document.Parse(jsonData.c_str()).HasParseError()) {
-        material = MaterialManager::GetInstance()->GetDefaultMaterial();
-
-        Logger::Error("Parsing JSON for material:" + filename);
-        return false;
-    }
-
-
-    if (document.HasMember("Name")) 
-    {
-        material->SetName(document["Name"].GetString());
-    }
-
-    auto LoadTexture = [&](const char* textureName, Material::TextureType textureType)
-    {
-        if (document.HasMember(textureName) && !std::string(document[textureName].GetString()).empty())
-        {
-            std::string name = document[textureName].GetString();
-            if (name == std::string("none") || name == std::string("None"))
-            {
-                return;
-            }
-            material->SetTexture(textureType, TextureManager::GetInstance()->GetTexture(ProjectDirectory / name));
-        }
-    };
-
-    LoadTexture("Albedo", Material::BaseColor);
-    LoadTexture("Normal", Material::Normal);
-    LoadTexture("Roughness", Material::Roughness);
-    LoadTexture("Metallic", Material::Metallic);
-    LoadTexture("AmbientOcclusion", Material::AmbientOcclusion);
-
-    if (document.HasMember("RougnessFloat"))
-    {
-        material->GetMaterialSettings().Roughness = document["RougnessFloat"].GetFloat();
-    }
-    if (document.HasMember("MetallicFloat"))
-    {
-        material->GetMaterialSettings().Metallic = document["MetallicFloat"].GetFloat();
-    }    
-    if (document.HasMember("BackfaceCulling"))
-    {
-        material->GetMaterialSettings().BackfaceCulling = document["BackfaceCulling"].GetBool();
-    }
-    if (document.HasMember("Color") && document["Color"].IsArray()) {
-        const rapidjson::Value& colorObject = document["Color"];
-        auto& color = material->GetMaterialSettings().Color;
-        color.x = colorObject[0].GetFloat();
-        color.y = colorObject[1].GetFloat();
-        color.z = colorObject[2].GetFloat();
-        color.w = colorObject[3].GetFloat();
-    }
-    return true;
-}
 
 void IOManager::CollectProjectFiles()
 {
@@ -464,16 +397,11 @@ void IOManager::CollectProjectFiles()
         }
         else if (file.path().extension() == SpectralModelExtention)
         {
-            std::string filename = StringUtils::StripPathFromFilename(file.path().string());
-            size_t lastindex = filename.find_last_of(".");
-
-            auto mesh = std::make_shared<Mesh>();
-            IOManager::LoadSpectralModel(filename.substr(0, lastindex), mesh);
-            ModelManager::GetInstance()->AddMesh(filename.substr(0, lastindex), mesh);
+            ResourceManager::GetInstance()->GetResource<Mesh>(file.path());
         }
         else if (file.path().extension() == SupportedAudioFiles[0])
         {
-            AudioManager::GetInstance()->GetAudioSource(file.path());
+            ResourceManager::GetInstance()->GetResource<AudioSource>(file.path());
         }
         else
         {
@@ -481,7 +409,7 @@ void IOManager::CollectProjectFiles()
             {
                 if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), filetype))
                 {
-                    TextureManager::GetInstance()->GetTexture(file.path());
+                    ResourceManager::GetInstance()->GetResource<Texture>(file.path());
                 }
             }
         }
@@ -635,13 +563,15 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
 
 void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject)
 {
-    auto meshObject = ObjectManager::GetInstance()->CreateObject(mesh->mName.C_Str());
+    auto meshObject = ObjectManager::GetInstance()->CreateObject(std::string(mesh->mName.data, mesh->mName.length));
     aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-    std::string materialName(material->GetName().data, material->GetName().length);
-    
-    std::string meshName = std::string(std::string(filename.c_str()) + "_" + std::string(mesh->mName.data, mesh->mName.length) + "_" + materialName);
+    std::string matNameNoFilename = std::string(material->GetName().C_Str());
+    std::string materialName = std::string(filename.c_str()) + "_" + matNameNoFilename;
+    std::string meshName = std::string(std::string(filename.c_str()) + "_" + std::string(mesh->mName.C_Str()) /* + "_" + matNameNoFilename*/);
     std::replace(meshName.begin(), meshName.end(), ':', '_');
     std::replace(meshName.begin(), meshName.end(), '.', '_');    
+    meshName.append(SpectralModelExtention);
+
     std::replace(materialName.begin(), materialName.end(), ':', '_');
     std::replace(materialName.begin(), materialName.end(), '.', '_');
     std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>();
@@ -677,51 +607,75 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
     }
 
     newMesh->CreateVertexAndIndexBuffer(Render::GetDevice());
-
-    meshObject->AddComponent(std::make_shared<MeshComponent>(meshObject, newMesh));
+    auto meshComponent = std::make_shared<MeshComponent>(meshObject, newMesh);
+    meshObject->AddComponent(meshComponent);
     meshObject->SetWorldMatrix(gameObject->GetWorldMatrix());
     meshObject->SetParent(gameObject);
     newMesh->CalculateBoundingBox();
+    newMesh->m_filename = meshName;
+    ResourceManager::GetInstance()->AddResource<Mesh>(newMesh);
 
+    materialName.append(SpectralMaterialExtention);
     if (materialName != "")
     {
-        newMesh->SetMaterial(MaterialManager::GetInstance()->GetMaterial(std::string(std::string(filename.c_str()) + "_" + materialName)));
+
+        std::shared_ptr<Material> createdMaterial = std::make_shared<Material>();
+
+        auto LoadAndApplyTexture = [&](Material::TextureType textureType, aiTextureType aiTextureType)
+        {
+            aiString textureFilename;
+            material->GetTexture(aiTextureType, 0, &textureFilename);
+            if (std::string(textureFilename.C_Str()) != "")
+            {
+                auto texturePath = std::filesystem::path(textureFilename.C_Str()).filename();
+
+                if (IOManager::LoadTexture(path / texturePath))
+                {
+                    createdMaterial->SetTexture(textureType, ResourceManager::GetInstance()->GetResource<Texture>(texturePath.string()));
+                    return;
+                }
+            }
+            switch (textureType)
+            {
+            case Material::BaseColor:
+                createdMaterial->SetTexture(0, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_albedo.bmp"));
+                break;
+            case Material::Normal:
+                createdMaterial->SetTexture(1, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_normal.bmp"));
+                break;
+            }
+        };
+
+
+
+        LoadAndApplyTexture(Material::TextureType::BaseColor, aiTextureType_DIFFUSE);
+        LoadAndApplyTexture(Material::TextureType::BaseColor, aiTextureType_BASE_COLOR);
+        LoadAndApplyTexture(Material::TextureType::Normal, aiTextureType_NORMALS);
+        LoadAndApplyTexture(Material::TextureType::Roughness, aiTextureType_SPECULAR);
+        LoadAndApplyTexture(Material::TextureType::Roughness, aiTextureType_DIFFUSE_ROUGHNESS);
+        LoadAndApplyTexture(Material::TextureType::Metallic, aiTextureType_METALNESS);
+        LoadAndApplyTexture(Material::TextureType::AmbientOcclusion, aiTextureType_AMBIENT_OCCLUSION);
+        createdMaterial->m_filename = materialName;
+
+        ResourceManager::GetInstance()->AddResource<Material>(createdMaterial);
+        meshComponent->SetMaterial(createdMaterial);
     }
     else
     {
-        newMesh->SetMaterial(MaterialManager::GetInstance()->GetDefaultMaterial());
+        meshComponent->SetMaterial(ResourceManager::GetInstance()->GetResource<Material>("Default.material"));
     }
+    
 
 
-    auto LoadAndApplyTexture = [&](Material::TextureType textureType, aiTextureType aiTextureType)
-    {
-        aiString textureFilename;
-        material->GetTexture(aiTextureType, 0, &textureFilename);
-        if (std::string(textureFilename.C_Str()) != "")
-        {
-            IOManager::LoadTexture(path / std::string(textureFilename.C_Str()));
-            newMesh->GetMaterial()->SetTexture(textureType, TextureManager::GetInstance()->GetTexture(StringUtils::StripPathFromFilename(textureFilename.C_Str())));
-        }
-    };
-
-    LoadAndApplyTexture(Material::TextureType::BaseColor, aiTextureType_DIFFUSE);
-    LoadAndApplyTexture(Material::TextureType::BaseColor, aiTextureType_BASE_COLOR);
-    LoadAndApplyTexture(Material::TextureType::Normal, aiTextureType_NORMALS);
-    LoadAndApplyTexture(Material::TextureType::Roughness, aiTextureType_SPECULAR);
-    LoadAndApplyTexture(Material::TextureType::Roughness, aiTextureType_DIFFUSE_ROUGHNESS);
-    LoadAndApplyTexture(Material::TextureType::Metallic, aiTextureType_METALNESS);
-    LoadAndApplyTexture(Material::TextureType::AmbientOcclusion, aiTextureType_AMBIENT_OCCLUSION);
-    newMesh->SetName(meshName);
-    ModelManager::GetInstance()->AddMesh(meshName, newMesh);
-
+    
     auto DropfileTask = Concurrency::create_task(
         [newMesh]()
     {
         IOManager::SaveSpectralModel(newMesh);
-        SaveSpectralMaterial(newMesh->GetMaterial());
+        //SaveSpectralMaterial(newMesh->GetMaterial());
     }
     );
-
+    
 }
 
 void IOManager::ProcessNode(const std::string& filename, const std::filesystem::path& path, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform)

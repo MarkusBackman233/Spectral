@@ -3,7 +3,8 @@
 #include "src/IMGUI/imgui_internal.h"
 #include "StringUtils.h"
 #include "Material.h"
-#include "MaterialManager.h"
+#include "ResourceManager.h"
+#include "IOManager.h"
 
 MaterialPropertyWindow::MaterialPropertyWindow(std::function<void(std::shared_ptr<Material>)> onSelectedMaterial)
     : m_onSelectedMaterial(onSelectedMaterial)
@@ -25,7 +26,9 @@ void MaterialPropertyWindow::PopulateWindow()
         }
         if (ImGui::Button("Create", buttonSize))
         {
-            MaterialManager::GetInstance()->GetMaterial(std::string(cstrText));
+            materialName = cstrText;
+            materialName.append(IOManager::SpectralMaterialExtention);
+            ResourceManager::GetInstance()->GetResource<Material>(materialName);
             materialName = "";
             ImGui::CloseCurrentPopup();
         }
@@ -36,9 +39,11 @@ void MaterialPropertyWindow::PopulateWindow()
         ImGui::OpenPopup("New Material");
     }
     ImGui::Separator();
-    for (const auto& [materialName, material] : MaterialManager::GetInstance()->GetMaterials())
+    auto materials = ResourceManager::GetInstance()->GetResources<Material>();
+
+    for (const auto& material : materials)
     {
-        if (ImGui::Button(StringUtils::StripPathFromFilename(material->GetName()).c_str(), buttonSize))
+        if (ImGui::Button(StringUtils::StripPathFromFilename(material->GetFilename()).c_str(), buttonSize))
         {
             m_onSelectedMaterial(material);
             CloseThisWindow();

@@ -8,6 +8,7 @@ SamplerState samplerState : register(s0);
 SamplerComparisonState cmpSampler : register(s1);
 SamplerState cubeSampler : register(s2);
 SamplerState clampSampler : register(s3);
+SamplerState pointSampler : register(s4);
 
 struct PSInput
 {

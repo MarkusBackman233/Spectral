@@ -3,7 +3,7 @@
 #include "src/IMGUI/imgui_internal.h"
 #include "Editor.h"
 #include "StringUtils.h"
-#include "ModelManager.h"
+#include "ResourceManager.h"
 #include "MeshComponent.h"
 #include "GameObject.h"
 #include "Mesh.h"
@@ -17,11 +17,11 @@ void MeshPropertyWindow::PopulateWindow()
 {
     const ImVec2 buttonSize(ImGui::GetCurrentWindow()->Size.x, 30);
 
-    auto meshes = ModelManager::GetInstance()->GetCachedMeshes();
+    auto meshes = ResourceManager::GetInstance()->GetResources<Mesh>();
 
-    for (const auto& [meshName, mesh] : meshes)
+    for (const auto& mesh: meshes)
     {
-        if (ImGui::Button(StringUtils::StripPathFromFilename(meshName).c_str(), buttonSize))
+        if (ImGui::Button(mesh->GetFilename().c_str(), buttonSize))
         {
             m_onSelectedMesh(mesh);
             CloseThisWindow();

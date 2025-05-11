@@ -26,6 +26,7 @@ struct D3D11_BUFFER_DESC;
 struct D3D11_SUBRESOURCE_DATA;
 
 class Mesh;
+class Material;
 class MeshComponent;
 class LockedContext;
 class Texture;
@@ -87,7 +88,7 @@ namespace Render
 	LockedContext	GetContext();
 	ID3D11SamplerState*		GetDefaultSamplerState();
 
-	void			DrawInstance(std::shared_ptr<Mesh> meshComponent, const Math::Matrix& matrix);
+	void			DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, const Math::Matrix& matrix);
 
 	const Math::Matrix&  GetViewMatrix();
 	const Math::Matrix&  GetProjectionMatrix();

@@ -10,7 +10,6 @@ class MeshComponent : public Component, public std::enable_shared_from_this<Mesh
 {
 public:
 	MeshComponent(GameObject* owner);
-	MeshComponent(GameObject* owner, std::string filename);
 	MeshComponent(GameObject* owner, MeshComponent* meshComponent);
 	MeshComponent(GameObject* owner, std::shared_ptr<Mesh> mesh);
 
@@ -26,12 +25,15 @@ public:
 #endif // EDITOR
 
 	std::shared_ptr<Mesh> GetMesh() { return m_mesh; }
-	void SetMesh(const std::string& filename);
 	void SetMesh(std::shared_ptr<Mesh> mesh);
+
+	void SetMaterial(std::shared_ptr<Material> material);
+	std::shared_ptr<Material> GetMaterial() { return m_material; }
 
 private:
 
 	std::shared_ptr<Mesh> m_mesh;
 
+	std::shared_ptr<Material> m_material;
 };
 

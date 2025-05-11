@@ -4,6 +4,8 @@
 #include "MeshComponent.h"
 #include "IOManager.h"
 #include "GuiManager.h"
+#include "InstanceManager.h"
+
 namespace Render
 {
 	ID3D11Device* GetDevice()
@@ -19,9 +21,9 @@ namespace Render
 		return RenderManager::GetInstance()->GetDeviceResources()->GetDefaultSamplerState();
 	}
 
-	void DrawInstance(std::shared_ptr<Mesh> mesh, const Math::Matrix& matrix)
+	void DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, const Math::Matrix& matrix)
 	{
-		RenderManager::GetInstance()->GetInstanceManager()->AddInstance(mesh, matrix);
+		RenderManager::GetInstance()->GetInstanceManager()->AddInstance(DrawableInstance{ mesh,material }, matrix);
 	}
 
 	const Math::Matrix& GetViewMatrix()

@@ -8,7 +8,7 @@
 #include "IOManager.h"
 #include "RenderManager.h"
 #include "StringUtils.h"
-
+#include "Json.h"
 
 ProjectBrowserManager::ProjectBrowserManager()
     : m_hasLoadedProject(false)
@@ -61,12 +61,12 @@ ProjectBrowserManager::ProjectBrowserManager()
     Render::SetWindowTitle(std::string("Spectral | ") + IOManager::ProjectName);
     IOManager::CollectProjectFiles();
 
-    std::filesystem::path projectIniFile = IOManager::ProjectDirectory / "Spectral_Project.ini";
-    std::string previouslyLoadedSceneName = IOManager::ReadFromIniFile(projectIniFile, "Project", "LastScene");
-    if (previouslyLoadedSceneName != IOManager::IniFailedToFindItem)
+    auto projectDescription = Json::ParseFile(IOManager::ProjectDirectory / "Project_Description.json");
+    if (projectDescription.Has("LastScene"))
     {
-        IOManager::LoadSpectralScene(previouslyLoadedSceneName);
+        IOManager::LoadSpectralScene(projectDescription["LastScene"].AsString());
     }
+
     m_hasLoadedProject = true;
     return;
 }
@@ -85,7 +85,10 @@ void ProjectBrowserManager::ReadPreviousProjects()
         std::string line;
         while (getline(previousProjects, line)) 
         {
-            m_previousProjects.push_front(PreviousProject(line, ReadProjectNameFromIni(std::filesystem::path(line))));
+            if(DoesProjectFileExist(std::filesystem::path(line)))
+            {
+                m_previousProjects.push_front(PreviousProject(line, ReadProjectNameFromIni(std::filesystem::path(line))));
+            }
         }
         previousProjects.close();
     }
@@ -100,6 +103,11 @@ void ProjectBrowserManager::ReadPreviousProjects()
 bool ProjectBrowserManager::Update()
 {
     auto windowSize = Render::GetWindowSize();
+    if (windowSize.x == 0 || windowSize.y == 0)
+    {
+        return false;
+    }
+
     ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
     ImGui::SetNextWindowSize(ImVec2((float)windowSize.x, (float)windowSize.y));
 
@@ -128,30 +136,40 @@ bool ProjectBrowserManager::Update()
             }
 
             ImGui::SetNextWindowPos(ImVec2(availRegion.x * 0.5f - 154.0f, availRegion.y * 0.5f - 62.0f));
-            ImGui::SetNextWindowSize(ImVec2(308.0f, 124.0f));
+            ImGui::SetNextWindowSize(ImVec2(308.0f, 184.0f));
             bool openWindow = true;
             if (ImGui::BeginPopupModal("New Project", &openWindow, windowFlags)) 
             {
                 static std::filesystem::path projectPath;
                 static std::string projectName;
-                ImGui::Text("Project Name:");
-                ImGui::InputText("##projectnameinput", projectName.data(), 255);
-                auto pathString = projectPath.string();
-                ImGui::Text("Path:");
-                ImGui::InputText("##projectpathinput", pathString.data(), 255);
-                ImGui::SameLine();
+
+
                 if (ImGui::Button("File Explorer"))
                 {
                     projectPath = SelectFromFileExplorer();
                 }
 
+
+                ImGui::Text("Project Name:");
+                char nameBuffer[256] = { 0 };
+                strncpy_s(nameBuffer, projectName.c_str(), sizeof(nameBuffer));
+                ImGui::InputText("##projectnameinput", nameBuffer, sizeof(nameBuffer));
+                projectName = nameBuffer;
+
                 ImGui::Separator();
 
+                ImGui::TextWrapped((projectPath / projectName).string().c_str());
+
+                if (projectPath.empty()|| projectName.empty())
+                {
+                    ImGui::BeginDisabled();
+                }
                 if (ImGui::Button("Create", ImVec2(60, 0)))
                 {
-                    CreateProject(projectPath.parent_path().wstring(), projectName);
+                    projectPath.append(projectName);
+                    CreateProject(projectPath, projectName);
 
-                    AddToPreviousProject(projectPath.string());
+                    AddToPreviousProject((projectPath).string());
                     ReadPreviousProjects();
 
                     projectName = "";
@@ -159,15 +177,21 @@ bool ProjectBrowserManager::Update()
 
                     ImGui::CloseCurrentPopup();
                 }
+                else if (projectPath.empty() || projectName.empty())
+                {
+                    ImGui::EndDisabled();
+                }
+
                 ImGui::EndPopup();
             }
+            bool openWindow2 = true;
 
             ImGui::SetNextWindowPos(ImVec2(availRegion.x * 0.5f - 154.0f, availRegion.y * 0.5f - 62.0f));
             ImGui::SetNextWindowSize(ImVec2(308.0f, 124.0f));
-            if (ImGui::BeginPopupModal("Project does not exist", &openWindow, windowFlags))
+            if (ImGui::BeginPopupModal("Project does not exist", &openWindow2, windowFlags))
             {
                 ImGui::NewLine();
-                ImGui::Text("Folder does not have a Spectral_Project.ini");
+                ImGui::Text("Folder does not have a Project_Description.json");
                 ImGui::NewLine();
                 ImGui::NewLine();
                 if (ImGui::Button("OK", buttonSize))
@@ -188,7 +212,7 @@ bool ProjectBrowserManager::Update()
         ImGui::SameLine();
         if (ImGui::BeginChild("meme##asdasd", ImGui::GetContentRegionAvail(), false))
         {
-            ImGui::Text("Previous Proejcts");
+            ImGui::Text("Previous Projects");
 
             for (const auto& [path, name] : m_previousProjects)
             {
@@ -245,16 +269,27 @@ void ProjectBrowserManager::RemoveProjectFromOldProjects(const std::filesystem::
 
 void ProjectBrowserManager::CreateProject(const std::filesystem::path& path, const std::string& name)
 {
-    std::filesystem::path iniFile = path / L"Spectral_Project.ini";
 
-    HANDLE hFile = CreateFile(iniFile.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    CloseHandle(hFile);
-    
-    BOOL writeResult = WritePrivateProfileString(L"Project", L"Name", StringUtils::StringToWideString(name).c_str(), iniFile.c_str());
-    if (!writeResult) 
-    {
-        Logger::Error("Error writing to INI file: " + GetLastError());
+    std::error_code ec;
+    std::filesystem::create_directories(path, ec); // Creates all intermediate directories if needed
+    if (ec) {
+        Logger::Error("Failed to create project directory: " + ec.message());
+        return;
     }
+
+    std::filesystem::path filePath = path / L"Project_Description.json";
+    Json::Object project;
+    project.emplace("Name", name);
+    Json::Serialize(project, filePath);
+
+    //HANDLE hFile = CreateFile(iniFile.c_str(), GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    //CloseHandle(hFile);
+    //
+    //BOOL writeResult = WritePrivateProfileString(L"Project", L"Name", StringUtils::StringToWideString(name).c_str(), iniFile.c_str());
+    //if (!writeResult) 
+    //{
+    //    Logger::Error("Error writing to INI file: " + GetLastError());
+    //}
 }
 
 void ProjectBrowserManager::SelectProject(const std::filesystem::path& path, const std::string& name)
@@ -273,6 +308,8 @@ void ProjectBrowserManager::LoadProject()
     if (DoesProjectFileExist(path))
     {
         auto name = ReadProjectNameFromIni(path);
+
+
         bool alreadyInPrevious = false;
 
         for (const auto& project : m_previousProjects)
@@ -299,22 +336,26 @@ void ProjectBrowserManager::LoadProject()
 
 bool ProjectBrowserManager::DoesProjectFileExist(const std::filesystem::path& path)
 {
-    return std::filesystem::exists(path / L"Spectral_Project.ini");
+    return std::filesystem::exists(path / L"Project_Description.json");
 }
 
 
 std::string ProjectBrowserManager::ReadProjectNameFromIni(const std::filesystem::path& path)
 {
-    std::wstring string;
-    GetPrivateProfileString(L"Project", L"Name", L"", string.data(), 256, (path / L"Spectral_Project.ini").c_str());
 
-    return StringUtils::WideStringToString(string);
+    Json projectDescription = Json::ParseFile(path / "Project_Description.json");
+    if (projectDescription.HasError())
+    {
+        return "";
+    }
+
+    return projectDescription["Name"].AsString();
 }
 
 std::filesystem::path ProjectBrowserManager::SelectFromFileExplorer()
 {
     BROWSEINFO bi = { 0 };
-    bi.lpszTitle = L"Select a spectral project folder";
+    bi.lpszTitle = L"Select a folder";
     bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
 
     LPITEMIDLIST pidl = SHBrowseForFolder(&bi);

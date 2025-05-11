@@ -3,26 +3,28 @@
 #include <iostream>
 #include <sstream>
 
-Json Json::ParseFile(const std::string& file)
+Json Json::ParseFile(const std::filesystem::path& path)
 {
-    std::ifstream f(file);
+    std::ifstream f(path);
+    bool error = false;
     if (!f)
     {
-        std::cerr << "Error opening file!" << std::endl;
+        std::cerr << "Error opening file! " << path << std::endl;
+        error = true;
     }
     std::string data = std::string((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     f.close();
 
     size_t index = 0;
     Json json = ParseValue(data, index);
-
+    json.m_hasError = error;
     return std::move(json);
 }
 
-void Json::Serialize(const Json& json, const std::string& file)
+void Json::Serialize(const Json& json, const std::filesystem::path& path)
 {
 
-    std::ofstream outFile(file);
+    std::ofstream outFile(path);
     if (outFile.is_open()) 
     {
         outFile << json.JsonToString(0);
@@ -104,6 +106,7 @@ std::string Json::JsonToString(int indent) const
         stream << indentA <<"}";
         return stream.str();
     }
+    return "";
 }
 
 Json Json::ParseString(const std::string& string)
@@ -290,5 +293,45 @@ const int Json::AsInt() const
 const bool Json::AsBool() const
 {
     return std::get<bool>(m_value);
+}
+
+std::string& Json::AsStringRef()
+{
+    return std::get<std::string>(m_value);
+}
+
+Json::Object& Json::AsObjectRef()
+{
+    return std::get<Json::Object>(m_value);
+}
+
+Json::Array& Json::AsArrayRef()
+{
+    return std::get<Json::Array>(m_value);
+}
+
+float& Json::AsFloatRef()
+{
+    return std::get<float>(m_value);
+}
+
+int& Json::AsIntRef()
+{
+    return std::get<int>(m_value);
+}
+
+bool& Json::AsBoolRef()
+{
+    return std::get<bool>(m_value);
+}
+
+const bool Json::Has(const std::string& key) const
+{
+    return AsObject().find(key) != AsObject().end();
+}
+
+bool Json::HasError() const
+{
+    return m_hasError;
 }
 

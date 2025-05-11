@@ -67,7 +67,7 @@ void PbrRender::Process(
         m_pixelConstantBuffer.lights[i].color = light->Color.GetNormalizedColor();
         m_pixelConstantBuffer.lights[i].additionalData.x = static_cast<float>(light->Type);
         m_pixelConstantBuffer.lights[i].additionalData.y = light->Attenuation;
-        m_pixelConstantBuffer.lights[i].additionalData.z = light->Enabled ? 1.0f : 0.0f;
+        //m_pixelConstantBuffer.lights[i].additionalData.z = light->Enabled ? 1.0f : 0.0f;
     }
 
     m_pixelConstantBuffer.cameraPosition.w = static_cast<float>(std::min(m_lightsToRender.size(), 50ull));

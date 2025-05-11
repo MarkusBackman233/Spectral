@@ -39,6 +39,7 @@ public:
     IDXGISwapChain* GetSwapChain() const { return m_pDXGISwapChain.Get(); }
 
     ID3D11SamplerState* GetDefaultSamplerState() const { return m_defaultSamplerState.Get(); }
+    ID3D11SamplerState* GetPointSamplerState() const { return m_pointSamplerState.Get(); }
     ID3D11SamplerState* GetClampSamplerState() const { return m_clampSamplerState.Get(); }
     ID3D11BlendState*   GetDefaultBlendState() const { return m_defaultBlendState.Get(); }
     ID3D11BlendState*   GetTransparentBlendState() const { return m_transarentBlendState.Get(); }
@@ -79,6 +80,7 @@ private:
     D3D_FEATURE_LEVEL       m_featureLevel;
     D3D11_TEXTURE2D_DESC    m_bbDesc;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_defaultSamplerState;
+    Microsoft::WRL::ComPtr<ID3D11SamplerState> m_pointSamplerState;
     Microsoft::WRL::ComPtr<ID3D11SamplerState> m_clampSamplerState;
     Microsoft::WRL::ComPtr<ID3D11BlendState>   m_defaultBlendState;
     Microsoft::WRL::ComPtr<ID3D11BlendState>   m_transarentBlendState;

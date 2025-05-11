@@ -24,4 +24,44 @@
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="src\icon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\TemplateGrid_albedo.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\TemplateGrid_normal.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\Terrain.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Assets\Light.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\Engine\src\Assets\Light.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\Engine\src\Assets\Audio.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\Light.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\Sun.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\Audio.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\Engine\src\Assets\Sun.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>

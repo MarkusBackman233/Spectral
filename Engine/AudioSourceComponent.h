@@ -1,10 +1,8 @@
 #pragma once
 #include "pch.h"
 #include "Component.h"
-#include "Vector3.h"
-#include "Vector4.h"
 #include "AudioSource.h"
-
+#include <phonon.h>
 
 
 class AudioSourceComponent : public Component

@@ -145,15 +145,14 @@ public:
 	static bool LoadFBX(const std::filesystem::path& filename);
 	//static bool LoadTexture(const std::string& filename);
 	static bool LoadTexture(const std::filesystem::path& file);
+	static bool LoadAudioSource(const std::filesystem::path& file);
 
 	static void SaveSpectralModel(std::shared_ptr<Mesh> mesh);
-	static bool LoadSpectralModel(const std::string& filename, std::shared_ptr<Mesh>& mesh);
 
 	static void SaveSpectralScene(const std::string& sceneName);
 	static bool LoadSpectralScene(const std::string& filename);
 
 	static void SaveSpectralMaterial(std::shared_ptr<Material> material);
-	static bool LoadSpectralMaterial(const std::string& filename, std::shared_ptr<Material>& material);
 
 	static void CollectProjectFiles();
 

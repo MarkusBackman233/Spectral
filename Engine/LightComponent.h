@@ -40,8 +40,6 @@ struct Light
 		Point,
 		Directional,
 	};
-
-	bool Enabled;
 	LightType Type;
 
 	Color Color;

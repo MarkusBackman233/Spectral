@@ -5,8 +5,8 @@
 #include "StringUtils.h"
 #include "GameObject.h"
 #include "Texture.h"
-#include "TextureManager.h"
 #include "IOManager.h"
+#include "ResourceManager.h"
 
 TexturePropertyWindow::TexturePropertyWindow(std::function<void(std::shared_ptr<Texture>)> onSelectedTexture, const std::string& currentSelectedTextureName)
     : m_currentSelectedTextureName(currentSelectedTextureName)
@@ -33,23 +33,24 @@ void TexturePropertyWindow::PopulateWindow()
     }
     if (ImGui::BeginTable("##TextureSelector", columnsPerRow, ImGuiTableFlags_NoSavedSettings | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_SizingFixedFit))
     {
-        auto textures = TextureManager::GetInstance()->GetCachedTextures();
 
-        for (const auto& [textureName, texture] : textures)
+        auto textures = ResourceManager::GetInstance()->GetResources<Texture>();
+
+        for (auto& texture : textures)
         {
-            if (!StringUtils::StringContainsCaseInsensitive(textureName, searchedString))
+            if (!StringUtils::StringContainsCaseInsensitive(texture->m_filename, searchedString))
             {
                 continue;
             }
 
             auto bgColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            if (m_currentSelectedTextureName == StringUtils::StripPathFromFilename(textureName))
+            if (m_currentSelectedTextureName == StringUtils::StripPathFromFilename(texture->m_filename))
             {
                 bgColor = ImVec4(1.0f, 0.3f, 1.0f, 1.0f);
             }
 
             ImGui::TableNextColumn();
-            if (ImGui::ImageButton(textureName.c_str(), texture->GetResourceView().Get(), imageSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), bgColor))
+            if (ImGui::ImageButton(texture->m_filename.c_str(), texture->GetResourceView().Get(), imageSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), bgColor))
             {
                 m_onSelectedTexture(texture);
                 CloseThisWindow();
@@ -58,7 +59,7 @@ void TexturePropertyWindow::PopulateWindow()
             }
 
 
-            ImGui::TextWrapped(textureName.c_str());
+            ImGui::TextWrapped(texture->m_filename.c_str());
         }
         ImGui::EndTable();
     }

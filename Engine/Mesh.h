@@ -5,11 +5,11 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 
-
+#include "LoadableResource.h"
 
 class Material;
 
-class Mesh
+class Mesh : public Resource
 {
 public:
 	struct Vertex {
@@ -21,17 +21,13 @@ public:
 
 	Mesh();
 
-	void SetMaterial(std::shared_ptr<Material> material);
-	std::shared_ptr<Material> GetMaterial() { return m_material; }
+	bool Load(const std::filesystem::path& file) override;
 
 	void CalculateBoundingBox();
 	Math::Vector3 GetBoundingBoxMin() const { return m_minBounds; }
 	Math::Vector3 GetBoundingBoxMax() const { return m_maxBounds; }
 
 	void CreateVertexAndIndexBuffer(ID3D11Device* device);
-
-	void SetName(const std::string& name);
-	std::string& GetName();
 
 	std::vector<Vertex> vertexes;
 	std::vector<uint32_t> indices32;
@@ -43,7 +39,5 @@ private:
 
 	Math::Vector3 m_maxBounds;
 	Math::Vector3 m_minBounds;
-	std::shared_ptr<Material> m_material;
-	std::string m_meshName;
 };
 

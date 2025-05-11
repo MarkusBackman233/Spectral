@@ -79,14 +79,14 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\Editor;C:\Projects\Horizon;C:\Projects\VCLIB\steamaudio\include;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\Editor;C:\Projects\Horizon;C:\Projects\VCLIB\steamaudio\include;C:\Projects\Spectral\Spectral\Engine\src\External\Recast\Include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\bin\win.x86_64.vc142.mt\debug;C:\Program Files\Assimp\lib\x64;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\x64\Debug;$(LibraryPath)</LibraryPath>
     <SourcePath>$(SourcePath)</SourcePath>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\Editor;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Program Files\Assimp\include;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\include;C:\Projects\VCLIB\RapidJson\include;C:\Projects\VCLIB\LuaJIT-2.1\src;C:\Projects\Spectral\Spectral\Editor;C:\Projects\VCLIB\steamaudio\include;C:\Projects\Spectral\Spectral\Engine\src\External\Recast\Include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Projects\Spectral\Spectral\x64\Release;C:\Program Files\Assimp\lib\x64;C:\Projects\VCLIB\PhysX-104.2-physx-5.1.3\physx\bin\win.x86_64.vc142.mt\release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -194,12 +194,12 @@
     <ClCompile Include="LineRenderer.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Material.cpp" />
-    <ClCompile Include="MaterialManager.cpp" />
     <ClCompile Include="MathFunctions.cpp" />
     <ClCompile Include="Matrix.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="MeshComponent.cpp" />
-    <ClCompile Include="ModelManager.cpp" />
+    <ClCompile Include="NavigationManager.cpp" />
+    <ClCompile Include="NavmeshActorComponent.cpp" />
     <ClCompile Include="ObjectManager.cpp" />
     <ClCompile Include="OrthographicCamera.cpp" />
     <ClCompile Include="ParticleComponent.cpp" />
@@ -212,6 +212,7 @@
     <ClCompile Include="PostProcessing.cpp" />
     <ClCompile Include="ProjectBrowserManager.cpp" />
     <ClCompile Include="RenderManager.cpp" />
+    <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="RigidbodyComponent.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneManager.cpp" />
@@ -223,6 +224,30 @@
     <ClCompile Include="SkyboxManager.cpp" />
     <ClCompile Include="SpectralAssert.cpp" />
     <ClCompile Include="src\External\DDSTextureLoader\DDSTextureLoader11.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourAlloc.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourAssert.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourCommon.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourCrowd.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourLocalBoundary.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourNavMesh.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourNavMeshBuilder.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourNavMeshQuery.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourNode.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourObstacleAvoidance.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourPathCorridor.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourPathQueue.cpp" />
+    <ClCompile Include="src\External\Recast\Source\DetourProximityGrid.cpp" />
+    <ClCompile Include="src\External\Recast\Source\Recast.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastAlloc.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastArea.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastAssert.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastContour.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastFilter.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastLayers.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastMesh.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastMeshDetail.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastRasterization.cpp" />
+    <ClCompile Include="src\External\Recast\Source\RecastRegion.cpp" />
     <ClCompile Include="src\IMGUI\imgui.cpp" />
     <ClCompile Include="src\IMGUI\ImGuizmo.cpp" />
     <ClCompile Include="src\IMGUI\imgui_demo.cpp" />
@@ -235,7 +260,6 @@
     <ClCompile Include="StringUtils.cpp" />
     <ClCompile Include="TerrainComponent.cpp" />
     <ClCompile Include="Texture.cpp" />
-    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="TimeManager.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Vector2.cpp" />
@@ -275,12 +299,12 @@
     <ClInclude Include="LineRenderer.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="Material.h" />
-    <ClInclude Include="MaterialManager.h" />
     <ClInclude Include="MathFunctions.h" />
     <ClInclude Include="Matrix.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="MeshComponent.h" />
-    <ClInclude Include="ModelManager.h" />
+    <ClInclude Include="NavigationManager.h" />
+    <ClInclude Include="NavmeshActorComponent.h" />
     <ClInclude Include="ObjectManager.h" />
     <ClInclude Include="OrthographicCamera.h" />
     <ClInclude Include="ParticleComponent.h" />
@@ -295,7 +319,10 @@
     <ClInclude Include="ProfileObject.h" />
     <ClInclude Include="ProjectBrowserManager.h" />
     <ClInclude Include="RenderManager.h" />
+    <ClInclude Include="LoadableResource.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="resource1.h" />
+    <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="RigidbodyComponent.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
@@ -307,6 +334,24 @@
     <ClInclude Include="SkyboxManager.h" />
     <ClInclude Include="SpectralAssert.h" />
     <ClInclude Include="src\External\DDSTextureLoader\DDSTextureLoader11.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourAlloc.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourAssert.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourCommon.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourCrowd.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourLocalBoundary.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourMath.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourNavMesh.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourNavMeshBuilder.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourNavMeshQuery.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourNode.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourObstacleAvoidance.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourPathCorridor.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourPathQueue.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourProximityGrid.h" />
+    <ClInclude Include="src\External\Recast\Include\DetourStatus.h" />
+    <ClInclude Include="src\External\Recast\Include\Recast.h" />
+    <ClInclude Include="src\External\Recast\Include\RecastAlloc.h" />
+    <ClInclude Include="src\External\Recast\Include\RecastAssert.h" />
     <ClInclude Include="src\External\Sol2\config.hpp" />
     <ClInclude Include="src\External\Sol2\forward.hpp" />
     <ClInclude Include="src\External\Sol2\sol.hpp" />
@@ -325,7 +370,6 @@
     <ClInclude Include="StringUtils.h" />
     <ClInclude Include="TerrainComponent.h" />
     <ClInclude Include="Texture.h" />
-    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="TimeManager.h" />
     <ClInclude Include="Triangle.h" />
     <ClInclude Include="Vector2.h" />
@@ -486,11 +530,15 @@
   <ItemGroup>
     <Image Include="src\assets\bitmap5.bmp" />
     <Image Include="src\Assets\Light.bmp" />
+    <Image Include="src\Assets\Light.png" />
     <Image Include="src\Assets\TemplateGrid_albedo.bmp" />
     <Image Include="src\Assets\TemplateGrid_normal.bmp" />
     <Image Include="src\Assets\Terrain.bmp" />
     <Image Include="src\bitmap1.bmp" />
     <Image Include="src\icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Engine.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

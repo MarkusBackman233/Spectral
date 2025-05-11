@@ -4,13 +4,13 @@
 
 constexpr uint32_t InitialMaxInstances = 8;
 
-void InstanceManager::AddInstance(std::shared_ptr<Mesh> mesh, const Math::Matrix& matrix)
+void InstanceManager::AddInstance(DrawableInstance drawable, const Math::Matrix& matrix)
 {
-    m_pendingInstances[mesh].push_back(matrix);
+    m_pendingInstances[drawable].push_back(matrix);
 }
 
 
-const std::unordered_map<std::shared_ptr<Mesh>, InstanceManager::InstanceData>& InstanceManager::GetInstances() const
+const std::unordered_map<DrawableInstance, InstanceManager::InstanceData>& InstanceManager::GetInstances() const
 {
     return m_instanceBuffers;
 }
@@ -64,7 +64,7 @@ void InstanceManager::Map(ID3D11DeviceContext* context, ID3D11Device* device)
 
 void InstanceManager::CreateInstanceBuffer(
     ID3D11Device* device, 
-    const std::shared_ptr<Mesh>& mesh, 
+    const DrawableInstance& drawable,
     const std::vector<Math::Matrix>& initialMatrices, 
     uint32_t maxInstances
 )
@@ -92,5 +92,5 @@ void InstanceManager::CreateInstanceBuffer(
     instanceData.MaxInstanceCount = maxInstances;
     instanceData.CurrentInstanceCount = static_cast<uint32_t>(initialMatrices.size());
 
-    m_instanceBuffers[mesh] = instanceData;
+    m_instanceBuffers[drawable] = instanceData;
 }

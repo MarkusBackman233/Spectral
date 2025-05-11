@@ -22,10 +22,12 @@ public:
 
 	PxShape* GetShape() { return m_shape; }
 	PhysXManager::PhysicsShape GetShapeType() const { return m_selectedShapeType; }
+
+	GameObject* GetClosestActorInHierarchy(GameObject* gameObject);
+
 private:
 
 	void SetShape(PhysXManager::PhysicsShape shapeType);
-	PxRigidActor* GetClosestActorInHierarchy(GameObject* gameObject);
 	PhysXManager::PhysicsShape m_selectedShapeType;
 
 	PxShape* m_shape;

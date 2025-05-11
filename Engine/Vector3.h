@@ -113,6 +113,7 @@ namespace Math
 
 		Vector3 GetInterpolate(const Vector3& A, float fraction) const;
 		Vector3 GetNormal() const;
+		Vector3& Normalize();
 		Vector3 Cross(const Math::Vector3& in) const;
 
 		bool IsFinite() const;

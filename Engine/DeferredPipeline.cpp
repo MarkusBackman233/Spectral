@@ -1,20 +1,16 @@
 #include "DeferredPipeline.h"
 #include "iRender.h"
 #include "DeviceResources.h"
-
 #include "Mesh.h"
-
 #include "Matrix.h"
 #include "RenderManager.h"
-
 #include "Texture.h"
 #include "ShadowManager.h"
 #include "Material.h"
-
 #include "ProfilerManager.h"
+
 DeferredPipeline::DeferredPipeline()
 {
-
 }
 
 void DeferredPipeline::CreateResources(ID3D11Device* device, const Math::Vector2& windowSize)
@@ -118,9 +114,10 @@ void DeferredPipeline::RenderGBuffer(
 
 
     const auto& instances = instanceManager.GetInstances();
-    for (const auto& [mesh, matrixes] : instances)
+    for (const auto& [instance, matrixes] : instances)
     {
-        Material* material = mesh->GetMaterial().get();
+
+        Material* material = instance.Material.get();
         SetShaderResource(material,Material::BaseColor, m_pixelConstantBuffer.data2.x);
         SetShaderResource(material,Material::Normal, m_pixelConstantBuffer.data2.y);
         SetShaderResource(material,Material::Roughness, m_pixelConstantBuffer.data.y, material->GetMaterialSettings().Roughness);
@@ -137,12 +134,29 @@ void DeferredPipeline::RenderGBuffer(
         }
 
         m_pixelConstantBuffer.materialColor = material->GetMaterialSettings().Color;
+        if (!material->GetMaterialSettings().LinearFiltering)
+        {
+            ID3D11SamplerState* samplers[1] = {
+                deviceResources.GetPointSamplerState()
+            };
+            context->PSSetSamplers(0, 1, samplers);
+        }
+
+
         Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 1, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
 
-        context->IASetVertexBuffers(0, 1, mesh->m_pVertexBuffer.GetAddressOf(), &stride, &offset);
-        context->IASetIndexBuffer(mesh->m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+        context->IASetVertexBuffers(0, 1, instance.Mesh->m_pVertexBuffer.GetAddressOf(), &stride, &offset);
+        context->IASetIndexBuffer(instance.Mesh->m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
         context->IASetVertexBuffers(1, 1, matrixes.Buffer.GetAddressOf(), &strideInstance, &offset);
-        context->DrawIndexedInstanced(static_cast<UINT>(mesh->indices32.size()), matrixes.CurrentInstanceCount, 0, 0, 0);
+        context->DrawIndexedInstanced(static_cast<UINT>(instance.Mesh->indices32.size()), matrixes.CurrentInstanceCount, 0, 0, 0);
+
+        if (!material->GetMaterialSettings().LinearFiltering)
+        {
+            ID3D11SamplerState* samplers[1] = {
+                deviceResources.GetDefaultSamplerState()
+            };
+            context->PSSetSamplers(0, 1, samplers);
+        }
     }
 }
 

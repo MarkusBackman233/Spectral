@@ -4,20 +4,17 @@
 #include "Mesh.h"
 #include "EditorUtils.h"
 #include <DirectXCollision.h>
-#include "TextureManager.h"
 #include "StringUtils.h"
 #include "Editor.h"
 #include "GameObject.h"
 #ifdef EDITOR
 #include "PropertyWindowFactory.h"
 #endif // DEBUG
-#include "EditorUtils.h"
 #include "Intersection.h"
 #include "IOManager.h"
-#include "MaterialManager.h"
 #include "Texture.h"
 #include "Material.h"
-
+#include "ResourceManager.h"
 
 TerrainComponent::TerrainComponent(GameObject* owner)
 	: Component(owner)
@@ -25,7 +22,7 @@ TerrainComponent::TerrainComponent(GameObject* owner)
 {
 
     m_mesh = std::make_shared<Mesh>();
-    m_mesh->SetName("Terrain");
+    m_mesh->m_filename = "Terrain";
 
 
     CreatePlaneMesh();
@@ -33,7 +30,7 @@ TerrainComponent::TerrainComponent(GameObject* owner)
 
 void TerrainComponent::Render()
 {
-    Render::DrawInstance(m_mesh, m_owner->GetWorldMatrix());
+    Render::DrawInstance(m_mesh, m_material, m_owner->GetWorldMatrix());
 }
 
 void TerrainComponent::Update(float deltaTime)
@@ -109,13 +106,13 @@ void TerrainComponent::ComponentEditor()
     ImGui::Separator();
 
 
-    ImGui::Text(std::string("Material: " + m_mesh->GetMaterial()->GetName()).c_str());
+    ImGui::Text(std::string("Material: " + GetMaterial()->GetFilename()).c_str());
     if (ImGui::Button("Edit##Material"))
     {
-        PropertyWindowFactory::SelectMaterial(m_mesh);
+        PropertyWindowFactory::SelectMaterial(m_material);
     }
 
-    bool isDisabled = m_mesh->GetMaterial()->GetName() == "default";
+    bool isDisabled = GetMaterial()->GetFilename() == "Default.material";
 
     if (isDisabled)
     {
@@ -141,14 +138,14 @@ void TerrainComponent::ComponentEditor()
 
     for (const auto& [textureName, textureId] : textures)
     {
-        if (m_mesh->GetMaterial()->GetTexture(textureId) && m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
+        if (GetMaterial()->GetTexture(textureId) && GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
         {
-            auto selectedTextureName = GetMesh()->GetMaterial()->GetTexture(textureId)->GetFilename();
+            auto selectedTextureName = GetMaterial()->GetTexture(textureId)->GetFilename();
             ImGui::Text(std::string(textureName + ": " + selectedTextureName).c_str());
-            auto resource = m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
+            auto resource = GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
             if (ImGui::ImageButton(textureName.c_str(), resource, Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                auto material = m_mesh->GetMaterial();
+                auto material = GetMaterial();
                 PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
             }
         }
@@ -158,17 +155,17 @@ void TerrainComponent::ComponentEditor()
 
             if (ImGui::Button(std::string("##" + textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                auto material = m_mesh->GetMaterial();
+                auto material = GetMaterial();
                 PropertyWindowFactory::SelectTexture(material, textureId);
             }
         }
         ImGui::Separator();
     }
 
-    ImGui::DragFloat("Roughness", &m_mesh->GetMaterial()->GetMaterialSettings().Roughness, 0.05f, 0.0f, 1.0f);
-    ImGui::DragFloat("Metallic", &m_mesh->GetMaterial()->GetMaterialSettings().Metallic, 0.05f, 0.0f, 1.0f);
-
-    ImGui::ColorPicker4("Color", &m_mesh->GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
+    ImGui::DragFloat("Roughness", &GetMaterial()->GetMaterialSettings().Roughness, 0.05f, 0.0f, 1.0f);
+    ImGui::DragFloat("Metallic", &GetMaterial()->GetMaterialSettings().Metallic, 0.05f, 0.0f, 1.0f);
+    ImGui::Checkbox("Linear Filtering", &GetMaterial()->GetMaterialSettings().LinearFiltering);
+    ImGui::ColorPicker4("Color", &GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
 
     if (isDisabled)
     {
@@ -178,7 +175,7 @@ void TerrainComponent::ComponentEditor()
 void TerrainComponent::DisplayComponentIcon()
 {
     ImGui::SameLine();
-    ImGui::Image(TextureManager::GetInstance()->GetTexture("Terrain.bmp")->GetResourceView().Get(), ImVec2(15, 15));
+    ImGui::Image(ResourceManager::GetInstance()->GetResource<Texture>("Terrain.bmp")->GetResourceView().Get(), ImVec2(15, 15));
 }
 #endif
 
@@ -186,24 +183,29 @@ Json::Object TerrainComponent::SaveComponent()
 {
     Json::Object object;
 
-    m_mesh->SetName("UserTerrain");
+    m_mesh->m_filename = "UserTerrain";
 
-    object.emplace("Terrain Name", m_mesh->GetName());
+    object.emplace("Terrain Name", m_mesh->GetFilename());
     IOManager::SaveSpectralModel(GetMesh());
-    object.emplace("Material", m_mesh->GetMaterial()->GetName());
+    object.emplace("Material", GetMaterial()->GetFilename());
 
     return std::move(object);
 }
 
 void TerrainComponent::LoadComponent(const rapidjson::Value& object)
 {
-    IOManager::LoadSpectralModel("UserTerrain", m_mesh);
-    m_mesh->SetMaterial(MaterialManager::GetInstance()->GetMaterial(object["Material"].GetString()));
+    m_mesh = ResourceManager::GetInstance()->GetResource<Mesh>("UserTerrain.model");
+    m_material = ResourceManager::GetInstance()->GetResource<Material>(object["Material"].GetString());
 }
 
 std::shared_ptr<Mesh> TerrainComponent::GetMesh()
 {
     return m_mesh;
+}
+
+std::shared_ptr<Material> TerrainComponent::GetMaterial()
+{
+    return m_material;
 }
 
 void TerrainComponent::CreatePlaneMesh()

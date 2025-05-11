@@ -46,7 +46,7 @@ private:
 	struct PixelConstantBuffer
 	{
 		Math::Vector4 data; // x = Shininess,  w = num lights
-		Math::Vector4 data2; // x = hasBaseColor, y = hasNormal
+		Math::Vector4 data2; // x = hasBaseColor, y = hasNormal, z = linearFiltering
 		Math::Vector4 materialColor;
 	};
 

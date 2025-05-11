@@ -125,6 +125,15 @@ Vector3 Vector3::GetNormal() const
 	return vector;
 }
 
+Vector3& Math::Vector3::Normalize()
+{
+	float length = Length();
+	x /= length;
+	y /= length;
+	z /= length;
+	return *this;
+}
+
 
 Vector3 Vector3::Cross(const Vector3& in) const
 {

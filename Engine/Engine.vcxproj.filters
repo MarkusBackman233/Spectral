@@ -49,6 +49,9 @@
     <Filter Include="Source Files\Rendering\PostProcessing">
       <UniqueIdentifier>{1064ca57-083f-475d-acc4-15d9b03d10b7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\External\Recast">
+      <UniqueIdentifier>{42130aa3-6240-4b48-921e-ffb3fdf984ea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\IMGUI\imgui_tables.cpp">
@@ -75,16 +78,10 @@
     <ClCompile Include="Component.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
-    <ClCompile Include="ModelManager.cpp">
-      <Filter>Source Files\Managers</Filter>
-    </ClCompile>
     <ClCompile Include="ObjectManager.cpp">
       <Filter>Source Files\Managers</Filter>
     </ClCompile>
     <ClCompile Include="PhysXManager.cpp">
-      <Filter>Source Files\Managers</Filter>
-    </ClCompile>
-    <ClCompile Include="TextureManager.cpp">
       <Filter>Source Files\Managers</Filter>
     </ClCompile>
     <ClCompile Include="Vector3.cpp">
@@ -137,9 +134,6 @@
     </ClCompile>
     <ClCompile Include="ComponentFactory.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MaterialManager.cpp">
-      <Filter>Source Files\Managers</Filter>
     </ClCompile>
     <ClCompile Include="StringUtils.cpp">
       <Filter>Source Files\Utils</Filter>
@@ -282,6 +276,87 @@
     <ClCompile Include="AudioSource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastRasterization.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastRegion.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\Recast.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastAlloc.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastArea.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastAssert.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastContour.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastFilter.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastLayers.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastMesh.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\RecastMeshDetail.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NavigationManager.cpp">
+      <Filter>Source Files\Managers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourNavMeshQuery.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourNode.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourAlloc.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourAssert.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourCommon.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourNavMesh.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourNavMeshBuilder.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="NavmeshActorComponent.cpp">
+      <Filter>Source Files\Components</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourPathQueue.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourProximityGrid.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourCrowd.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourLocalBoundary.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourObstacleAvoidance.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
+    <ClCompile Include="src\External\Recast\Source\DetourPathCorridor.cpp">
+      <Filter>Source Files\External\Recast</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vector3.h">
@@ -309,12 +384,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PhysXManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ModelManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TextureManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\IMGUI\imgui_internal.h">
@@ -395,9 +464,6 @@
     <ClInclude Include="ComponentFactory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MaterialManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="StringUtils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -419,7 +485,7 @@
     <ClInclude Include="ProjectBrowserManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
+    <ClInclude Include="LoadableResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TerrainComponent.h">
@@ -548,6 +614,75 @@
     <ClInclude Include="AudioSource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\RecastAssert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\Recast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\RecastAlloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NavigationManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourNavMeshQuery.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourStatus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourAlloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourAssert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourNavMesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourNavMeshBuilder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource1.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NavmeshActorComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourPathQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourProximityGrid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourCrowd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourLocalBoundary.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourObstacleAvoidance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\External\Recast\Include\DetourPathCorridor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -609,16 +744,13 @@
     <Image Include="src\icon.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="src\bitmap1.bmp">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="src\Assets\TemplateGrid_albedo.bmp">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="src\Assets\TemplateGrid_normal.bmp">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="src\Assets\Light.bmp">
+    <Image Include="src\Assets\Light.png">
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="src\Assets\Terrain.bmp">
@@ -627,5 +759,19 @@
     <Image Include="src\assets\bitmap5.bmp">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="src\Assets\Light.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\Assets\Light.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\bitmap1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Engine.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

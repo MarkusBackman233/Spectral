@@ -61,6 +61,22 @@ void DeviceResources::CreateDeviceResources()
         
         ThrowIfFailed(device->CreateSamplerState(&samplerDesc, &samplerState));
         samplerState.As(&m_defaultSamplerState);    
+    }    
+    {
+        Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState;
+        D3D11_SAMPLER_DESC samplerDesc = {};
+        samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT; // Linear filtering
+        samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
+        samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
+        samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP; // Wrap addressing mode
+        samplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+        samplerDesc.MaxAnisotropy = 16;
+        samplerDesc.MinLOD = 0;
+        samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+        
+        
+        ThrowIfFailed(device->CreateSamplerState(&samplerDesc, &samplerState));
+        samplerState.As(&m_pointSamplerState);    
     }
     {
         Microsoft::WRL::ComPtr<ID3D11SamplerState> clampSamplerState;

@@ -1,46 +1,31 @@
 #include "MeshComponent.h"
-#include "ModelManager.h"
 #include "Mesh.h"
 #include "iRender.h"
-#include <fstream>
-#include <ppltasks.h>
-#include "Logger.h"
-#include "TextureManager.h"
 #include "ObjectManager.h"
-#include "IOManager.h"
-#include "MaterialManager.h"
-#include "StringUtils.h"
 #include "Editor.h"
 #include "PropertyWindowFactory.h"
-#include "DirectXCollision.h"
-#include "DxMathUtils.h"
-#include "RenderManager.h"
-#include "Editor.h"
 #include "Texture.h"
 #include "Material.h"
+#include "ResourceManager.h"
 
 MeshComponent::MeshComponent(GameObject* owner)
     : Component(owner)
     , m_mesh(nullptr)
 {
-
-}
-
-MeshComponent::MeshComponent(GameObject* owner, std::string filename)
-    : Component(owner)
-{
-	SetMesh(filename);
+    m_material = ResourceManager::GetInstance()->GetResource<Material>("Default.material");
 }
 
 MeshComponent::MeshComponent(GameObject* owner, MeshComponent* meshComponent)
     : Component(owner)
 {
+    SetMaterial(meshComponent->GetMaterial());
 	SetMesh(meshComponent->GetMesh());
 }
 
 MeshComponent::MeshComponent(GameObject* owner, std::shared_ptr<Mesh> mesh)
     : Component(owner)
 {
+    m_material = ResourceManager::GetInstance()->GetResource<Material>("Default.material");
 	SetMesh(mesh);
 }
 
@@ -54,7 +39,7 @@ void MeshComponent::Render()
         //if (RenderManager::GetInstance()->GetFrustum().Contains(boundingBox))
         //{
         //}
-	    Render::DrawInstance(m_mesh, m_owner->GetWorldMatrix());
+	    Render::DrawInstance(m_mesh, m_material, m_owner->GetWorldMatrix());
     }
 }
 
@@ -68,8 +53,8 @@ Json::Object MeshComponent::SaveComponent()
     Json::Object object;
     if (m_mesh)
     {
-        object.emplace("Mesh", m_mesh->GetName());
-        object.emplace("Material", m_mesh->GetMaterial()->GetName());
+        object.emplace("Mesh", GetMesh()->GetFilename());
+        object.emplace("Material", GetMaterial()->GetFilename());
     }
     else
     {
@@ -83,15 +68,15 @@ void MeshComponent::LoadComponent(const rapidjson::Value& object)
     std::string meshName = object["Mesh"].GetString();
     if (meshName != "NoName")
     {
-        m_mesh = ModelManager::GetInstance()->GetMesh(meshName);
-        m_mesh->SetMaterial(MaterialManager::GetInstance()->GetMaterial(object["Material"].GetString()));
+        m_mesh = ResourceManager::GetInstance()->GetResource<Mesh>(meshName);
+        m_material = ResourceManager::GetInstance()->GetResource<Material>(object["Material"].GetString());
     }
 }
 
 #ifdef EDITOR
 void MeshComponent::ComponentEditor()
 {
-    std::string meshName = m_mesh ? m_mesh->GetName() : "Null";
+    std::string meshName = m_mesh ? m_mesh->GetFilename() : "Null";
 
     ImGui::Text(std::string("Mesh: " + meshName).c_str());
     if (ImGui::Button("Edit##Mesh"))
@@ -103,13 +88,13 @@ void MeshComponent::ComponentEditor()
     if (!m_mesh)
         return;
 
-    ImGui::Text(std::string("Material: " + m_mesh->GetMaterial()->GetName()).c_str());
+    ImGui::Text(std::string("Material: " + GetMaterial()->GetFilename()).c_str());
     if (ImGui::Button("Edit##Material"))
     {
-        PropertyWindowFactory::SelectMaterial(m_mesh);
+        PropertyWindowFactory::SelectMaterial(m_material);
     }
 
-    bool isDisabled = m_mesh->GetMaterial()->GetName() == "default";
+    bool isDisabled = GetMaterial()->GetFilename() == "Default.material";
 
     if (isDisabled)
     {
@@ -135,14 +120,14 @@ void MeshComponent::ComponentEditor()
     
     for (const auto& [textureName, textureId] : textures)
     {
-        if (m_mesh->GetMaterial()->GetTexture(textureId) && m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
+        if (GetMaterial()->GetTexture(textureId) && GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
         {
-            auto selectedTextureName = Editor::GetInstance()->GetObjectSelector()->SelectedGameObject()->GetComponentOfType<MeshComponent>()->GetMesh()->GetMaterial()->GetTexture(textureId)->GetFilename();
+            auto selectedTextureName = GetMaterial()->GetTexture(textureId)->GetFilename();
             ImGui::Text(std::string(textureName + ": " + selectedTextureName).c_str());
-            auto resource = m_mesh->GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
+            auto resource = GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
             if (ImGui::ImageButton(textureName.c_str(),resource, Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                auto material = m_mesh->GetMaterial();
+                auto material = GetMaterial();
                 PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
             }
         }
@@ -152,17 +137,18 @@ void MeshComponent::ComponentEditor()
     
             if (ImGui::Button(std::string("##"+ textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                auto material = m_mesh->GetMaterial();
+                auto material = GetMaterial();
                 PropertyWindowFactory::SelectTexture(material, textureId);
             }
         }
         ImGui::Separator();
     }
 
-    ImGui::DragFloat("Roughness", &m_mesh->GetMaterial()->GetMaterialSettings().Roughness, 0.05f,0.0f,1.0f);
-    ImGui::DragFloat("Metallic", &m_mesh->GetMaterial()->GetMaterialSettings().Metallic, 0.05f,0.0f,1.0f);
-    ImGui::Checkbox("Backface Culling", &m_mesh->GetMaterial()->GetMaterialSettings().BackfaceCulling);
-    ImGui::ColorPicker4("Color", &m_mesh->GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
+    ImGui::DragFloat("Roughness", &GetMaterial()->GetMaterialSettings().Roughness, 0.05f,0.0f,1.0f);
+    ImGui::DragFloat("Metallic", &GetMaterial()->GetMaterialSettings().Metallic, 0.05f,0.0f,1.0f);
+    ImGui::Checkbox("Backface Culling", &GetMaterial()->GetMaterialSettings().BackfaceCulling);
+    ImGui::Checkbox("Linear Filtering", &GetMaterial()->GetMaterialSettings().LinearFiltering);
+    ImGui::ColorPicker4("Color", &GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
 
     if (isDisabled)
     {
@@ -191,12 +177,13 @@ void MeshComponent::ComponentEditor()
 
 }
 #endif
-void MeshComponent::SetMesh(const std::string& filename)
-{
-	m_mesh = ModelManager::GetInstance()->GetMesh(filename);
-}
 
 void MeshComponent::SetMesh(std::shared_ptr<Mesh> mesh)
 {
 	m_mesh = mesh;
+}
+
+void MeshComponent::SetMaterial(std::shared_ptr<Material> material)
+{
+    m_material = material;
 }

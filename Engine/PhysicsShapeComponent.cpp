@@ -75,11 +75,11 @@ void PhysicsShapeComponent::SetShape(PhysXManager::PhysicsShape shapeType)
 	m_selectedShapeType = shapeType;
 }
 
-PxRigidActor* PhysicsShapeComponent::GetClosestActorInHierarchy(GameObject* gameObject)
+GameObject* PhysicsShapeComponent::GetClosestActorInHierarchy(GameObject* gameObject)
 {
 	if (auto rigidComp = gameObject->GetComponentOfType<RigidbodyComponent>())
 	{
-		return rigidComp->GetActor();
+		return gameObject;
 	}
 	
 	if (gameObject->GetParent())

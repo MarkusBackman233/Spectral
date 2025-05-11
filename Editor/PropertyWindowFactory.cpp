@@ -1,6 +1,6 @@
 #ifdef EDITOR
 #include "PropertyWindowFactory.h"
-#include "Mesh.h"
+#include "MeshComponent.h"
 #include "Editor.h"
 #include "MeshPropertyWindow.h"
 #include "TexturePropertyWindow.h"
@@ -38,13 +38,13 @@ void PropertyWindowFactory::SelectTexture(std::shared_ptr<Material>& selectMater
     ));
 }
 
-void PropertyWindowFactory::SelectMaterial(std::shared_ptr<Mesh>& selectMesh)
+void PropertyWindowFactory::SelectMaterial(std::shared_ptr<Material>& material)
 {
     Editor::GetInstance()->SetPropertyWindow(
         std::make_shared<MaterialPropertyWindow>(
-            [&selectMesh](std::shared_ptr<Material> material)
+            [&material](std::shared_ptr<Material> selectedMaterial)
     {
-        selectMesh->SetMaterial(material);
+        material = selectedMaterial;
     }
     ));
 }

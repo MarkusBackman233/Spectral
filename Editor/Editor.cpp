@@ -9,7 +9,6 @@
 #include "GameObject.h"
 #include "Matrix.h"
 #include "ObjectManager.h"
-#include "TextureManager.h"
 #include "iRender.h"
 #include "ShadowManager.h"
 #include "ProfilerManager.h"
@@ -38,6 +37,8 @@
 #include "GuiManager.h"
 #include "Vector4.h"
 #include "MathFunctions.h"
+#include "ResourceManager.h"
+
 using namespace Spectral;
 
 int Editor::ColorPickerMask = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoTooltip 
@@ -75,16 +76,32 @@ void Editor::PreRender()
 
 void Editor::Render()
 {
+
     ImGui::Render();
+
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
-
 void Editor::Update(float deltaTime)
 {
     m_mainViewport = ImGui::GetMainViewport(); 
     PreRender();
     TopMenu();
+    
+
     RenderManager::GetInstance()->GetGuiManager()->Render();
+    //ImGui::SetNextWindowSize(ImVec2(500,500));
+    //if (ImGui::Begin("Viewport"))
+    //{
+    //
+    //    ID3D11ShaderResourceView* srv = RenderManager::GetInstance()->GetDeviceResources()->RenderTargetSRV();
+    //    ImVec2 imageSize = ImGui::GetContentRegionAvail();
+    //    ImGui::Image((void*)srv, imageSize);
+    //    ImGui::End();
+    //}
+    //
+    ImGui::SetNextWindowSize(ImVec2(350, 450), ImGuiCond_FirstUseEver);
+
+    bool open = true;
 
     m_editorCameraController.Update(deltaTime);
 
@@ -163,6 +180,21 @@ void Editor::HandleDropFile(const std::filesystem::path& filename)
             );
             return;
         }
+    }    
+    
+    for (auto& filetype : IOManager::SupportedAudioFiles)
+    {
+        if (StringUtils::StringContainsCaseInsensitive(filename.extension().string(), filetype))
+        {
+            auto DropfileTask = Concurrency::create_task(
+                [filename]()
+            {
+
+                IOManager::LoadAudioSource(filename);
+            }
+            );
+            return;
+        }
     }
 
     for (auto& filetype : IOManager::SupportedMeshFiles)
@@ -182,7 +214,10 @@ void Editor::HandleDropFile(const std::filesystem::path& filename)
 
 void Editor::GameObjectListItem(GameObject* gameObject)
 {
-    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow |
+        ImGuiTreeNodeFlags_OpenOnDoubleClick |
+        ImGuiTreeNodeFlags_SpanAvailWidth | // Makes the whole row clickable/highlightable
+        ImGuiTreeNodeFlags_AllowItemOverlap; // Allows icons/buttons on the same line
     if(m_objectSelector.IsGameObjectSelected(gameObject))
     {
         node_flags |= ImGuiTreeNodeFlags_Selected;
@@ -194,9 +229,7 @@ void Editor::GameObjectListItem(GameObject* gameObject)
     {
         node_flags |= ImGuiTreeNodeFlags_Leaf;
     }
-
     bool node_open = ImGui::TreeNodeEx(gameObject, node_flags, gameObject->GetName().c_str());
-
     if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
     {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
@@ -357,7 +390,7 @@ void Editor::TopMenu()
                 gameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
                 m_objectSelector.SetSelectedGameObject(gameObject);
                 auto meshComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Mesh);
-                std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(meshName);
+                std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(ResourceManager::GetInstance()->GetResource<Mesh>(meshName));
 
                 gameObject->AddComponent(meshComponent);
             };
@@ -470,30 +503,43 @@ void Editor::GameObjectsWindow()
 {
     ImGui::SetNextWindowPos(ImVec2(0, m_mainViewport->WorkPos.y), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2((float)m_leftMenuSizeX, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y ), ImGuiCond_Always);
-
     ImGui::Begin("GameObjects", &m_windowsOpen, m_defaultWindowFlags);
-    if (ImGui::BeginListBox("##GOList", ImGui::GetContentRegionAvail()))
+    if (ImGui::BeginTabBar("Stuff"))
     {
-        auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
-        for (const auto& gameObject : gameObjects)
+        if (ImGui::BeginTabItem("Game Objects"))
         {
-            if (gameObject->GetParent() == nullptr)
+            if (ImGui::BeginListBox("##GOList", ImGui::GetContentRegionAvail()))
             {
-                GameObjectListItem(gameObject.get());
+                auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
+                for (const auto& gameObject : gameObjects)
+                {
+                    if (gameObject->GetParent() == nullptr)
+                    {
+                        GameObjectListItem(gameObject.get());
+                    }
+                }
+                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 100.0f)));
+                if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
+                {
+                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
+                    {
+                        m_objectSelector.SelectedGameObject()->SetParent(nullptr);
+                    }
+                    ImGui::EndDragDropTarget();
+                }
+                ImGui::EndListBox();
             }
+            ImGui::EndTabItem();
         }
-        ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 100.0f)));
-        if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
+        if (ImGui::BeginTabItem("Navmeshes"))
         {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
-            {
-                m_objectSelector.SelectedGameObject()->SetParent(nullptr);
-            }
-            ImGui::EndDragDropTarget();
+
+            ImGui::EndTabItem();
         }
-        ImGui::EndListBox();
+        ImGui::EndTabBar();
     }
     ImGui::End();
+
 }
 
 void Editor::GameObjectComponentWindow()
@@ -510,7 +556,7 @@ void Editor::GameObjectComponentWindow()
             ImGui::PopStyleColor();
             bool close = true;
             ImGui::PushID(it->get());
-            if (ImGui::CollapsingHeader(it->get()->GetComponentName().c_str(), &close, ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::CollapsingHeader(it->get()->GetComponentName().c_str(), &close, ImGuiTreeNodeFlags_None))
             {
                 it->get()->ComponentEditor();
             }

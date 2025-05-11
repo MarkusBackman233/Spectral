@@ -1,18 +1,12 @@
 
 #include "GameObject.h"
 #include "Component.h"
-#include <iostream>
-#include "Mesh.h"
-#include "ModelManager.h"
-#include "TextureManager.h"
-#include "MeshComponent.h"
 #include "CharacterControllerComponent.h"
+#include "NavmeshActorComponent.h"
 #include "AudioSourceComponent.h"
 #include "random"
-#include "limits"
 #include "RigidbodyComponent.h"
 #include "MathFunctions.h"
-#include "Editor.h"
 #include "ObjectManager.h"
 
 GameObject::GameObject()
@@ -194,6 +188,7 @@ void GameObject::RemoveChild(GameObject* gameObject)
 }
 
 
+
 CharacterControllerComponent* GameObject::GetCharacterControllerComponent() const
 {
 	return GetComponentOfType<CharacterControllerComponent>().get();
@@ -202,6 +197,11 @@ CharacterControllerComponent* GameObject::GetCharacterControllerComponent() cons
 AudioSourceComponent* GameObject::GetAudioSourceComponent() const
 {
 	return GetComponentOfType<AudioSourceComponent>().get();
+}
+
+NavmeshActorComponent* GameObject::GetNavmeshActorComponent() const
+{
+	return GetComponentOfType<NavmeshActorComponent>().get();
 }
 
 void GameObject::SetName(const std::string& name)

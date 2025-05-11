@@ -1,14 +1,10 @@
 #include "AudioSourceComponent.h"
-#include "iRender.h"
-#include "TextureManager.h"
 #include "Editor.h"
-#include "SceneManager.h"
 #include "GameObject.h"
-#include "TextureManager.h"
-#include "Texture.h"
-#include "RenderManager.h"
 #include "PropertyWindowFactory.h"
 #include "AudioManager.h"
+#include "ResourceManager.h"
+#include "iRender.h"
 
 AudioSourceComponent::AudioSourceComponent(GameObject* owner)
 	: Component(owner)
@@ -93,12 +89,11 @@ void AudioSourceComponent::Render()
 {
 
 #ifdef EDITOR
-	//static auto texture = TextureManager::GetInstance()->GetTexture("Light.bmp");
-	//Render::DrawGuizmo(m_owner->GetWorldMatrix().GetPosition(), texture, m_light->Color.GetNormalizedColor());
-	//if (m_light->Type == Light::LightType::Directional && Editor::GetInstance()->IsStarted() == false)
-	//{
-	//	Render::DrawLine(m_owner->GetWorldMatrix().GetPosition(), m_owner->GetWorldMatrix().GetPosition() + m_owner->GetWorldMatrix().GetFront()*2);
-	//}
+	if (!Editor::GetInstance()->IsStarted())
+	{
+		static auto texture = ResourceManager::GetInstance()->GetResource<Texture>("Audio.png");
+		Render::DrawGuizmo(m_owner->GetWorldMatrix().GetPosition(), texture);
+	}
 #endif // EDITOR
 }
 
@@ -120,7 +115,7 @@ Json::Object AudioSourceComponent::SaveComponent()
 	Json::Object object;
 	if (m_audioSource != nullptr)
 	{
-		object.emplace("AudioSource", m_audioSource->m_fileName);
+		object.emplace("AudioSource", m_audioSource->GetFilename());
 	}
 	else
 	{
@@ -143,7 +138,7 @@ void AudioSourceComponent::LoadComponent(const rapidjson::Value& object)
 	std::string audioSourceName = object["AudioSource"].GetString();
 	if (audioSourceName != "Null")
 	{
-		SetAudioSource(AudioManager::GetInstance()->GetAudioSource(audioSourceName));
+		SetAudioSource(ResourceManager::GetInstance()->GetResource<AudioSource>(audioSourceName));
 	}
 
 
@@ -177,7 +172,7 @@ AudioSource::Settings AudioSourceComponent::GetSettings()
 
 int AudioSourceComponent::GetSamplesLeft()
 {
-	return std::max(static_cast<int>(m_audioSource->m_audioFile.samples[0].size()) - m_currentSample, 0);
+	return std::max(static_cast<int>(m_audioSource->GetAudioFile().samples[0].size()) - m_currentSample, 0);
 }
 
 bool AudioSourceComponent::IsPlaying() const
@@ -216,7 +211,7 @@ void AudioSourceComponent::ComponentEditor()
 	ImGui::Text("Selected Audio Source:");
 	if (m_audioSource != nullptr)
 	{
-		ImGui::Text(m_audioSource->m_fileName.c_str());
+		ImGui::Text(m_audioSource->GetFilename().c_str());
 	}
 	else
 	{
@@ -225,8 +220,10 @@ void AudioSourceComponent::ComponentEditor()
 }
 void AudioSourceComponent::DisplayComponentIcon()
 {
+	static auto texture = ResourceManager::GetInstance()->GetResource<Texture>("Audio.png");
+	Render::DrawGuizmo(m_owner->GetWorldMatrix().GetPosition(), texture);
 	//auto color = GetLight()->Color.GetNormalizedColor();
-	//ImGui::SameLine();
-	//ImGui::Image(TextureManager::GetInstance()->GetTexture("Light.bmp")->GetResourceView().Get(), ImVec2(15, 15), ImVec2(0, 0), ImVec2(1, 1), ImVec4(color.x, color.y, color.z, 1.0f));
+	ImGui::SameLine();
+	ImGui::Image(texture->GetResourceView().Get(), ImVec2(15, 15), ImVec2(0, 0), ImVec2(1, 1));
 }
 #endif
