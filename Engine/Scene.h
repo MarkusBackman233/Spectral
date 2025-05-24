@@ -1,9 +1,11 @@
 #pragma once
-#include <pch.h>
-#include "LightComponent.h"
 #include <d3d11.h>
 #include <wrl/client.h>
+#include "Vector4.h"
+#include <memory>
+#include <vector>
 
+struct Light;
 
 class Scene
 {

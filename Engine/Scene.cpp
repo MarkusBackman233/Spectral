@@ -4,9 +4,11 @@
 #include "iRender.h"
 #include "IOManager.h"
 
-#include "src/External/stb_image.h"
 #include "src/External/DDSTextureLoader/DDSTextureLoader11.h"
+#include "DeviceResources.h"
 #include "Component.h"
+#include "LightComponent.h"
+#include "Light.h"
 
 Scene::Scene()
 {

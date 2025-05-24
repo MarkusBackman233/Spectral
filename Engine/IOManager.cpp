@@ -9,7 +9,6 @@
 #include "ComponentFactory.h"
 #include <ppltasks.h>
 #include "StringUtils.h"
-#include "RenderManager.h"
 #include "SceneManager.h"
 #include "ScriptManager.h"
 #include "Texture.h"
@@ -22,7 +21,6 @@
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp\scene.h>
-#include "thread"
 
 #include <algorithm>
 #include <execution>
@@ -45,7 +43,7 @@ std::string IOManager::SpectralSceneExtention = ".scene";
 std::string IOManager::SpectralMaterialExtention = ".material";
 
 const std::vector<std::string> IOManager::SupportedTextureFiles = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga" };
-const std::vector<std::string> IOManager::SupportedMeshFiles = { ".fbx" ,".blend", ".obj", ".gltf" };
+const std::vector<std::string> IOManager::SupportedMeshFiles = { ".fbx" ,".blend", ".obj", ".gltf", ".glb" };
 const std::vector<std::string> IOManager::SupportedAudioFiles = { ".wav" };
 
 void IOManager::SetExecutableDirectiory()
@@ -86,22 +84,71 @@ bool IOManager::LoadProject(std::optional<std::string> forceProject /*= std::nul
 bool IOManager::LoadFBX(const std::filesystem::path& filename)
 {
     Assimp::Importer importer;
-    const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PreTransformVertices | aiProcess_FixInfacingNormals | aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    //const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PopulateArmatureData | aiProcess_PreTransformVertices | aiProcess_FixInfacingNormals | aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PopulateArmatureData | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    
+    
+    
     std::string strippedFilename(filename.filename().string().c_str());
     if (scene == nullptr)
     {
-        Logger::Error("Could not load model: " + strippedFilename);
+        Logger::Error("Could not load model: " + strippedFilename + " " + importer.GetErrorString());
         return false;
     }
     
     auto rootObject = ObjectManager::GetInstance()->CreateObject(strippedFilename);
-    aiVector3D position, rotation, scale;
-    scene->mRootNode->mTransformation.Decompose(scale, rotation, position);
-    rotation *= 57.2957795f;
-    Math::Matrix matrix;
-    EditorUtils::RecomposeMatrix(matrix, *static_cast<Math::Vector3*>((void*)&position), *static_cast<Math::Vector3*>((void*)&rotation), *static_cast<Math::Vector3*>((void*)&scale));
-    rootObject->SetWorldMatrix(matrix);
+    {
+        aiVector3D position, rotation, scale;
+        scene->mRootNode->mTransformation.Decompose(scale, rotation, position);
+        rotation *= 57.2957795f;
+        Math::Matrix matrix;
+        EditorUtils::RecomposeMatrix(matrix, *static_cast<Math::Vector3*>((void*)&position), *static_cast<Math::Vector3*>((void*)&rotation), *static_cast<Math::Vector3*>((void*)&scale));
+        rootObject->SetWorldMatrix(matrix);
+    }
+
+    for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
+        aiMesh* mesh = scene->mMeshes[i];
+
+        if (mesh->HasBones())
+        {
+            for (unsigned int j = 0; j < mesh->mNumBones; j++)
+            {
+                aiBone* bone = mesh->mBones[j];
+                auto object = ObjectManager::GetInstance()->CreateObject(bone->mName.C_Str());
+                object->SetParent(rootObject);
+                {
+                    aiVector3D position, rotation, scale;
+                    bone->mOffsetMatrix.Decompose(scale, rotation, position);
+
+                    Math::Vector3 newPos;
+                    newPos.y = -position.z;
+                    newPos.x = position.y;
+                    newPos.z = position.z;
+
+                    rotation *= 57.2957795f;
+                    Math::Matrix matrix;
+                    EditorUtils::RecomposeMatrix(matrix, newPos, *static_cast<Math::Vector3*>((void*)&rotation), *static_cast<Math::Vector3*>((void*)&scale));
+                    object->SetLocalMatrix(matrix);
+                }
+
+            }
+            //aiArmature* armature = mesh->mArmature;
+            //
+            //std::cout << "Armature name: " << armature->mName.C_Str() << std::endl;
+            //std::cout << "Num bones: " << armature->mNumBones << std::endl;
+            //
+            //for (unsigned int j = 0; j < armature->mNumBones; ++j) {
+            //    aiBone* bone = armature->mBones[j];
+            //    std::cout << "Bone " << j << ": " << bone->mName.C_Str() << std::endl;
+            //}
+        }
+    }
+
     IOManager::ProcessNode(strippedFilename, std::filesystem::path(filename).parent_path(), scene->mRootNode, scene, rootObject, Math::Matrix());
+
+
+
+
     return true;
 }
 /*
@@ -659,12 +706,15 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
 
         ResourceManager::GetInstance()->AddResource<Material>(createdMaterial);
         meshComponent->SetMaterial(createdMaterial);
+
+
+
     }
     else
     {
         meshComponent->SetMaterial(ResourceManager::GetInstance()->GetResource<Material>("Default.material"));
     }
-    
+
 
 
     

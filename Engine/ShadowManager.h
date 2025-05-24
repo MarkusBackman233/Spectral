@@ -1,9 +1,8 @@
 #pragma once
-#include "pch.h"
+#include <cstdint>
+#include <memory>
 #include <d3d11.h>
-#include <minwindef.h>
-#include <wtypes.h>
-#include <wrl.h>
+#include <wrl/client.h>
 #include "Matrix.h"
 #include "OrthographicCamera.h"
 

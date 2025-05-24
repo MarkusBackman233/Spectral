@@ -15,6 +15,7 @@
 #include "AudioSourceComponent.h"
 #include "NavmeshActorComponent.h"
 #include "ResourceManager.h"
+#include "NavigationManager.h"
 Script::Script(const std::string& filename, bool newScript)
 	: m_filename(filename)
 {
@@ -49,6 +50,7 @@ void Script::Start(GameObject* GameObject)
 
     m_lua["gameObject"] = GameObject;
     m_lua["Input"] = InputManager::GetInstance();
+    m_lua["Navigation"] = NavigationManager::GetInstance();
 
     sol::protected_function startFunction = m_lua["Start"];
     if (startFunction.valid()) {
@@ -298,6 +300,10 @@ void Script::SetBindings()
             "GetKeyReleased", &InputManager::GetKeyReleased,
             "GetKeyHeld", &InputManager::GetKeyHeld,
             "GetMouseMovement", &InputManager::GetMouseMovement
+        );
+
+        m_lua.new_usertype<NavigationManager>("Navigation",
+            "GetRandomPointInRadius", &NavigationManager::GetRandomPointInRadius
         );
 
     }

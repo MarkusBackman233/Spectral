@@ -4,6 +4,9 @@
 #include "DetourNavMeshQuery.h"
 
 #include "DetourCrowd.h"
+#include "Vector3.h"
+
+class GameObject;
 
 class NavigationManager : public rcContext
 {
@@ -14,23 +17,30 @@ public:
 	}
 	NavigationManager() {};
 
-
+	void Update(float deltaTime);
+	void DebugRender();
 	bool GenerateNavMesh();
-	void InitCrowd();
-	rcPolyMesh* m_pmesh;
-	rcPolyMeshDetail* m_dmesh;
 
-	dtNavMesh* m_navMesh;
-	dtNavMeshQuery* m_navQuery;
+	int CreateAgent(GameObject* gameObject, const dtCrowdAgentParams& params);
+	void RemoveAgent(int agentId);
+	const dtCrowdAgent* GetAgentData(int agentId);
+	bool RequestTarget(const Math::Vector3& target, int agentId);
 
-	dtCrowd* m_crowd;
+	Math::Vector3 GetRandomPointInRadius(const Math::Vector3& center, float radius);
 
 protected:
 	virtual void doLog(const rcLogCategory category, const char* msg, const int len) override;
 
 private:	
-	//class InputGeom* m_geom;
 
+	void InitCrowd();
+
+
+	rcPolyMesh* m_pmesh;
+	rcPolyMeshDetail* m_dmesh;
+	dtNavMesh* m_navMesh;
+	dtNavMeshQuery* m_navQuery;
+	dtCrowd* m_crowd;
 
 	unsigned char m_navMeshDrawFlags;
 
@@ -53,13 +63,10 @@ private:
 	bool m_filterLedgeSpans;
 	bool m_filterWalkableLowHeightSpans;
 
-
 	unsigned char* m_triareas;
 	rcHeightfield* m_solid;
 	rcCompactHeightfield* m_chf;
 	rcContourSet* m_cset;
 	rcConfig m_cfg;
-
-
 };
 

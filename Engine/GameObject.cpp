@@ -38,6 +38,11 @@ void GameObject::SetWorldMatrix(const Math::Matrix& worldMatrix)
 void GameObject::SetLocalMatrix(const Math::Matrix& localMatrix)
 {
 	m_localMatrix = localMatrix;
+	if (GetParent())
+	{
+		m_worldMatrix = GetParent()->GetWorldMatrix() * localMatrix;
+	}
+
 	UpdateTransform();
 }
 

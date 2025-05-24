@@ -220,7 +220,7 @@
     <ClCompile Include="ScriptComponent.cpp" />
     <ClCompile Include="ScriptManager.cpp" />
     <ClCompile Include="ShadowManager.cpp" />
-    <ClCompile Include="SimulationStateManager.cpp" />
+    <ClCompile Include="GameStateManager.cpp" />
     <ClCompile Include="SkyboxManager.cpp" />
     <ClCompile Include="SpectralAssert.cpp" />
     <ClCompile Include="src\External\DDSTextureLoader\DDSTextureLoader11.cpp" />
@@ -295,6 +295,7 @@
     <ClInclude Include="iRender.h" />
     <ClInclude Include="JointComponent.h" />
     <ClInclude Include="Json.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="LightComponent.h" />
     <ClInclude Include="LineRenderer.h" />
     <ClInclude Include="Logger.h" />
@@ -330,7 +331,7 @@
     <ClInclude Include="ScriptComponent.h" />
     <ClInclude Include="ScriptManager.h" />
     <ClInclude Include="ShadowManager.h" />
-    <ClInclude Include="SimulationStateManager.h" />
+    <ClInclude Include="GameStateManager.h" />
     <ClInclude Include="SkyboxManager.h" />
     <ClInclude Include="SpectralAssert.h" />
     <ClInclude Include="src\External\DDSTextureLoader\DDSTextureLoader11.h" />

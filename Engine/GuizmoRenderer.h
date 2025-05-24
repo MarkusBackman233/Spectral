@@ -3,6 +3,11 @@
 #include "Vector4.h"
 #include "Vector2.h"
 #include <wrl/client.h>
+#include <memory>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+#include "Vector3.h"
 
 
 class Texture;

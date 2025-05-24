@@ -25,7 +25,10 @@ NavmeshActorComponent::NavmeshActorComponent(GameObject* owner, NavmeshActorComp
 
 NavmeshActorComponent::~NavmeshActorComponent()
 {
-
+    if (m_agentId != -1)
+    {
+        NavigationManager::GetInstance()->RemoveAgent(m_agentId);
+    }
 }
 
 void NavmeshActorComponent::Start()
@@ -41,14 +44,14 @@ void NavmeshActorComponent::Reset()
     m_hasTarget = false;
     if (m_agentId != -1)
     {
-        NavigationManager::GetInstance()->m_crowd->removeAgent(m_agentId);
+        NavigationManager::GetInstance()->RemoveAgent(m_agentId);
     }
     m_agentId = -1;
 }
 
 void NavmeshActorComponent::Update(float deltaTime)
 {
-    const dtCrowdAgent* agent = NavigationManager::GetInstance()->m_crowd->getAgent(m_agentId);
+    const dtCrowdAgent* agent = NavigationManager::GetInstance()->GetAgentData(m_agentId);
     Math::Vector3 velocity(agent->vel[0], agent->vel[1], agent->vel[2]);
     Math::Vector3 position(agent->npos[0], agent->npos[1], agent->npos[2]);
     
@@ -169,19 +172,11 @@ void NavmeshActorComponent::SetTarget(const Math::Vector3& target)
         CreateAgent();
     }
 
-    m_target = target;
-    m_hasTarget = true;
-    dtPolyRef startRef;
-    dtQueryFilter filter;
-    filter.setIncludeFlags(0xFFFF);  // Adjust according to your walkability flags
-    filter.setExcludeFlags(0);       // Exclude nothing
-
-    float halfExtents[3] = { 4.0f, 4.0f, 4.0f };  // Bounding box to search within (XZ radius and vertical range)
-
-    auto query = NavigationManager::GetInstance()->m_navQuery;
-    query->findNearestPoly(target.Data(), halfExtents, &filter, &startRef, nullptr);
-    NavigationManager::GetInstance()->m_crowd->requestMoveTarget(m_agentId, startRef, target.Data());
-
+    if (NavigationManager::GetInstance()->RequestTarget(target, m_agentId))
+    {
+        m_hasTarget = true;
+        m_target = target;
+    }
 }
 bool NavmeshActorComponent::HasTarget() const
 {
@@ -195,9 +190,6 @@ dtCrowdAgentParams NavmeshActorComponent::GetAgentParams() const
 
 void NavmeshActorComponent::CreateAgent()
 {
-    auto crowd = NavigationManager::GetInstance()->m_crowd;
-    Math::Vector3 currentPosition = m_owner->GetWorldMatrix().GetPosition();
-
-    m_agentId = crowd->addAgent(currentPosition.Data(), &m_agentParams);
+    m_agentId = NavigationManager::GetInstance()->CreateAgent(m_owner, m_agentParams);
 }
 

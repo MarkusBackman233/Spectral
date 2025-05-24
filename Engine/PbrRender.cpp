@@ -5,8 +5,9 @@
 #include "SkyboxManager.h"
 #include "SceneManager.h"
 #include "SSAO.h"
-#include "LightComponent.h"
 #include "ProfilerManager.h"
+#include "DeviceResources.h"
+#include "Light.h"
 
 PbrRender::PbrRender()
 {
@@ -60,7 +61,7 @@ void PbrRender::Process(
 
     for (size_t i = 0; i < m_lightsToRender.size() && i < 50; i++)
     {
-        Light* light = m_lightsToRender[i].get();
+        const Light* light = m_lightsToRender[i];
 
         m_pixelConstantBuffer.lights[i].position = Math::Vector4(light->Position, light->Attenuation);
         m_pixelConstantBuffer.lights[i].direction = Math::Vector4(light->Direction, 1.0f);
@@ -80,7 +81,7 @@ void PbrRender::Process(
     m_lightsToRender.clear();
 }
 
-void PbrRender::RenderLight(std::shared_ptr<Light> light)
+void PbrRender::RenderLight(const Light* light)
 {
     m_lightsToRender.push_back(light);
 }

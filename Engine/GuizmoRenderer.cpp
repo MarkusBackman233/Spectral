@@ -5,7 +5,7 @@
 #include "Matrix.h"
 #include "ProfilerManager.h"
 #include "Texture.h"
-
+#include "DeviceResources.h"
 GuizmoRenderer::GuizmoRenderer()
 {
  

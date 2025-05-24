@@ -6,7 +6,7 @@
 #include "src/External/stb_image.h"
 #include "src/External/DDSTextureLoader/DDSTextureLoader11.h"
 #include "Logger.h"
-#include "IOManager.h"
+#include "DeviceResources.h"
 
 
 bool Texture::LoadTexture(unsigned char* bytes, const Math::Vector2i& size)
@@ -59,7 +59,7 @@ bool Texture::LoadFromResource(unsigned char* bytes, size_t size)
 
 	unsigned char* image = stbi_load_from_memory(
 		bytes,
-		size,
+		static_cast<int>(size),
 		&width, &height, &channels, 0
 	);
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;

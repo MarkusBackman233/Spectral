@@ -37,7 +37,7 @@
 
 #define COMPONENT(componentClass, componentEnum, str, canDuplicate) \
     COMPONENT_SELECT(canDuplicate)(componentClass, componentEnum, str)
-
+#undef COMPONENT
 // Component list
 #define COMPONENT_LIST \
     COMPONENT(RigidbodyComponent,           Component::Type::Rigidbody,             "Rigidbody Component",              1) \

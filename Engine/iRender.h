@@ -1,11 +1,9 @@
 #pragma once
 #include "pch.h"
-#include <stdexcept>
-#include "DeviceResources.h"
+#include <d3d11.h>
+#include <wrl/client.h>
 #include "Vector4.h"
-#include "Vector3.h"
 #include "Vector2.h"
-#include "Matrix.h"
 #include "Camera.h"
 
 typedef long HRESULT;
@@ -30,6 +28,7 @@ class Material;
 class MeshComponent;
 class LockedContext;
 class Texture;
+struct Light;
 
 namespace Math
 {
@@ -88,7 +87,6 @@ namespace Render
 	LockedContext	GetContext();
 	ID3D11SamplerState*		GetDefaultSamplerState();
 
-	void			DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, const Math::Matrix& matrix);
 
 	const Math::Matrix&  GetViewMatrix();
 	const Math::Matrix&  GetProjectionMatrix();
@@ -105,10 +103,12 @@ namespace Render
 	HRESULT CreateConstantBuffer(ID3D11Device* device, size_t size, Microsoft::WRL::ComPtr<ID3D11Buffer>& buffer);
 	void	UpdateConstantBuffer(SHADER_TYPE shaderType, int slotIndex, Microsoft::WRL::ComPtr<ID3D11Buffer>& destinationData, const void* sourceData, ID3D11DeviceContext* context);
 
-
+	void	DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, const Math::Matrix& matrix);
+	void	DrawText2D(const std::string& text, const Math::Vector2& position);
 	void	DrawText2D(const std::string& text, const Math::Vector2& position);
 	void	DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector4& color = Math::Vector4(1,1,1,1));
 	void	DrawGuizmo(const Math::Vector3& position, std::shared_ptr<Texture> texture, const Math::Vector4& color = Math::Vector4(1, 1, 1, 1));
+	void	DrawLight(const Light* light);
 
 	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture);
 

@@ -7,9 +7,62 @@
 #include "GameObject.h"
 #include "PhysicsShapeComponent.h"
 #include "RigidbodyComponent.h"
+#include "iRender.h"
+#include <random>
 
+void NavigationManager::Update(float deltaTime)
+{
+	m_crowd->update(deltaTime, nullptr);
+}
 
+void NavigationManager::DebugRender()
+{
+	{
+		const auto navMesh = NavigationManager::GetInstance()->m_navMesh;
+		for (int i = 0; i < navMesh->getMaxTiles(); ++i)
+		{
+			const dtMeshTile* tile = navMesh->getTileG(i);
 
+			const dtPoly* polys = tile->polys;
+			const float* verts = tile->verts;
+			const dtPolyDetail* detailMeshes = tile->detailMeshes;
+			const float* detailVerts = tile->detailVerts;
+
+			for (int j = 0; j < tile->header->polyCount; ++j)
+			{
+				const dtPoly& p = polys[j];
+				if (p.getType() != DT_POLYTYPE_GROUND) continue; // skip off-mesh connections
+
+				const dtPolyDetail& pd = detailMeshes[j];
+
+				for (int k = 0; k < pd.triCount; ++k)
+				{
+					const unsigned char* t = &tile->detailTris[(pd.triBase + k) * 4];
+
+					Math::Vector3 tri[3];
+					for (int m = 0; m < 3; ++m)
+					{
+						const int vertIndex = t[m];
+						const float* v;
+
+						if (vertIndex < pd.vertCount)
+							v = &detailVerts[(pd.vertBase + vertIndex) * 3];
+						else
+							v = &verts[p.verts[vertIndex - pd.vertCount] * 3];
+
+						tri[m] = Math::Vector3(v[0], v[1], v[2]);
+					}
+
+					// Draw triangle as lines
+					Render::DrawLine(tri[0], tri[1]);
+					Render::DrawLine(tri[1], tri[2]);
+					Render::DrawLine(tri[2], tri[0]);
+				}
+			}
+		}
+
+	}
+}
 
 bool NavigationManager::GenerateNavMesh()
 {
@@ -121,9 +174,9 @@ bool NavigationManager::GenerateNavMesh()
 	const float* bmin = min.Data();
 	const float* bmax = max.Data();
 	const float* verts = vertexes.data()->Data();
-	const int nverts = vertexes.size();
+	const int nverts = static_cast<int>(vertexes.size());
 	const int* tris = triangles.data();
-	const int ntris = triangles.size() / 3;
+	const int ntris = static_cast<int>(triangles.size()) / 3;
 
 	//
 	// Step 1. Initialize build config.
@@ -517,6 +570,68 @@ bool NavigationManager::GenerateNavMesh()
 	log(RC_LOG_PROGRESS, ">> Polymesh: %d vertices  %d polygons", m_pmesh->nverts, m_pmesh->npolys);
 	InitCrowd();
 	return true;
+}
+
+int NavigationManager::CreateAgent(GameObject* gameObject, const dtCrowdAgentParams& params)
+{
+	Math::Vector3 currentPosition = gameObject->GetWorldMatrix().GetPosition();
+	return m_crowd->addAgent(currentPosition.Data(), &params);
+}
+
+void NavigationManager::RemoveAgent(int agentId)
+{
+	NavigationManager::GetInstance()->m_crowd->removeAgent(agentId);
+}
+
+const dtCrowdAgent* NavigationManager::GetAgentData(int agentId)
+{
+	return m_crowd->getAgent(agentId);
+}
+
+bool NavigationManager::RequestTarget(const Math::Vector3& target, int agentId)
+{
+	dtPolyRef startRef;
+	dtQueryFilter filter;
+	filter.setIncludeFlags(0xFFFF);  // Adjust according to your walkability flags
+	filter.setExcludeFlags(0);       // Exclude nothing
+
+	float halfExtents[3] = { 4.0f, 4.0f, 4.0f };
+
+	m_navQuery->findNearestPoly(target.Data(), halfExtents, &filter, &startRef, nullptr);
+	return m_crowd->requestMoveTarget(agentId, startRef, target.Data());
+}
+
+float generateRandomFloat() {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	static std::uniform_real_distribution<float> dis(0.0f, 1.0f);
+	return dis(gen);
+}
+
+Math::Vector3 NavigationManager::GetRandomPointInRadius(const Math::Vector3& center, float radius)
+{
+
+	static std::random_device rd;                      // Uses hardware entropy source if available
+	static std::mt19937 gen(rd());                     // Mersenne Twister engine seeded with rd
+	static std::uniform_real_distribution<float> dis(0.0, 1.0); // Uniform distribution from 0 to 1
+
+
+	dtPolyRef startRef;
+	dtQueryFilter filter;
+	filter.setIncludeFlags(0xFFFF);  // Adjust according to your walkability flags
+	filter.setExcludeFlags(0);       // Exclude nothing
+
+	float halfExtents[3] = { radius, radius, radius };
+
+	m_navQuery->findNearestPoly(center.Data(), halfExtents, &filter, &startRef, nullptr);
+	float n = dis(gen);
+	dtPolyRef randomRef;
+
+	float t[3]{};
+
+	m_navQuery->findRandomPointAroundCircle(startRef,center.Data(),radius, &filter, generateRandomFloat, &randomRef,t);
+
+	return { t[0], t[1], t[2] };
 }
 
 void NavigationManager::InitCrowd()

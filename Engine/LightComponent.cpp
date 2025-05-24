@@ -2,11 +2,9 @@
 #include "iRender.h"
 #include "ResourceManager.h"
 #include "Editor.h"
-#include "SceneManager.h"
 #include "GameObject.h"
 #include "Texture.h"
-#include "RenderManager.h"
-#include "SimulationStateManager.h"
+#include "Light.h"
 
 
 
@@ -38,8 +36,7 @@ void LightComponent::Render()
 {
 	m_light->Position = m_owner->GetWorldMatrix().GetPosition();
 	m_light->Direction = m_owner->GetWorldMatrix().GetFront();
-	RenderManager::GetInstance()->GetPbrRenderer()->RenderLight(m_light);
-
+	Render::DrawLight(m_light.get());
 
 #ifdef EDITOR
 	if(!Editor::GetInstance()->IsStarted())

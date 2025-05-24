@@ -3,7 +3,7 @@
 #include "DeviceResources.h"
 #include "Mesh.h"
 #include "Matrix.h"
-#include "RenderManager.h"
+#include "InstanceManager.h"
 #include "Texture.h"
 #include "ShadowManager.h"
 #include "Material.h"

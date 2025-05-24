@@ -2,16 +2,14 @@
 #include <d3d11.h>
 #include "iRender.h"
 #include "Mesh.h"
-#include "Texture.h"
-#include "Logger.h"
-#include "IOManager.h"
-#include "Material.h"
 #include "SceneManager.h"
 #include "Matrix.h"
 #include "DirectXMath.h"
 #include "DxMathUtils.h"
 #include "TimeManager.h"
 #include "ProfilerManager.h"
+#include "Light.h"
+
 using namespace DirectX;
 
 

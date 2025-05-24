@@ -1,12 +1,11 @@
 #include "ShadowManager.h"
-#include "RenderManager.h"
+#include "InstanceManager.h"
 #include "iRender.h"
 #include "ProfilerManager.h"
 #include "Mesh.h"
 #include "SceneManager.h"
-#include "DxMathUtils.h"
 #include "MathFunctions.h"
-
+#include "Light.h"
 ShadowManager::ShadowManager()
     : m_ShadowMapSize(4096) 
 {}

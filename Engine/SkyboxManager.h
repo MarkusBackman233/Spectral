@@ -1,5 +1,7 @@
 #pragma once
-#include "pch.h"
+#include <array>
+#include <memory>
+#include <vector>
 #include "Vector4.h"
 #include <wrl/client.h>
 #include "Matrix.h"

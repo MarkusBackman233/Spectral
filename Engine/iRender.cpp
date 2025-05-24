@@ -1,7 +1,6 @@
 #include "iRender.h"
 #include "RenderManager.h"
 #include <fstream>
-#include "MeshComponent.h"
 #include "IOManager.h"
 #include "GuiManager.h"
 #include "InstanceManager.h"
@@ -144,6 +143,11 @@ namespace Render
 	void DrawGuizmo(const Math::Vector3& position, std::shared_ptr<Texture> texture, const Math::Vector4& color)
 	{
 		RenderManager::GetInstance()->GetGuizmoRenderer()->AddGuizmo(texture, position, color);
+	}
+
+	void DrawLight(const Light* light)
+	{
+		RenderManager::GetInstance()->GetPbrRenderer()->RenderLight(light);
 	}
 
 	Math::Vector2i GetWindowSize()

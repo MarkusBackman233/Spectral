@@ -2,9 +2,8 @@
 #include <vector>
 #include <string>
 #include "Texture.h"
-#include <comdef.h>
 
-#include "RenderManager.h"
+#include "Mesh.h"
 #include "Vector2.h"
 #include "iRender.h"
 

@@ -1,7 +1,7 @@
 #include "MeshComponent.h"
 #include "Mesh.h"
 #include "iRender.h"
-#include "ObjectManager.h"
+#include "GameObject.h"
 #include "Editor.h"
 #include "PropertyWindowFactory.h"
 #include "Texture.h"

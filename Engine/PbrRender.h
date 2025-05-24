@@ -26,7 +26,7 @@ public:
 		const SSAO& ssao
 	);
 
-	void RenderLight(std::shared_ptr<Light> light);
+	void RenderLight(const Light* light);
 
 private:
 
@@ -50,7 +50,7 @@ private:
 	PixelConstantBuffer m_pixelConstantBuffer;
 
 
-	std::vector<std::shared_ptr<Light>> m_lightsToRender;
+	std::vector<const Light*> m_lightsToRender;
 
 };
 

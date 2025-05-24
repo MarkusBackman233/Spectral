@@ -2,29 +2,26 @@
 #include "IOManager.h"
 #include "TimeManager.h"
 #include "ObjectManager.h"
-#include "SimulationStateManager.h"
+#include "GameStateManager.h"
 #include "InputManager.h"
 #ifdef EDITOR
 #include "Editor.h"
 #endif // EDITOR
 
-#include <Horizon.h>
 #include <AudioManager.h>
+#include <WindowsManager.h>
 
 
 int main(int argc, char* args[])
 {
-    Horizon::InitializePhysics();
-
     bool projectLoaded = argc > 1 ? IOManager::LoadProject(std::string(args[1])) : IOManager::LoadProject();
 
     if (projectLoaded == false)
     {
         return EXIT_SUCCESS;
     }
-    
 
-    SimulationStateManager stateManager;
+    GameStateManager stateManager;
     TimeManager timeManager;
 
     WindowsManager::CreateWindowsLoop(

@@ -5,7 +5,7 @@
 #include "DeferredPipeline.h"
 #include <random>
 #include "ProfilerManager.h"
-
+#include "DeviceResources.h"
 
 SSAO::SSAO()
     : PostProcessing()

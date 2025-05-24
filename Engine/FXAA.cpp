@@ -1,6 +1,7 @@
 #include "FXAA.h"
 #include "iRender.h"
 #include "ProfilerManager.h"
+#include "DeviceResources.h"
 FXAA::FXAA()
     : PostProcessing()
 {
