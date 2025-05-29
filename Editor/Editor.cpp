@@ -161,49 +161,12 @@ void Editor::Update(float deltaTime)
 void Editor::HandleDropFile(const std::filesystem::path& filename)
 {
     Logger::Info("Loading drop file: " + filename.filename().string());
-    
-    for (auto& filetype : IOManager::SupportedTextureFiles)
-    {
-        if (StringUtils::StringContainsCaseInsensitive(filename.extension().string(), filetype))
+    Concurrency::create_task(
+        [filename]()
         {
-            auto DropfileTask = Concurrency::create_task(
-                [filename]()
-            {
-                IOManager::LoadTexture(filename);
-            }
-            );
-            return;
+            IOManager::LoadDroppedResource(filename);
         }
-    }    
-    
-    for (auto& filetype : IOManager::SupportedAudioFiles)
-    {
-        if (StringUtils::StringContainsCaseInsensitive(filename.extension().string(), filetype))
-        {
-            auto DropfileTask = Concurrency::create_task(
-                [filename]()
-            {
-
-                IOManager::LoadAudioSource(filename);
-            }
-            );
-            return;
-        }
-    }
-
-    for (auto& filetype : IOManager::SupportedMeshFiles)
-    {
-        if (StringUtils::StringContainsCaseInsensitive(filename.extension().string(), filetype))
-        {
-            auto DropfileTask = Concurrency::create_task(
-                [filename]()
-            {
-                IOManager::LoadFBX(filename);
-            }
-            );
-            return;
-        }
-    }
+    );
 }
 
 void Editor::GameObjectListItem(GameObject* gameObject)

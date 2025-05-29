@@ -45,7 +45,25 @@ public:
             resourceData.StoredResources.try_emplace(filename, resource);
         }
 
-        if (!resource->Load(IOManager::ProjectDirectory / file))
+
+
+        std::filesystem::path foundPath;
+        for (const auto& entry : std::filesystem::recursive_directory_iterator(IOManager::ProjectDirectory))
+        {
+            if (entry.is_regular_file() && entry.path().filename() == filename)
+            {
+                foundPath = entry.path();
+                break;
+            }
+        }
+
+        if (foundPath.empty())
+        {
+            Logger::Error("File not found: " + filename);
+            return nullptr;
+        }
+
+        if (!resource->Load(foundPath))
         {
             std::unique_lock lock(resourceData.Mutex); // Exclusive lock for writing
             resourceData.StoredResources.erase(filename);

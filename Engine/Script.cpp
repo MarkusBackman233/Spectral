@@ -21,7 +21,10 @@ Script::Script(const std::string& filename, bool newScript)
 {
 	if (newScript)
 	{
-        auto file = IOManager::ProjectDirectory / (filename + std::string(".lua"));
+        auto file = IOManager::ProjectDirectory / 
+            IOManager::GetResourceData<IOManager::ResourceType::Script>().Folder /
+            (filename + IOManager::GetResourceData<IOManager::ResourceType::Script>().SpectralExtension);
+        std::filesystem::create_directories(file);
         std::ofstream lua_file(file);
 
         lua_file << "\n";
@@ -48,7 +51,7 @@ void Script::Start(GameObject* GameObject)
 
     ReloadScript();
 
-    m_lua["gameObject"] = GameObject;
+    m_lua["This"] = GameObject;
     m_lua["Input"] = InputManager::GetInstance();
     m_lua["Navigation"] = NavigationManager::GetInstance();
 
@@ -142,7 +145,7 @@ void Script::ReloadScript()
     m_exposedVariables.clear();
     //m_lua = sol::state();
 
-    auto filepath = IOManager::ProjectDirectory / (m_filename + std::string(".lua"));
+    auto filepath = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Script>().Folder / m_filename;
     try {
         m_lua.script_file(filepath.string());
         SetBindings();

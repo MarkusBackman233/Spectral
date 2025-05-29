@@ -1,12 +1,7 @@
 #pragma once
 #include "pch.h"
 #include <fstream>
-#include <sstream>
-
 #include <rapidjson/document.h>
-#include <rapidjson/prettywriter.h>
-#include <rapidjson/stringbuffer.h>
-
 #include <filesystem>
 #include "Json.h"
 
@@ -131,21 +126,39 @@ public:
 	static std::filesystem::path ProjectDirectory;
 	static std::filesystem::path ExecutableDirectory;
 
-	static std::string SpectralModelExtention;
-	static std::string SpectralSceneExtention;
-	static std::string SpectralMaterialExtention;
+	enum class ResourceType
+	{
+		Model,
+		Texture,
+		Audio,
+		Scene,
+		Script,
+		Material,
 
-	static const std::vector<std::string> SupportedTextureFiles;
-	static const std::vector<std::string> SupportedMeshFiles;
-	static const std::vector<std::string> SupportedAudioFiles;
+		Num
+	};
+
+	struct IOResourceData
+	{
+		std::string Folder;
+		std::string SpectralExtension;
+		std::vector<std::string> SupportedExtensions;
+	};
+
+	static std::array<IOResourceData, static_cast<uint8_t>(ResourceType::Num)> IOResources;
+
+	template <ResourceType T>
+	static IOResourceData& GetResourceData()
+	{
+		return IOResources[static_cast<size_t>(T)];
+	}
 
 	static void SetExecutableDirectiory();
 	static bool LoadProject(std::optional<std::string> forceProject = std::nullopt);
 
 	static bool LoadFBX(const std::filesystem::path& filename);
-	//static bool LoadTexture(const std::string& filename);
-	static bool LoadTexture(const std::filesystem::path& file);
-	static bool LoadAudioSource(const std::filesystem::path& file);
+
+	static bool LoadDroppedResource(const std::filesystem::path& file);
 
 	static void SaveSpectralModel(std::shared_ptr<Mesh> mesh);
 
@@ -156,9 +169,6 @@ public:
 
 	static void CollectProjectFiles();
 
-	static void WriteToIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name, const std::string& value);
-	static std::string ReadFromIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name);
-
 private: 
 	static Json::Object SaveGameObject(GameObject* gameObject);
 	static void LoadGameObject(const rapidjson::Value& object, GameObject* parent);
@@ -166,7 +176,6 @@ private:
 	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject);
 	static void ProcessNode(const std::string& filename, const std::filesystem::path& path, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform);
 
-	static std::filesystem::path GetPath(const std::string& filename, const std::string& extention);
+	static std::filesystem::path GetPath(const std::string& filename, const std::string& Extension);
 
 };
-

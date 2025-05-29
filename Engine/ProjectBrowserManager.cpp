@@ -61,7 +61,7 @@ ProjectBrowserManager::ProjectBrowserManager()
     Render::SetWindowTitle(std::string("Spectral | ") + IOManager::ProjectName);
     IOManager::CollectProjectFiles();
 
-    auto projectDescription = Json::ParseFile(IOManager::ProjectDirectory / "Project_Description.json");
+    auto projectDescription = Json::ParseFile(IOManager::ProjectDirectory  / "Project_Description.json");
     if (projectDescription.Has("LastScene"))
     {
         IOManager::LoadSpectralScene(projectDescription["LastScene"].AsString());

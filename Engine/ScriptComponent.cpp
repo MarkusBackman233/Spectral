@@ -68,7 +68,7 @@ void ScriptComponent::ComponentEditor()
     
     if (ImGui::Button("Edit##Script"))
     {
-        ShellExecute(0, 0, (IOManager::ProjectDirectory / (m_script->GetFilename() + std::string(".lua"))).wstring().c_str(), 0, 0, SW_SHOW);
+        ShellExecute(0, 0, (IOManager::ProjectDirectory / "Scripts" / m_script->GetFilename()).wstring().c_str(), 0, 0, SW_SHOW);
     }
 
     

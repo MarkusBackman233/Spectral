@@ -38,13 +38,42 @@ std::string IOManager::ProjectName = "";
 std::filesystem::path IOManager::ProjectDirectory = "";
 std::filesystem::path IOManager::ExecutableDirectory = "";
 
-std::string IOManager::SpectralModelExtention = ".model";
-std::string IOManager::SpectralSceneExtention = ".scene";
-std::string IOManager::SpectralMaterialExtention = ".material";
+std::array<IOManager::IOResourceData, static_cast<uint8_t>(IOManager::ResourceType::Num)> IOManager::IOResources
+{
+    IOManager::IOResourceData{
+        .Folder = "Models",
+        .SpectralExtension = {".model"},
+        .SupportedExtensions = { ".fbx" ,".blend", ".obj", ".gltf", ".glb" }
+    },
+    IOManager::IOResourceData{
+        .Folder = "Textures",
+        .SpectralExtension = {},
+        .SupportedExtensions = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga" }
+    },
+    IOManager::IOResourceData{
+        .Folder = "Audio",
+        .SpectralExtension = {},
+        .SupportedExtensions = { ".wav" }
+    },
+    IOManager::IOResourceData{
+        .Folder = "Scenes",
+        .SpectralExtension = {},
+        .SupportedExtensions = { ".scene" }
+    },
+    IOManager::IOResourceData{
+        .Folder = "Scripts",
+        .SpectralExtension = {},
+        .SupportedExtensions = { ".lua" }
+    },
+    IOManager::IOResourceData{
+        .Folder = "Materials",
+        .SpectralExtension = {},
+        .SupportedExtensions = { ".material" }
+    },
+};
 
-const std::vector<std::string> IOManager::SupportedTextureFiles = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga" };
-const std::vector<std::string> IOManager::SupportedMeshFiles = { ".fbx" ,".blend", ".obj", ".gltf", ".glb" };
-const std::vector<std::string> IOManager::SupportedAudioFiles = { ".wav" };
+
+
 
 void IOManager::SetExecutableDirectiory()
 {
@@ -151,75 +180,87 @@ bool IOManager::LoadFBX(const std::filesystem::path& filename)
 
     return true;
 }
-/*
-bool IOManager::LoadTexture(const std::string& filename)
-{
-    namespace fs = std::filesystem;
-    fs::path sourceFile = filename;
-    fs::path targetParent = IOManager::ProjectDirectory;
-    auto target = targetParent / sourceFile.filename();
-    try
-    {
-        fs::create_directories(targetParent);
-        fs::copy_file(sourceFile, target, fs::copy_options::overwrite_existing);
-    }
-    catch (std::exception& e)
-    {
-        Logger::Error(e.what());
-    }
-    
-    TextureManager::GetInstance()->GetTexture(StringUtils::StripPathFromFilename(filename));
-    return true;
-}
-*/
-bool IOManager::LoadTexture(const std::filesystem::path& file)
+
+
+
+bool IOManager::LoadDroppedResource(const std::filesystem::path& file)
 {
     namespace fs = std::filesystem;
 
-    fs::path targetParent = IOManager::ProjectDirectory;
-    auto target = targetParent / file.filename();
+    const std::string extension = file.extension().string();
+    std::string folder;
+    ResourceType matchedType = ResourceType::Num;
 
-    try
+    for (size_t i = 0; i < static_cast<size_t>(ResourceType::Num); ++i)
     {
-        fs::create_directories(targetParent);
-        fs::copy_file(file, target, fs::copy_options::overwrite_existing);
+        auto& data = IOResources[i];
+        for (const auto& ext : data.SupportedExtensions)
+        {
+            if (StringUtils::StringContainsCaseInsensitive(extension, ext))
+            {
+                folder = data.Folder;
+                matchedType = static_cast<ResourceType>(i);
+                break;
+            }
+        }
+        if (matchedType != ResourceType::Num) break;
     }
-    catch (std::exception& e)
+
+    if (matchedType == ResourceType::Num)
     {
-        Logger::Error(e.what());
+        Logger::Error("Unsupported file extension: " + extension);
+        return false;
     }
-    auto texture = ResourceManager::GetInstance()->GetResource<Texture>(file);
 
+    fs::path fileName = file.filename();
 
-    return texture != nullptr;
-}
-
-bool IOManager::LoadAudioSource(const std::filesystem::path& file)
-{
-    namespace fs = std::filesystem;
-
-    fs::path targetParent = IOManager::ProjectDirectory;
-    auto target = targetParent / file.filename();
+    fs::path targetParent = ProjectDirectory / folder;
+    fs::path target = targetParent / fileName;
 
     try
     {
         fs::create_directories(targetParent);
         fs::copy_file(file, target, fs::copy_options::overwrite_existing);
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
         Logger::Error(e.what());
+        return false;
     }
-    auto audioSource = ResourceManager::GetInstance()->GetResource<AudioSource>(file);
 
+    std::shared_ptr<Resource> resource = nullptr;
+    switch (matchedType)
+    {
+    case ResourceType::Audio:
+        resource = ResourceManager::GetInstance()->GetResource<AudioSource>(fileName);
+        break;
+    case ResourceType::Texture:
+        resource = ResourceManager::GetInstance()->GetResource<Texture>(fileName);
+        break;
+    case ResourceType::Model:
+        resource = ResourceManager::GetInstance()->GetResource<Mesh>(fileName);
+        break;
+    case ResourceType::Material:
+        resource = ResourceManager::GetInstance()->GetResource<Material>(fileName);
+        break;
+    case ResourceType::Script:
+        
+        ScriptManager::GetInstance()->GetScript(std::string(fileName.filename().string().c_str()));
+        break;
+    case ResourceType::Scene:
+        // not done
+        break;
+    default:
+        break;
+    }
 
-    return audioSource != nullptr;
+    return resource != nullptr || matchedType == ResourceType::Script;
 }
 
 
 void IOManager::SaveSpectralModel(std::shared_ptr<Mesh> mesh)
 {
-    WriteObject writeObject(ProjectDirectory / mesh->GetFilename());
+    WriteObject writeObject(ProjectDirectory / GetResourceData<IOManager::ResourceType::Model>().Folder / mesh->GetFilename());
     writeObject.Write(mesh->GetFilename());
     writeObject.Write(mesh->vertexes);
     writeObject.Write(mesh->indices32);
@@ -271,7 +312,8 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
     }
 
     obj.emplace("GameObjects", gameObjects);
-    Json::Serialize(obj, GetPath(sceneName, ".json").string());
+    
+    Json::Serialize(obj, ProjectDirectory / GetResourceData<IOManager::ResourceType::Scene>().Folder / (sceneName + ".json"));
 
     Logger::Info("Completed Saving Scene: " + sceneName);
 #ifdef EDITOR
@@ -286,8 +328,8 @@ bool IOManager::LoadSpectralScene(const std::string& filename)
 
     std::string jsonData;
     try {
-        std::ifstream file(ProjectDirectory / filename);
-
+        std::ifstream file(ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Scene>().Folder / filename);
+        Logger::Info((ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Scene>().Folder / filename).string());
         std::stringstream buffer;
         buffer << file.rdbuf();
 
@@ -414,7 +456,7 @@ void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     document.Accept(writer);
     
-    std::ofstream ofs(ProjectDirectory / material->GetFilename());
+    std::ofstream ofs(ProjectDirectory / GetResourceData<IOManager::ResourceType::Material>().Folder / material->GetFilename());
     if (ofs.is_open()) {
         ofs << buffer.GetString();
         ofs.close();
@@ -438,21 +480,21 @@ void IOManager::CollectProjectFiles()
     }
     std::for_each(std::execution::par, filesToLoad.begin(), filesToLoad.end(), [](std::filesystem::directory_entry& file) 
     {
-        if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), ".lua"))
+        if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), GetResourceData<ResourceType::Script>().SupportedExtensions[0]))
         {
-            ScriptManager::GetInstance()->GetScript(file.path().filename().replace_extension("").string());
+            ScriptManager::GetInstance()->GetScript(file.path().filename().string().c_str());
         }
-        else if (file.path().extension() == SpectralModelExtention)
+        else if (file.path().extension() == GetResourceData<ResourceType::Model>().SupportedExtensions[0])
         {
             ResourceManager::GetInstance()->GetResource<Mesh>(file.path());
         }
-        else if (file.path().extension() == SupportedAudioFiles[0])
+        else if (file.path().extension() == GetResourceData<ResourceType::Audio>().SupportedExtensions[0])
         {
             ResourceManager::GetInstance()->GetResource<AudioSource>(file.path());
         }
         else
         {
-            for (auto& filetype : SupportedTextureFiles)
+            for (auto& filetype : GetResourceData<ResourceType::Texture>().SupportedExtensions)
             {
                 if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), filetype))
                 {
@@ -463,24 +505,6 @@ void IOManager::CollectProjectFiles()
 
     });
     Logger::Info("Finished project files");
-}
-
-void IOManager::WriteToIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name, const std::string& value)
-{
-    BOOL writeResult = WritePrivateProfileStringA(attribute.c_str(), name.c_str(), value.c_str(), iniPath.string().c_str());
-    if (!writeResult) {
-        DWORD error = GetLastError();
-        Logger::Error("Writing to INI file: " + error);
-    }
-}
-
-std::string IOManager::ReadFromIniFile(const std::filesystem::path& iniPath, const std::string& attribute, const std::string& name)
-{
-    std::string returnValue;
-    returnValue.resize(256);
-    GetPrivateProfileStringA(attribute.c_str(), name.c_str(), IOManager::IniFailedToFindItem.c_str(), returnValue.data(), 256, iniPath.string().c_str());
-
-    return returnValue;
 }
 
 
@@ -617,7 +641,7 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
     std::string meshName = std::string(std::string(filename.c_str()) + "_" + std::string(mesh->mName.C_Str()) /* + "_" + matNameNoFilename*/);
     std::replace(meshName.begin(), meshName.end(), ':', '_');
     std::replace(meshName.begin(), meshName.end(), '.', '_');    
-    meshName.append(SpectralModelExtention);
+    meshName.append(GetResourceData<ResourceType::Model>().SpectralExtension);
 
     std::replace(materialName.begin(), materialName.end(), ':', '_');
     std::replace(materialName.begin(), materialName.end(), '.', '_');
@@ -662,7 +686,7 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
     newMesh->m_filename = meshName;
     ResourceManager::GetInstance()->AddResource<Mesh>(newMesh);
 
-    materialName.append(SpectralMaterialExtention);
+    materialName.append(GetResourceData<ResourceType::Material>().SpectralExtension);
     if (materialName != "")
     {
 
@@ -676,7 +700,7 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
             {
                 auto texturePath = std::filesystem::path(textureFilename.C_Str()).filename();
 
-                if (IOManager::LoadTexture(path / texturePath))
+                if (IOManager::LoadDroppedResource(path / texturePath))
                 {
                     createdMaterial->SetTexture(textureType, ResourceManager::GetInstance()->GetResource<Texture>(texturePath.string()));
                     return;
@@ -759,8 +783,8 @@ void IOManager::ProcessNode(const std::string& filename, const std::filesystem::
     }
 }
 
-std::filesystem::path IOManager::GetPath(const std::string& filename, const std::string& extention)
+std::filesystem::path IOManager::GetPath(const std::string& filename, const std::string& Extension)
 {
-    std::filesystem::path filePath = ProjectDirectory / (filename + extention);
+    std::filesystem::path filePath = ProjectDirectory / (filename + Extension);
     return filePath;
 }

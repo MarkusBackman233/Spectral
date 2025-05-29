@@ -2,8 +2,9 @@
 #include "pch.h"
 
 #define SOL_LUAJIT 1
-#define SOL_ALL_SAFETIES_ON 1
-#define SOL_EXCEPTIONS_SAFE_PROPAGATION  1
+#define SOL_PRINT_ERRORS 0
+//#define SOL_ALL_SAFETIES_ON 1
+//#define SOL_EXCEPTIONS_SAFE_PROPAGATION  1
 #include "src/External/Sol2/sol.hpp"
 #include "Vector3.h"
 

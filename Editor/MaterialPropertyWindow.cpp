@@ -27,7 +27,7 @@ void MaterialPropertyWindow::PopulateWindow()
         if (ImGui::Button("Create", buttonSize))
         {
             materialName = cstrText;
-            materialName.append(IOManager::SpectralMaterialExtention);
+            materialName.append(IOManager::GetResourceData<IOManager::ResourceType::Material>().SpectralExtension);
             ResourceManager::GetInstance()->GetResource<Material>(materialName);
             materialName = "";
             ImGui::CloseCurrentPopup();
