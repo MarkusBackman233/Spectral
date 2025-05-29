@@ -4,4 +4,5 @@ UnitTests/x64/
 Application/x64/
 x64/
 .vs/
+packages/
 Spectral.sln
