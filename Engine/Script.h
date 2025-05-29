@@ -7,17 +7,18 @@
 //#define SOL_EXCEPTIONS_SAFE_PROPAGATION  1
 #include "src/External/Sol2/sol.hpp"
 #include "Vector3.h"
+#include "LoadableResource.h"
 
 class GameObject;
 
 
-class Script
+class Script : public Resource
 {
 public:
-	Script(const std::string& filename, bool newScript = false);
+	Script();
 	~Script() {}
 
-	std::string GetFilename() const { return m_filename; }
+	bool Load(const std::filesystem::path& file) override;
 
 	void Start(GameObject* GameObject);
 	void Update(float deltaTime);
@@ -37,7 +38,6 @@ private:
 
 	void SetBindings();
 
-	std::string m_filename;
 	sol::state m_lua;
 
 	std::vector<std::string> m_exposedVariables;

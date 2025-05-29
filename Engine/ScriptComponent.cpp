@@ -1,10 +1,10 @@
 #include "ScriptComponent.h"
 #include "src/IMGUI/imgui.h"
 #include "PropertyWindowFactory.h"
-#include "ScriptManager.h"
 #include <Windows.h>
 #include "IOManager.h"
 #include <shellapi.h>
+#include "ResourceManager.h"
 
 ScriptComponent::ScriptComponent(GameObject* owner)
 	: Component(owner)
@@ -51,7 +51,7 @@ void ScriptComponent::LoadComponent(const rapidjson::Value& object)
         auto scriptName = object["Script"].GetString();
         if (scriptName != "null")
         {
-            SetScript(ScriptManager::GetInstance()->GetScript(object["Script"].GetString()));
+            m_script = ResourceManager::GetInstance()->GetResource<Script>(scriptName);
         }
     }
 }
@@ -93,26 +93,25 @@ void ScriptComponent::ComponentEditor()
 
 #define IF_NULL_RETURN(nullcheck, returnValue) if (nullcheck == nullptr) return returnValue
 
-/*
+
 std::string ScriptComponent::GetComponentName()
 {
     IF_NULL_RETURN(m_script,"Script Component");
 
     const std::string& input = m_script->GetFilename();
-    std::string result;
+    //std::string result;
 
-    for (size_t i = 0; i < input.length(); ++i) {
-        // Add a space if transitioning from lowercase to uppercase
-        if (i > 0 && std::islower(input[i - 1]) && std::isupper(input[i])) {
-            result += ' ';
-        }
-        result += input[i];
-    }
-    result += " Lua##script";
-    return result;
+    //for (size_t i = 0; i < input.length(); ++i) {
+    //    if (i > 0 && std::islower(input[i - 1]) && std::isupper(input[i])) {
+    //        result += ' ';
+    //    }
+    //    result += input[i];
+    //}
+    //result += " ##script";
+    return input;
 }
-*/
+
 void ScriptComponent::SetScript(std::shared_ptr<Script> script)
 {
-    m_script = std::make_shared<Script>(script->GetFilename(),false);
+    m_script = script;
 }

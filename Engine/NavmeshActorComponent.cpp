@@ -1,8 +1,6 @@
 #include "NavmeshActorComponent.h"
 #include "GameObject.h"
 #include "Json.h"
-#include <DetourNavMeshQuery.h>
-#include "iRender.h"
 #include "NavigationManager.h"
 #include "src/IMGUI/imgui.h"
 
@@ -69,7 +67,6 @@ void NavmeshActorComponent::Update(float deltaTime)
 
         m_yrot = m_yrot + (atan2(velNorm.z, velNorm.x)-m_yrot) * deltaTime * 5.0f;
 
-
         auto mat = Math::Matrix::MakeRotationY(m_yrot);
         auto scale = m_owner->GetWorldMatrix().GetScale();
 
@@ -80,8 +77,6 @@ void NavmeshActorComponent::Update(float deltaTime)
         position.y += m_agentParams.height;
         mat.SetPosition(position);
         m_owner->SetWorldMatrix(mat);
-        
-
     }
 }
 

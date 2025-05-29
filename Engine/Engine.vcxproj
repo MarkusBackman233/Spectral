@@ -141,7 +141,8 @@
       <AdditionalManifestFiles>$(ProjectDir)src\icon.ico; $(ProjectDir)src\Assets\TemplateGrid_albedo.png; %(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
     <PostBuildEvent>
-      <Command>xcopy /Y "C:\Projects\Horizon\x64\Debug\Horizon.dll" "$(OutDir)"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -218,7 +219,6 @@
     <ClCompile Include="SceneManager.cpp" />
     <ClCompile Include="Script.cpp" />
     <ClCompile Include="ScriptComponent.cpp" />
-    <ClCompile Include="ScriptManager.cpp" />
     <ClCompile Include="ShadowManager.cpp" />
     <ClCompile Include="GameStateManager.cpp" />
     <ClCompile Include="SkyboxManager.cpp" />
@@ -329,7 +329,6 @@
     <ClInclude Include="SceneManager.h" />
     <ClInclude Include="Script.h" />
     <ClInclude Include="ScriptComponent.h" />
-    <ClInclude Include="ScriptManager.h" />
     <ClInclude Include="ShadowManager.h" />
     <ClInclude Include="GameStateManager.h" />
     <ClInclude Include="SkyboxManager.h" />

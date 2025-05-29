@@ -198,9 +198,6 @@
     <ClCompile Include="ScriptComponent.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
-    <ClCompile Include="ScriptManager.cpp">
-      <Filter>Source Files\Managers</Filter>
-    </ClCompile>
     <ClCompile Include="CharacterControllerComponent.cpp">
       <Filter>Source Files\Components</Filter>
     </ClCompile>
@@ -543,9 +540,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Script.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ScriptManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="CharacterControllerComponent.h">

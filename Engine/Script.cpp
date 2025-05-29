@@ -16,35 +16,16 @@
 #include "NavmeshActorComponent.h"
 #include "ResourceManager.h"
 #include "NavigationManager.h"
-Script::Script(const std::string& filename, bool newScript)
-	: m_filename(filename)
+
+Script::Script()
 {
-	if (newScript)
-	{
-        auto file = IOManager::ProjectDirectory / 
-            IOManager::GetResourceData<IOManager::ResourceType::Script>().Folder /
-            (filename + IOManager::GetResourceData<IOManager::ResourceType::Script>().SpectralExtension);
-        std::filesystem::create_directories(file);
-        std::ofstream lua_file(file);
-
-        lua_file << "\n";
-        lua_file << "\n";
-        lua_file << "function Start()\n";
-        lua_file << "\n";
-        lua_file << "end\n";
-        lua_file << "\n";
-        lua_file << "\n";
-        lua_file << "function Update(deltaTime)\n";
-        lua_file << "\n";
-        lua_file << "end\n";
-
-        lua_file.close();
-	}
-    else
-    {
-        //ReloadScript();
-    }
 }
+
+bool Script::Load(const std::filesystem::path& /*file*/)
+{
+    return true;
+}
+
 
 void Script::Start(GameObject* GameObject)
 {

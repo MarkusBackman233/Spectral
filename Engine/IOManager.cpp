@@ -10,7 +10,6 @@
 #include <ppltasks.h>
 #include "StringUtils.h"
 #include "SceneManager.h"
-#include "ScriptManager.h"
 #include "Texture.h"
 #include "Material.h"
 #include "Editor.h"
@@ -30,7 +29,7 @@
 
 #include "AudioManager.h"
 #include "ResourceManager.h"
-
+#include <rapidjson/prettywriter.h>
 std::string IOManager::IniFailedToFindItem = "NotFound";
 
 std::string IOManager::ProjectName = "";
@@ -62,7 +61,7 @@ std::array<IOManager::IOResourceData, static_cast<uint8_t>(IOManager::ResourceTy
     },
     IOManager::IOResourceData{
         .Folder = "Scripts",
-        .SpectralExtension = {},
+        .SpectralExtension = { ".lua" },
         .SupportedExtensions = { ".lua" }
     },
     IOManager::IOResourceData{
@@ -244,8 +243,7 @@ bool IOManager::LoadDroppedResource(const std::filesystem::path& file)
         resource = ResourceManager::GetInstance()->GetResource<Material>(fileName);
         break;
     case ResourceType::Script:
-        
-        ScriptManager::GetInstance()->GetScript(std::string(fileName.filename().string().c_str()));
+        resource = ResourceManager::GetInstance()->GetResource<Script>(fileName);
         break;
     case ResourceType::Scene:
         // not done
@@ -482,7 +480,7 @@ void IOManager::CollectProjectFiles()
     {
         if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), GetResourceData<ResourceType::Script>().SupportedExtensions[0]))
         {
-            ScriptManager::GetInstance()->GetScript(file.path().filename().string().c_str());
+            ResourceManager::GetInstance()->GetResource<Script>(file.path());
         }
         else if (file.path().extension() == GetResourceData<ResourceType::Model>().SupportedExtensions[0])
         {
@@ -541,7 +539,16 @@ Json::Object IOManager::SaveGameObject(GameObject* gameObject)
         for (const auto& comonent : gameObject->GetComponents())
         {
             auto componentObject = comonent->SaveComponent();
-            componentObject.emplace("Name", comonent->GetComponentName());
+            auto it = ComponentFactory::ComponentTypes.find(comonent->GetComponentType());
+            if (it != ComponentFactory::ComponentTypes.end())
+            {
+                componentObject.emplace("Name", comonent->GetComponentName());
+            }
+            else
+            {
+                componentObject.emplace("Name", "null");
+            }
+
             componentsArray.push_back(componentObject);
         }
         obj.emplace("Components", componentsArray);

@@ -8,6 +8,7 @@
 #include "AudioSource.h"
 #include "Mesh.h"
 #include "Material.h"
+#include "Script.h"
 #include "IOManager.h"
 
 class ResourceManager

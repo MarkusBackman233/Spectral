@@ -26,9 +26,9 @@ public:
 #ifdef EDITOR
     void ComponentEditor() override;
 #endif // EDITOR
-    /*
+    
     std::string GetComponentName() override;
-    */
+    
     void SetScript(std::shared_ptr<Script> script);
     std::shared_ptr<Script> GetScript() { return m_script; }
 private:

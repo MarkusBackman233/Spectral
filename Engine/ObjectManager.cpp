@@ -102,12 +102,16 @@ std::vector<std::weak_ptr<Component>> ObjectManager::GetComponentsOfType(Compone
 
 void ObjectManager::Start()
 {
+    for (auto& object : m_gameObjects) 
+    {
+        object->Start();
+    }
+
     for (auto& object : m_gameObjects) // need to run script start before other component starts
     {
+
         for (const auto& component : object->GetComponents())
         {
-            
-
             if (component->Is<ScriptComponent>())
             {
                 component->Start();
@@ -116,7 +120,6 @@ void ObjectManager::Start()
     }
     for (auto& object : m_gameObjects)
     {
-        object->Start();
         for (const auto& component : object->GetComponents())
         {
             if (component->Is<ScriptComponent>() == nullptr)
