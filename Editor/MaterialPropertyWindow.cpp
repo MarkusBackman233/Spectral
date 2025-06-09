@@ -20,15 +20,27 @@ void MaterialPropertyWindow::PopulateWindow()
     if (ImGui::BeginPopupModal("New Material"))
     {
         static std::string materialName;
-        auto cstrText = (char*)materialName.c_str();
-        if (ImGui::InputText("Material Name##ObjectName", cstrText, 255))
-        {
+        char buffer[255] = {};
+        strncpy_s(buffer, sizeof(buffer), materialName.c_str(), _TRUNCATE);
+        buffer[sizeof(buffer) - 1] = '\0'; // ensure null-termination
+
+        ImGui::SetNextItemWidth(200);
+        if (ImGui::InputText("Script Name##ObjectName", buffer, sizeof(buffer))) {
+            materialName = buffer;
         }
         if (ImGui::Button("Create", buttonSize))
-        {
-            materialName = cstrText;
+        { 
             materialName.append(IOManager::GetResourceData<IOManager::ResourceType::Material>().SpectralExtension);
-            ResourceManager::GetInstance()->GetResource<Material>(materialName);
+
+            auto material = std::make_shared<Material>();
+            material->m_filename = materialName;
+            material->SetTexture(0, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_albedo.bmp"));
+            material->SetTexture(1, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_normal.bmp"));
+            IOManager::SaveSpectralMaterial(material);
+
+            auto file = IOManager::ProjectDirectory /
+                IOManager::GetResourceData<IOManager::ResourceType::Material>().Folder / materialName;
+            ResourceManager::GetInstance()->GetResource<Material>(file);
             materialName = "";
             ImGui::CloseCurrentPopup();
         }

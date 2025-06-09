@@ -10,7 +10,7 @@
 #include "Material.h"
 #include "Script.h"
 #include "IOManager.h"
-
+#include "Prefab.h"
 class ResourceManager
 {
 public:
@@ -61,6 +61,8 @@ public:
         if (foundPath.empty())
         {
             Logger::Error("File not found: " + filename);
+            std::unique_lock lock(resourceData.Mutex); // Exclusive lock for writing
+            resourceData.StoredResources.erase(filename);
             return nullptr;
         }
 

@@ -234,19 +234,19 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
 
 
             std::vector<float*> data;
-            std::vector<float> forcedMonoBuffer;// should reuse this instead of creating a new one
-
-            if (channels == 2 && settings.Mono)
-            {
-                forcedMonoBuffer.resize(currentFramesAvailable);
-                for (size_t i = 0; i < currentFramesAvailable; i++)
-                {
-                    forcedMonoBuffer[i] = (samples[0][audioComp->GetCurrentSample() + i] + samples[1][audioComp->GetCurrentSample() + i]) * 0.5f;
-                }
-                channels = 1;
-                data.push_back(forcedMonoBuffer.data());
-            }
-            else
+            //std::vector<float> forcedMonoBuffer;// should reuse this instead of creating a new one
+            //
+            //if (channels == 2 && settings.Mono)
+            //{
+            //    forcedMonoBuffer.resize(currentFramesAvailable);
+            //    for (size_t i = 0; i < currentFramesAvailable; i++)
+            //    {
+            //        forcedMonoBuffer[i] = (samples[0][audioComp->GetCurrentSample() + i] + samples[1][audioComp->GetCurrentSample() + i]) * 0.5f;
+            //    }
+            //    channels = 1;
+            //    data.push_back(forcedMonoBuffer.data());
+            //}
+            //else
             {
                 for (size_t i = 0; i < channels; i++)
                 {

@@ -42,7 +42,7 @@ void JointComponent::Render()
 
 Json::Object JointComponent::SaveComponent()
 {
-	return Json::Object{ {"Joint Type ", JointTypeToString.at(m_jointType)} };
+	return Json::Object{ {"Joint Type", JointTypeToString.at(m_jointType)} };
 }
 
 void JointComponent::LoadComponent(const rapidjson::Value& object)

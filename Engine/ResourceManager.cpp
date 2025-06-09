@@ -7,4 +7,5 @@ ResourceManager::ResourceManager()
     m_resources.try_emplace(std::type_index(typeid(Mesh)));
     m_resources.try_emplace(std::type_index(typeid(Material)));
     m_resources.try_emplace(std::type_index(typeid(Script)));
+    m_resources.try_emplace(std::type_index(typeid(Prefab)));
 }

@@ -27,6 +27,10 @@ public:
 	PhysXManager::PhysicsType GetPhysicsType() const { return m_physicsType; }
 	void SetPhysicsType(PhysXManager::PhysicsType physicsType);
 
+
+	void AddForce(const Math::Vector3& force);
+	void AddImpulse(const Math::Vector3& impulse);
+
 private:
 
 	void CollectShapes(RigidbodyComponent* collector, GameObject* gameObject);

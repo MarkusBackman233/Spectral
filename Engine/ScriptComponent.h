@@ -31,6 +31,7 @@ public:
     
     void SetScript(std::shared_ptr<Script> script);
     std::shared_ptr<Script> GetScript() { return m_script; }
+
 private:
     std::shared_ptr<Script> m_script;
 };

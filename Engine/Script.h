@@ -8,7 +8,6 @@
 #include "src/External/Sol2/sol.hpp"
 #include "Vector3.h"
 #include "LoadableResource.h"
-
 class GameObject;
 
 
@@ -26,13 +25,20 @@ public:
 	std::vector<std::string>& GetExposedVariables();
 	std::string GetFloatVariable(const std::string& variableName);
 
-private:
+	void OnContact();
 
+private:
 
 	static void DrawLine(const Math::Vector3& start,const Math::Vector3& end);
 	static GameObject* CreateGameObject(const std::string& name);
+	static GameObject* SpawnPrefab(const std::string& name);
+	static void StartGameObject(GameObject* gameObject);
+
+
 	static GameObject* GetGameObjectWithName(const std::string& name);
 	static void AddComponentToGameObject(GameObject* gameObject, const std::string& componentName);
+
+	static void DuplicateGameObject(GameObject* duplicate, GameObject* source);
 
 	void ReloadScript();
 

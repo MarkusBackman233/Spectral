@@ -9,9 +9,13 @@
 #include "MathFunctions.h"
 #include "ObjectManager.h"
 
+
+#define INVALID_PREFAB_ID std::numeric_limits<size_t>::max()
+
 GameObject::GameObject()
 	: m_components{}
 	, m_shouldDestroyOnReset(false)
+	, m_prefab(nullptr)
 {
 	std::random_device rd;
 	std::mt19937_64 eng(rd());
@@ -23,10 +27,7 @@ GameObject::GameObject()
 
 GameObject::~GameObject()
 {
-	for (auto& component : m_components)
-	{
-		ObjectManager::GetInstance()->UnregisterComponent(component);
-	}
+
 }
 
 void GameObject::SetWorldMatrix(const Math::Matrix& worldMatrix)
@@ -209,6 +210,11 @@ NavmeshActorComponent* GameObject::GetNavmeshActorComponent() const
 	return GetComponentOfType<NavmeshActorComponent>().get();
 }
 
+RigidbodyComponent* GameObject::GetRigidbodyComponent() const
+{
+	return GetComponentOfType<RigidbodyComponent>().get();
+}
+
 void GameObject::SetName(const std::string& name)
 {
 	m_name = name;
@@ -255,6 +261,10 @@ GameObject* GameObject::GetRootGameObject()
 unsigned long long GameObject::GetId() const
 {
 	return m_id;
+}
+bool GameObject::IsPrefab() const
+{
+	return m_prefab != nullptr;
 }
 
 void GameObject::UpdateTransform()

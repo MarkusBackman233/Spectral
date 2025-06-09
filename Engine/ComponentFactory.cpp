@@ -68,7 +68,7 @@ const std::unordered_map<std::string, Component::Type> ComponentFactory::Compone
 };
 
 // Component creation function
-std::shared_ptr<Component> ComponentFactory::CreateComponent(GameObject* gameObject, Component::Type type, const std::shared_ptr<Component>& duplicateComponent)
+std::shared_ptr<Component> ComponentFactory::CreateComponent(GameObject* gameObject, Component::Type type, const std::shared_ptr<Component>& duplicateComponent, bool registerComponent /*= true*/)
 {
     std::shared_ptr<Component> component = nullptr;
 
@@ -79,7 +79,9 @@ std::shared_ptr<Component> ComponentFactory::CreateComponent(GameObject* gameObj
         COMPONENT_LIST
 #undef COMPONENT
     }
-
-    ObjectManager::GetInstance()->RegisterComponent(component);
+    if (registerComponent)
+    {
+        ObjectManager::GetInstance()->RegisterComponent(component);
+    }
     return component;
 }

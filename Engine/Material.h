@@ -43,7 +43,6 @@ public:
 private:
 	std::array<std::shared_ptr<Texture>, TextureType::NumTextures> m_textures{};
 
-	std::string m_name;
 	MaterialSettings m_settings;
 
 

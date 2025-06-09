@@ -39,6 +39,8 @@ void RigidbodyComponent::Start()
 {
 
 	auto actor = GetActor();
+	actor->userData = m_owner;
+
 	PhysXManager::GetInstance()->DetachShapesFromActor(actor);
 
 	CollectShapes(this, m_owner);
@@ -84,7 +86,10 @@ void RigidbodyComponent::Update(float deltaTime)
 {
 	if (m_actor && m_actor->is<PxRigidDynamic>())
 	{
-		UpdatePhysicsPosition();
+		if (!m_actor->is<PxRigidDynamic>()->isSleeping())
+		{
+			UpdatePhysicsPosition();
+		}
 	}
 }
 
@@ -188,6 +193,27 @@ void RigidbodyComponent::SetPhysicsType(PhysXManager::PhysicsType physicsType)
 		m_actor->release();
 	}
 	m_actor = PhysXManager::GetInstance()->CreateActor(m_physicsType, m_owner->GetWorldMatrix());
+}
+
+void RigidbodyComponent::AddForce(const Math::Vector3& force)
+{
+	if (m_physicsType != PhysXManager::PhysicsType::DynamicActor)
+	{
+		Logger::Error("Tried to apply force to non dynamic actor");
+		return;
+	}
+	m_actor->is<PxRigidDynamic>()->addForce(PxVec3(force.x, force.y, force.z));
+
+}
+
+void RigidbodyComponent::AddImpulse(const Math::Vector3& impulse)
+{
+	if (m_physicsType != PhysXManager::PhysicsType::DynamicActor)
+	{
+		Logger::Error("Tried to apply impulse to non dynamic actor");
+		return;
+	}
+	m_actor->is<PxRigidDynamic>()->addForce(PxVec3(impulse.x, impulse.y, impulse.z), PxForceMode::eIMPULSE);
 }
 
 void RigidbodyComponent::CollectShapes(RigidbodyComponent* collector, GameObject* gameObject)

@@ -47,7 +47,10 @@ void ObjectManager::Destroy(GameObject* gameObject)
     }
 
     gameObject->SetParent(nullptr);
-
+    for (auto& component : gameObject->GetComponents())
+    {
+        ObjectManager::GetInstance()->UnregisterComponent(component);
+    }
     auto it = std::find_if(m_gameObjects.begin(), m_gameObjects.end(),
         [gameObject](const std::unique_ptr<GameObject>& p) { return p->GetId() == gameObject->GetId(); });
     if (it != m_gameObjects.end())

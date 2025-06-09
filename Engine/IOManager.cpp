@@ -51,12 +51,12 @@ std::array<IOManager::IOResourceData, static_cast<uint8_t>(IOManager::ResourceTy
     },
     IOManager::IOResourceData{
         .Folder = "Audio",
-        .SpectralExtension = {},
+        .SpectralExtension = ".wav",
         .SupportedExtensions = { ".wav" }
     },
     IOManager::IOResourceData{
         .Folder = "Scenes",
-        .SpectralExtension = {},
+        .SpectralExtension = ".scene",
         .SupportedExtensions = { ".scene" }
     },
     IOManager::IOResourceData{
@@ -66,8 +66,13 @@ std::array<IOManager::IOResourceData, static_cast<uint8_t>(IOManager::ResourceTy
     },
     IOManager::IOResourceData{
         .Folder = "Materials",
-        .SpectralExtension = {},
+        .SpectralExtension = ".material",
         .SupportedExtensions = { ".material" }
+    },
+    IOManager::IOResourceData{
+        .Folder = "Prefabs",
+        .SpectralExtension = ".prefab",
+        .SupportedExtensions = { ".prefab" }
     },
 };
 
@@ -212,38 +217,46 @@ bool IOManager::LoadDroppedResource(const std::filesystem::path& file)
     }
 
     fs::path fileName = file.filename();
-
-    fs::path targetParent = ProjectDirectory / folder;
-    fs::path target = targetParent / fileName;
-
-    try
+    
+    if (matchedType != ResourceType::Model)
     {
-        fs::create_directories(targetParent);
-        fs::copy_file(file, target, fs::copy_options::overwrite_existing);
+        fs::path targetParent = ProjectDirectory / folder;
+        fs::path target = targetParent / fileName;
+
+        try
+        {
+            fs::create_directories(targetParent);
+            fs::copy_file(file, target, fs::copy_options::overwrite_existing);
+        }
+        catch (const std::exception& e)
+        {
+            Logger::Error(e.what());
+            return false;
+        }
     }
-    catch (const std::exception& e)
+    else
     {
-        Logger::Error(e.what());
-        return false;
+        LoadFBX(file);
     }
+
 
     std::shared_ptr<Resource> resource = nullptr;
     switch (matchedType)
     {
     case ResourceType::Audio:
-        resource = ResourceManager::GetInstance()->GetResource<AudioSource>(fileName);
+        resource = ResourceManager::GetInstance()->GetResource<AudioSource>(std::string(fileName.string().c_str()));
         break;
     case ResourceType::Texture:
-        resource = ResourceManager::GetInstance()->GetResource<Texture>(fileName);
+        resource = ResourceManager::GetInstance()->GetResource<Texture>(std::string(fileName.string().c_str()));
         break;
     case ResourceType::Model:
-        resource = ResourceManager::GetInstance()->GetResource<Mesh>(fileName);
+        resource = ResourceManager::GetInstance()->GetResource<Mesh>(std::string(fileName.string().c_str()));
         break;
     case ResourceType::Material:
-        resource = ResourceManager::GetInstance()->GetResource<Material>(fileName);
+        resource = ResourceManager::GetInstance()->GetResource<Material>(std::string(fileName.string().c_str()));
         break;
     case ResourceType::Script:
-        resource = ResourceManager::GetInstance()->GetResource<Script>(fileName);
+        resource = ResourceManager::GetInstance()->GetResource<Script>(std::string(fileName.string().c_str()));
         break;
     case ResourceType::Scene:
         // not done
@@ -478,25 +491,35 @@ void IOManager::CollectProjectFiles()
     }
     std::for_each(std::execution::par, filesToLoad.begin(), filesToLoad.end(), [](std::filesystem::directory_entry& file) 
     {
-        if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), GetResourceData<ResourceType::Script>().SupportedExtensions[0]))
+
+        auto extension = file.path().extension();
+        if (!extension.empty())
         {
-            ResourceManager::GetInstance()->GetResource<Script>(file.path());
-        }
-        else if (file.path().extension() == GetResourceData<ResourceType::Model>().SupportedExtensions[0])
-        {
-            ResourceManager::GetInstance()->GetResource<Mesh>(file.path());
-        }
-        else if (file.path().extension() == GetResourceData<ResourceType::Audio>().SupportedExtensions[0])
-        {
-            ResourceManager::GetInstance()->GetResource<AudioSource>(file.path());
-        }
-        else
-        {
-            for (auto& filetype : GetResourceData<ResourceType::Texture>().SupportedExtensions)
+            auto* rm = ResourceManager::GetInstance();
+            if (extension == GetResourceData<ResourceType::Script>().SpectralExtension)
             {
-                if (StringUtils::StringContainsCaseInsensitive(file.path().extension().string(), filetype))
+                rm->GetResource<Script>(file.path());
+            }
+            else if (extension == GetResourceData<ResourceType::Model>().SpectralExtension)
+            {
+                rm->GetResource<Mesh>(file.path());
+            }
+            else if (extension == GetResourceData<ResourceType::Audio>().SpectralExtension)
+            {
+                rm->GetResource<AudioSource>(file.path());
+            }
+            else if (extension == GetResourceData<ResourceType::Prefab>().SpectralExtension)
+            {
+                rm->GetResource<Prefab>(file.path());
+            }
+            else
+            {
+                for (auto& filetype : GetResourceData<ResourceType::Texture>().SupportedExtensions)
                 {
-                    ResourceManager::GetInstance()->GetResource<Texture>(file.path());
+                    if (extension == filetype)
+                    {
+                        rm->GetResource<Texture>(file.path());
+                    }
                 }
             }
         }
@@ -542,7 +565,7 @@ Json::Object IOManager::SaveGameObject(GameObject* gameObject)
             auto it = ComponentFactory::ComponentTypes.find(comonent->GetComponentType());
             if (it != ComponentFactory::ComponentTypes.end())
             {
-                componentObject.emplace("Name", comonent->GetComponentName());
+                componentObject.emplace("Name", it->second);
             }
             else
             {
@@ -591,7 +614,7 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
                 c++;
             }
         }
-        gameObject->SetWorldMatrix(matrix);
+        gameObject->SetWorldMatrixNoUpdate(matrix);
     }
 
     {
@@ -609,7 +632,7 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
                 c++;
             }
         }
-        gameObject->SetLocalMatrix(matrix);
+        gameObject->SetLocalMatrixNoUpdate(matrix);
     }
 
 
@@ -622,7 +645,12 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
         const rapidjson::Value& components = object["Components"];
         for (rapidjson::SizeType i = 0; i < components.Size(); i++) {
             const rapidjson::Value& componentObject = components[i];
-            auto component = ComponentFactory::CreateComponent(gameObject, ComponentFactory::ComponentNames.find(componentObject["Name"].GetString())->second);
+
+            auto component = ComponentFactory::CreateComponent(
+                gameObject, 
+                ComponentFactory::ComponentNames.find(componentObject["Name"].GetString())->second, 
+                nullptr
+            );
             component->LoadComponent(componentObject);
             gameObject->AddComponent(component);
         }

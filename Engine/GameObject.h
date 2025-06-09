@@ -10,6 +10,8 @@ class CharacterControllerComponent;
 class AudioSourceComponent;
 class NavmeshActorComponent;
 class ObjectManager;
+class Prefab;
+class RigidbodyComponent;
 
 class GameObject
 {
@@ -54,18 +56,20 @@ public:
 
 
 	// hax for lua script getter
-	CharacterControllerComponent* GetCharacterControllerComponent() const;
-	AudioSourceComponent*		  GetAudioSourceComponent() const;
-	NavmeshActorComponent*		  GetNavmeshActorComponent() const;
+	CharacterControllerComponent*	GetCharacterControllerComponent() const;
+	AudioSourceComponent*			GetAudioSourceComponent() const;
+	NavmeshActorComponent*			GetNavmeshActorComponent() const;
+	RigidbodyComponent*				GetRigidbodyComponent() const;
 
 	void SetName(const std::string& name);
 	const std::string& GetName() { return m_name; }
 
-	//void Translate(const Math::Vector3& position, const Math::Vector4& quat);
 	GameObject* GetRootGameObject();
 
 	unsigned long long GetId() const;
 
+	bool IsPrefab() const;
+	void SetPrefab(std::shared_ptr<Prefab> prefab) { m_prefab = prefab; }
 private:
 	friend class ObjectManager;
 	void UpdateLocalMatrix();
@@ -81,6 +85,8 @@ private:
 	void UpdateChildrenGlobalMatrix();
 
 
+
+
 	std::vector<GameObject*> m_children;
 	GameObject* m_parent;
 	std::vector<std::shared_ptr<Component>> m_components;
@@ -94,7 +100,11 @@ private:
 #endif // EDITOR
 
 	bool m_shouldDestroyOnReset;
+
+	std::shared_ptr<Prefab> m_prefab;
+
 	unsigned long long m_id;
+	
 };
 
 

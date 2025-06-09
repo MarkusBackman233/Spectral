@@ -134,6 +134,7 @@ public:
 		Scene,
 		Script,
 		Material,
+		Prefab,
 
 		Num
 	};
@@ -169,9 +170,9 @@ public:
 
 	static void CollectProjectFiles();
 
-private: 
 	static Json::Object SaveGameObject(GameObject* gameObject);
 	static void LoadGameObject(const rapidjson::Value& object, GameObject* parent);
+private: 
 
 	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject);
 	static void ProcessNode(const std::string& filename, const std::filesystem::path& path, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform);

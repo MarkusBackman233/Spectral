@@ -354,6 +354,9 @@
     <ClCompile Include="src\External\Recast\Source\DetourPathCorridor.cpp">
       <Filter>Source Files\External\Recast</Filter>
     </ClCompile>
+    <ClCompile Include="Prefab.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vector3.h">
@@ -678,6 +681,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Prefab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

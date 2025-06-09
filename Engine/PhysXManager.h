@@ -13,7 +13,7 @@
 class Mesh;
 using namespace physx;
 
-class PhysXManager
+class PhysXManager : public PxSimulationEventCallback
 {
 public:
 
@@ -77,6 +77,15 @@ public:
 	float GetTimeSinceLastSimulationTick() const;
 
 	PxControllerManager* GetControllerManager();
+
+protected:
+	void onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs) override;
+
+	void onTrigger(PxTriggerPair* pairs, PxU32 count) override {}
+	void onConstraintBreak(PxConstraintInfo*, PxU32) override {}
+	void onWake(PxActor**, PxU32) override {}
+	void onSleep(PxActor**, PxU32) override {}
+	void onAdvance(const PxRigidBody* const*, const PxTransform*, const PxU32) override {}
 
 private:
 	PhysXManager();

@@ -95,6 +95,21 @@ std::string Script::GetFloatVariable(const std::string& variableName)
     //turn m_lua[variableName];
 }
 
+void Script::OnContact()
+{
+    sol::protected_function contactFunction = m_lua["OnContact"];
+    if (contactFunction.valid()) {
+        sol::protected_function_result result = contactFunction();
+        if (!result.valid()) {
+            sol::error err = result;
+            Logger::Error("Lua Update error: " + std::string(err.what()));
+#ifdef EDITOR
+            Editor::GetInstance()->StopSimulation();
+#endif
+        }
+    }
+}
+
 void Script::DrawLine(const Math::Vector3& start, const Math::Vector3& end)
 {
     return Render::DrawLine(start,end);
@@ -104,6 +119,50 @@ GameObject* Script::CreateGameObject(const std::string& name)
 {
     return ObjectManager::GetInstance()->CreateObject(name, true);
 }
+
+GameObject* Script::SpawnPrefab(const std::string& name)
+{
+    auto prefabObject = ResourceManager::GetInstance()->GetResource<Prefab>(name + IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension)->GetPrefabRoot();
+    if (!prefabObject)
+    {
+        Logger::Error(std::string("Could not find prefab with name: ") + name);
+    }
+    auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(prefabObject->GetName(), true);
+    DuplicateGameObject(duplicateGameObject, prefabObject);
+    StartGameObject(duplicateGameObject);
+    return duplicateGameObject;
+}
+
+void Script::StartGameObject(GameObject* gameObject)
+{
+    for (auto* child : gameObject->GetChildren())
+    {
+        StartGameObject(child);
+    }
+
+    for (const auto& component : gameObject->GetComponents())
+    {
+        component->Start();
+    }
+}
+
+void Script::DuplicateGameObject(GameObject* duplicate, GameObject* source)
+{
+    for (auto* child : source->GetChildren())
+    {
+        GameObject* duplicateGameObject = ObjectManager::GetInstance()->CreateObject(child->GetName());
+        duplicateGameObject->SetParent(duplicate);
+        DuplicateGameObject(duplicateGameObject, child);
+    }
+    for (const auto& component : source->GetComponents())
+    {
+        auto comp = ComponentFactory::CreateComponent(duplicate, component->GetComponentType(), component);
+        duplicate->AddComponent(comp);
+    }
+    duplicate->SetWorldMatrixNoUpdate(source->GetWorldMatrix());
+    duplicate->SetLocalMatrixNoUpdate(source->GetLocalMatrix());
+}
+
 
 GameObject* Script::GetGameObjectWithName(const std::string& name)
 {
@@ -164,6 +223,7 @@ void Script::SetBindings()
             "GetCharacterControllerComponent", &GameObject::GetCharacterControllerComponent,
             "GetAudioSourceComponent", &GameObject::GetAudioSourceComponent,
             "GetNavmeshActorComponent", &GameObject::GetNavmeshActorComponent,
+            "GetRigidbodyComponent", &GameObject::GetRigidbodyComponent,
             "GetTransform", &GameObject::GetWorldMatrix,
             "SetTransform", &GameObject::SetWorldMatrix,
             "GetPosition", &GameObject::GetPosition,
@@ -181,6 +241,11 @@ void Script::SetBindings()
 
         m_lua.new_usertype<AudioSourceComponent>("AudioSourceComponent",
             "PlayAudio", &AudioSourceComponent::PlayAudio
+        );
+
+        m_lua.new_usertype<RigidbodyComponent>("RigidbodyComponent",
+            "AddForce", &RigidbodyComponent::AddForce,
+            "AddImpulse", &RigidbodyComponent::AddImpulse
         );
 
         m_lua.new_usertype<NavmeshActorComponent>("NavmeshActorComponent",
@@ -258,9 +323,9 @@ void Script::SetBindings()
             "GetPosition", &Math::Matrix::GetPosition,
             "SetPosition", &Math::Matrix::SetPosition,
             "LookAt", &Math::Matrix::LookAt,
-            "Front", &Math::Matrix::GetFront,
-            "Right", &Math::Matrix::GetRight,
-            "Up", &Math::Matrix::GetUp
+            "GetFront", &Math::Matrix::GetFront,
+            "GetRight", &Math::Matrix::GetRight,
+            "GetUp", &Math::Matrix::GetUp
         );
 
 
@@ -277,6 +342,7 @@ void Script::SetBindings()
         m_lua.set_function("CreateObject", &CreateGameObject);
         m_lua.set_function("AddComponentToGameObject", &AddComponentToGameObject);
         m_lua.set_function("Raycast", &Physics::Raycast);
+        m_lua.set_function("SpawnPrefab", &SpawnPrefab);
 
 
         m_lua.new_usertype<InputManager>("Input",

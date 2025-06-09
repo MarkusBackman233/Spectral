@@ -70,7 +70,6 @@ void Editor::PreRender()
 
 void Editor::Render()
 {
-
     ImGui::Render();
 
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -386,6 +385,21 @@ void Editor::TopMenu()
                 newGameObject->AddComponent(ComponentFactory::CreateComponent(newGameObject,Component::Type::Light));
                 m_objectSelector.SetSelectedGameObject(newGameObject);
             }
+            ImGui::SeparatorText("Prefabs");
+            auto prefabs = ResourceManager::GetInstance()->GetResources<Prefab>();
+            for (auto& prefab : prefabs)
+            {
+                auto prefabObject = prefab->GetPrefabRoot();
+                if (ImGui::MenuItem(prefabObject->GetName().c_str(), ""))
+                {
+
+                    auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(prefabObject->GetName());
+                    EditorUtils::DuplicateGameObject(duplicateGameObject, prefabObject);
+
+                    duplicateGameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
+                    m_objectSelector.SetSelectedGameObject(duplicateGameObject);
+                }
+            }
             ImGui::Separator();
             ImGui::EndMenu();
         }
@@ -505,6 +519,40 @@ void Editor::GameObjectComponentWindow()
 
     if (ImGui::BeginListBox("##GOCW", ImGui::GetContentRegionAvail()))
     {
+        if (m_objectSelector.SelectedGameObject()->IsPrefab())
+        {
+            if (ImGui::Button("Apply prefab changes"))
+            {
+                std::string filename = m_objectSelector.SelectedGameObject()->GetName();
+                filename.append(IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension);
+
+
+                auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Prefab>().Folder / filename;
+                std::filesystem::create_directories(file.parent_path());
+
+                auto prefabJson = IOManager::SaveGameObject(m_objectSelector.SelectedGameObject());
+                Json::Serialize(prefabJson, file);
+
+                auto prefab = ResourceManager::GetInstance()->GetResource<Prefab>(filename);
+                prefab->Reload(file);
+            }
+        }
+        else
+        {
+            if (ImGui::Button("Convert to prefab"))
+            {
+                std::string filename = m_objectSelector.SelectedGameObject()->GetName();
+                filename.append(IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension);
+                auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Prefab>().Folder / filename;
+                std::filesystem::create_directories(file.parent_path());
+
+                auto prefabJson = IOManager::SaveGameObject(m_objectSelector.SelectedGameObject());
+                Json::Serialize(prefabJson, file);
+
+                m_objectSelector.SelectedGameObject()->SetPrefab(ResourceManager::GetInstance()->GetResource<Prefab>(file));
+            }
+        }
+
         auto width = ImGui::GetWindowWidth() - 30;
 
         auto components = m_objectSelector.SelectedGameObject()->GetComponents();

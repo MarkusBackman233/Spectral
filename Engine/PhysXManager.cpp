@@ -1,7 +1,8 @@
 #include "PhysXManager.h"
 #include "Mesh.h"
 #include "Logger.h"
-#include "iRender.h"
+#include "GameObject.h"
+#include "ScriptComponent.h"
 #ifdef EDITOR
 #include "Editor.h"
 #endif
@@ -12,6 +13,18 @@ std::unordered_map<PhysXManager::PhysicsShape, std::string> PhysXManager::Physic
 	{PhysicsShape::TriangleMesh, "Triangle Mesh" },
 	{PhysicsShape::ConvexMesh, "Convex Mesh" },
 };
+
+PxFilterFlags CustomFilterShader(
+	PxFilterObjectAttributes attributes0, PxFilterData filterData0,
+	PxFilterObjectAttributes attributes1, PxFilterData filterData1,
+	PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize)
+{
+	pairFlags = PxPairFlag::eCONTACT_DEFAULT
+		| PxPairFlag::eNOTIFY_TOUCH_FOUND
+		| PxPairFlag::eNOTIFY_TOUCH_LOST;
+
+	return PxFilterFlag::eDEFAULT;
+}
 
 PhysXManager::PhysXManager()
 	: m_lastSimulationTick(0.0f)
@@ -26,11 +39,11 @@ PhysXManager::PhysXManager()
 	sceneDesc.gravity = PxVec3(0.0f, -9.81f, 0.0f);
 	m_dispatcher = PxDefaultCpuDispatcherCreate(2);
 	sceneDesc.cpuDispatcher = m_dispatcher;
-	sceneDesc.filterShader = PxDefaultSimulationFilterShader;
+	sceneDesc.filterShader = CustomFilterShader;
 	m_scene = m_physics->createScene(sceneDesc);
 	m_scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
 	m_scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 1.0f);
-
+	m_scene->setSimulationEventCallback(this);
 	PxCookingParams cookingParams = PxCookingParams(physx::PxTolerancesScale());
 	cookingParams.meshWeldTolerance = 0.01f;
 	cookingParams.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_ACTIVE_EDGES_PRECOMPUTE;
@@ -109,6 +122,32 @@ float PhysXManager::GetTimeSinceLastSimulationTick() const
 PxControllerManager* PhysXManager::GetControllerManager()
 {
 	return m_controllerManager;
+}
+
+void PhysXManager::onContact(const PxContactPairHeader& pairHeader, const PxContactPair* pairs, PxU32 nbPairs)
+{
+	for (PxU32 i = 0; i < nbPairs; i++) 
+	{
+		const PxContactPair& cp = pairs[i];
+
+		if (cp.events & PxPairFlag::eNOTIFY_TOUCH_FOUND)
+		{
+			PxActor* actor0 = pairHeader.actors[0];
+			PxActor* actor1 = pairHeader.actors[1];
+
+			GameObject* object0 = static_cast<GameObject*>(actor0->userData);
+			GameObject* object1 = static_cast<GameObject*>(actor1->userData);
+			//cp.extractContacts
+
+			for (auto& comp : object0->GetComponents())
+			{
+				if (comp->GetComponentType() == Component::Type::Script)
+				{
+					comp->Is<ScriptComponent>()->GetScript()->OnContact();
+				}
+			}
+		}
+	}
 }
 
 void PhysXManager::TickSimulation(float deltaTime)
@@ -295,8 +334,8 @@ PxTriangleMesh* PhysXManager::CreatePhysxTriangleMesh(Mesh* mesh) const
 		triangleMesh = m_physics->createTriangleMesh(stream);
 	}
 
-	Logger::Info("\t -----------------------------------------------\n");
-	Logger::Info("\t Create triangle mesh with %i triangles: \n" +  (int)meshDesc.triangles.count);
+	//Logger::Info("\t -----------------------------------------------\n");
+	//Logger::Info("\t Create triangle mesh with %i triangles: \n" +  (int)meshDesc.triangles.count);
 
 	return triangleMesh;
 

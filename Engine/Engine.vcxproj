@@ -151,7 +151,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING;NDEBUG;NOMINMAX;SOL_PRINT_ERRORS;EDITOR;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING;NDEBUG;NOMINMAX;EDITOR;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp20</LanguageStandard>
@@ -211,6 +211,7 @@
     <ClCompile Include="PhysXManager.cpp" />
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="PostProcessing.cpp" />
+    <ClCompile Include="Prefab.cpp" />
     <ClCompile Include="ProjectBrowserManager.cpp" />
     <ClCompile Include="RenderManager.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
@@ -317,6 +318,7 @@
     <ClInclude Include="PhysXManager.h" />
     <ClInclude Include="Camera.h" />
     <ClInclude Include="PostProcessing.h" />
+    <ClInclude Include="Prefab.h" />
     <ClInclude Include="ProfileObject.h" />
     <ClInclude Include="ProjectBrowserManager.h" />
     <ClInclude Include="RenderManager.h" />
