@@ -1,7 +1,7 @@
 # Spectral
 ## Features
-* DirectX11
-* Lua script support
+* Lua scripting
+* Recast navigation
 * Physically based rendering
 * Dynamic Skybox
 * Project browser
