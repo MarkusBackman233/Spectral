@@ -203,5 +203,6 @@ float4 main(PS_INPUT input) : SV_TARGET
    // float3 blendedColor = (prefilteredColor + lastSpecularMap.SampleLevel(samplerState, normal, data.y * 8).xyz) / data.z * 144;
     
     
-    return float4(blendedColor, 1.00);
+    //return float4(blendedColor, 1.00);
+    return float4(skyboxMap.SampleLevel(samplerState, normal, 0).xyz, 1.00);
 }

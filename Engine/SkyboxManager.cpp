@@ -5,8 +5,6 @@
 #include "SceneManager.h"
 #include "Matrix.h"
 #include "DirectXMath.h"
-#include "DxMathUtils.h"
-#include "TimeManager.h"
 #include "ProfilerManager.h"
 #include "Light.h"
 
@@ -109,6 +107,9 @@ void SkyboxManager::RenderSkybox(ID3D11DeviceContext* context, ID3D11RenderTarge
     ProfileFunction
     context->PSSetShaderResources(0, 1, m_skybox.Resource.GetAddressOf());
     Render::SetShaders(m_skyboxPixelShader, m_skyboxVertexShader, m_pInputLayout, context);
+    m_pixelConstantBuffer.skyboxColor.w = 0.0f;
+    Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 0, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
+
     DrawSkybox(context, renderTarget);
     ID3D11ShaderResourceView* nullView = nullptr;
     context->PSSetShaderResources(0, 1, &nullView);
@@ -120,67 +121,64 @@ void SkyboxManager::DrawSkybox(ID3D11DeviceContext* context, ID3D11RenderTargetV
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     UINT stride = sizeof(Mesh::Vertex);
     UINT offset = 0;
-    UINT strideInstance = sizeof(Math::Matrix);
 
-
-    Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 0, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
     context->IASetVertexBuffers(0, 1, m_skyboxMesh->m_pVertexBuffer.GetAddressOf(), &stride, &offset);
     context->IASetIndexBuffer(m_skyboxMesh->m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     context->DrawIndexed(static_cast<UINT>(m_skyboxMesh->indices32.size()), 0, 0);
 }
 
-void SkyboxManager::CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* device)
+void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* device)
 {
     ProfileFunction
     bool sunHasChanged = false;
 
     Scene& scene = SceneManager::GetInstance()->GetCurrentScene();
-    if (scene.GetSkyboxResourceView() != nullptr)
-    {
-        m_pixelConstantBuffer.skyboxColor.w = 0.0f;
-    }
-    else
-    {
+    //if (scene.GetSkyboxResourceView() != nullptr)
+    //{
+        m_pixelConstantBuffer.skyboxColor.w = 1.0f;
+    //}
+    //else
+    //{
         if (auto* sun = scene.GetSun())
         {
-
-            if (m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x)
+    
+            if (m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.y != sun->Direction.y || m_pixelConstantBuffer.skyboxColor.z != sun->Direction.z)
             {
                 sunHasChanged = true;
                 m_pixelConstantBuffer.data.z = 0.0f;
             }
-
+    
             m_pixelConstantBuffer.skyboxColor.x = sun->Direction.x;
             m_pixelConstantBuffer.skyboxColor.y = sun->Direction.y;
             m_pixelConstantBuffer.skyboxColor.z = sun->Direction.z;
+    
         }
+    //
+    //    m_pixelConstantBuffer.skyboxColor.w = 1.0f;
+    //    m_pixelConstantBuffer.data.x = TimeManager::GetLifeTime();
+    //}
+    //
+    //if (m_pixelConstantBuffer.data.z * 0.00694 > 8.4)
+    //{
+    //    return;
+    //}
 
-        m_pixelConstantBuffer.skyboxColor.w = 1.0f;
-        m_pixelConstantBuffer.data.x = TimeManager::GetLifeTime();
-    }
 
-    if (m_pixelConstantBuffer.data.z * 0.00694 > 8.4)
-    {
-        return;
-    }
-
-    XMVECTOR lookAt[6] = {
-        XMVectorSet(1, 0, 0, 0),   // +X
-        XMVectorSet(-1, 0, 0, 0),  // -X
-        XMVectorSet(0, 1, 0, 0),   // +Y
-        XMVectorSet(0, -1, 0, 0),  // -Y
-        XMVectorSet(0, 0, 1, 0),   // +Z
-        XMVectorSet(0, 0, -1, 0)   // -Z
+    static XMMATRIX views[6] = {
+        XMMatrixLookToLH(XMVectorSet(0,  0,  0, 0), XMVectorSet(1,  0,  0, 0), XMVectorSet(0, 1, 0, 0)),  // +X
+        XMMatrixLookToLH(XMVectorSet(0,  0,  0, 0), XMVectorSet(-1,  0,  0, 0), XMVectorSet(0, 1, 0, 0)),  // -X
+        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  1,  0, 0), XMVectorSet(0, 0, -1, 0)), // +Y
+        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0, -1,  0, 0), XMVectorSet(0, 0,  1, 0)), // -Y
+        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  0,  1, 0), XMVectorSet(0, 1, 0, 0)),  // +Z
+        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  0, -1, 0), XMVectorSet(0, 1, 0, 0))   // -Z
     };
-
-    XMVECTOR up[6] = {
-        XMVectorSet(0, -1, 0, 0),  // +X
-        XMVectorSet(0, -1, 0, 0),  // -X
-        XMVectorSet(0, 0, 1, 0),   // +Y
-        XMVectorSet(0, 0, -1, 0),  // -Y
-        XMVectorSet(0, -1, 0, 0),  // +Z
-        XMVectorSet(0, -1, 0, 0)   // -Z
-    };
+    //static int f = 0;
+    //
+    //if (f > 0)
+    //{
+    //    return;
+    //}
+    //f++;
     D3D11_VIEWPORT viewport{};
     viewport.Width = static_cast<float>(m_skybox.Resolution);
     viewport.Height = static_cast<float>(m_skybox.Resolution);
@@ -189,7 +187,10 @@ void SkyboxManager::CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
     m_pixelConstantBuffer.data.z += 1.0f;
-    if (sunHasChanged)
+    Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 0, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
+    context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    //if (sunHasChanged)
     {
 
 
@@ -198,8 +199,7 @@ void SkyboxManager::CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
 
         for (int i = 0; i < 6; ++i) 
         {
-            XMMATRIX view = XMMatrixLookAtLH(XMVectorZero(), lookAt[i], up[i]);
-            m_vertexConstantBuffer.viewProjection = Spectral::DxMathUtils::ToSp(view);
+            m_vertexConstantBuffer.viewProjection = views[i];
             Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_pVertexConstantBufferData, &m_vertexConstantBuffer, context);
             DrawSkybox(context, m_skybox.GetRenderTarget(i));
         }    
@@ -211,9 +211,9 @@ void SkyboxManager::CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
 
     context->PSSetShaderResources(0, 1, m_skybox.Resource.GetAddressOf());
     context->PSSetShaderResources(1, 1, m_lastSpecular.Resource.GetAddressOf());
-
+    
     Render::SetShaders(m_irradiancePixelShader, m_skyboxVertexShader, m_pInputLayout, context);
-
+    
     viewport.Width = static_cast<float>(m_irradiance.Resolution);
     viewport.Height = static_cast<float>(m_irradiance.Resolution);
     context->RSSetViewports(1, &viewport);
@@ -225,14 +225,13 @@ void SkyboxManager::CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         context->OMSetBlendState(m_alphaMixState.Get(), blendFactor, sampleMask);
         
         for (int i = 0; i < 6; ++i) {
-            XMMATRIX view = XMMatrixLookAtLH(XMVectorZero(), lookAt[i], up[i]);
-            m_vertexConstantBuffer.viewProjection = Spectral::DxMathUtils::ToSp(view);
+            m_vertexConstantBuffer.viewProjection = views[i];
             Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_pVertexConstantBufferData, &m_vertexConstantBuffer, context);
             DrawSkybox(context, m_irradiance.GetRenderTarget(i));
         }
     }
     Render::SetShaders(m_specularPixelShader, m_skyboxVertexShader, m_pInputLayout, context);
-
+    
     for (unsigned int mip = 0; mip < m_specular.NumMips; ++mip)
     {
         unsigned int mipSize = m_specular.Resolution >> mip;
@@ -243,8 +242,7 @@ void SkyboxManager::CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         m_pixelConstantBuffer.data.y = roughness;
         for (int i = 0; i < 6; ++i) 
         {
-            XMMATRIX view = XMMatrixLookAtLH(XMVectorZero(), lookAt[i], up[i]);
-            m_vertexConstantBuffer.viewProjection = Spectral::DxMathUtils::ToSp(view);
+            m_vertexConstantBuffer.viewProjection = views[i];
             Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_pVertexConstantBufferData, &m_vertexConstantBuffer, context);
             DrawSkybox(context, m_specular.RenderTargets[mip][i].Get());
         }

@@ -14,7 +14,7 @@ namespace Spectral
 		static DirectX::XMMATRIX ToDx(const Math::Matrix& vector);
 		static Math::Vector4 ToSp(const DirectX::XMVECTOR& vector);
 		static Math::Vector3 ToSp(const DirectX::XMFLOAT3& vector);
-		static Math::Matrix ToSp(const DirectX::XMMATRIX& vector);
+		static Math::Matrix ToSp(const DirectX::XMMATRIX& matrix);
 	};
 }
 

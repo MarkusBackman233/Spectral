@@ -55,7 +55,7 @@ void RenderManager::Render()
     LockedContext lockedContext = m_deviceResources.GetLockedDeviceContext();
     ID3D11DeviceContext* context = lockedContext.GetContext();
 
-    m_skyboxManager.CreateCubeMap(context, m_deviceResources.GetDevice());
+    m_skyboxManager.RenderCubeMap(context, m_deviceResources.GetDevice());
     m_camera->CreateViewAndPerspective();
     m_instanceManager.Map(context, m_deviceResources.GetDevice());
     m_shadowManager.DrawShadowDepth(context, m_instanceManager);

@@ -5,6 +5,7 @@
 #include "Vector4.h"
 #include <wrl/client.h>
 #include "Matrix.h"
+#include <DirectXMath.h>
 class Mesh;
 class DeviceResources;
 
@@ -50,7 +51,7 @@ public:
 	void CreateResources(ID3D11DeviceContext* context, ID3D11Device* device);
 	void DrawSkybox(ID3D11DeviceContext* context, ID3D11RenderTargetView* renderTarget);
 	ID3D11SamplerState* GetCubeSamplerState() const { return m_cubeSamplerState.Get(); }
-	void CreateCubeMap(ID3D11DeviceContext* context, ID3D11Device* device);
+	void RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* device);
 
 	ID3D11ShaderResourceView* GetSkyboxCubemap() const { return m_skybox.GetResource(); }
 	ID3D11ShaderResourceView* GetIrradianceCubemap() const { return m_irradiance.GetResource(); }
@@ -78,7 +79,7 @@ private:
 
 	struct VertexConstantBuffer
 	{
-		Math::Matrix viewProjection;
+		DirectX::XMMATRIX viewProjection;
 		Math::Matrix lightMatrix;
 		Math::Vector4 cameraPos;
 	} m_vertexConstantBuffer;

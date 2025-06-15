@@ -28,9 +28,9 @@ Math::Vector3 Spectral::DxMathUtils::ToSp(const DirectX::XMFLOAT3& vector)
 	return Math::Vector3(vector.x, vector.y, vector.z);
 }
 
-Math::Matrix Spectral::DxMathUtils::ToSp(const DirectX::XMMATRIX& vector)
+Math::Matrix Spectral::DxMathUtils::ToSp(const DirectX::XMMATRIX& matrix)
 {
-	Math::Matrix matrix = *static_cast<Math::Matrix*>((void*)&vector);
+	Math::Matrix spMatrix = *static_cast<Math::Matrix*>((void*)&matrix);
 
-	return matrix;
+	return spMatrix;
 }

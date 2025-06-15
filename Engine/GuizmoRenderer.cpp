@@ -85,7 +85,7 @@ void GuizmoRenderer::Render(ID3D11DeviceContext* context, const DeviceResources&
     }
 
     m_guizmosToDraw.clear();
-    context->RSSetState(deviceResources.GetNoCullingRasterizer());
+    context->RSSetState(deviceResources.GetBackfaceCullingRasterizer());
 }
 
 void GuizmoRenderer::AddGuizmo(std::shared_ptr<Texture> texture, const Math::Vector3& position, const Math::Vector4& color)
