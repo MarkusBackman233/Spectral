@@ -240,20 +240,12 @@ float4 main(VVSOutput input) : SV_TARGET
     float3 reflection = normalize(reflect(-viewDir, normal.xyz));
     float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
     
-    float3 specularSample;
-    if (Shadow < 1.0f && dot(normal.xyz, sunDirection) > 0.0)
-    {
-        specularSample = specularMap.SampleLevel(samplerState, viewDir, roughness * 8).rgb * (1.0 - Shadow);
-        specularSample += specularMap.SampleLevel(samplerState, -reflection, roughness * 8).rgb * Shadow;
-    }
-    else
-    {
-        specularSample = specularMap.SampleLevel(samplerState, -reflection, roughness * 8).rgb;
-    }
+    float3 specularSample = specularMap.SampleLevel(samplerState, -reflection, roughness * 8).rgb;
+    
 
     float4 brdfTerm = specularIntegrationMap.SampleLevel(clampSampler, float2(NdotV, 1.0 - roughness), 0);
     float3 specular = specularSample * (F * brdfTerm.x + brdfTerm.y) * ao;
-    float3 iradiance = iradianceMap.SampleLevel(samplerState, normal.xyz, 0).rgb / PI * max(Shadow, 0.5);
+    float3 iradiance = iradianceMap.SampleLevel(samplerState, normal.xyz, 0).rgb / PI;
     float3 kS = F;
     float3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;

@@ -7,6 +7,7 @@
 #include "DirectXMath.h"
 #include "ProfilerManager.h"
 #include "Light.h"
+#include "TimeManager.h"
 
 using namespace DirectX;
 
@@ -133,12 +134,12 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
     bool sunHasChanged = false;
 
     Scene& scene = SceneManager::GetInstance()->GetCurrentScene();
-    //if (scene.GetSkyboxResourceView() != nullptr)
-    //{
-        m_pixelConstantBuffer.skyboxColor.w = 1.0f;
-    //}
-    //else
-    //{
+    if (scene.GetSkyboxResourceView() != nullptr)
+    {
+      m_pixelConstantBuffer.skyboxColor.w = 1.0f;
+    }
+    else
+    {
         if (auto* sun = scene.GetSun())
         {
     
@@ -153,15 +154,15 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
             m_pixelConstantBuffer.skyboxColor.z = sun->Direction.z;
     
         }
-    //
-    //    m_pixelConstantBuffer.skyboxColor.w = 1.0f;
-    //    m_pixelConstantBuffer.data.x = TimeManager::GetLifeTime();
-    //}
-    //
-    //if (m_pixelConstantBuffer.data.z * 0.00694 > 8.4)
-    //{
-    //    return;
-    //}
+    
+        m_pixelConstantBuffer.skyboxColor.w = 1.0f;
+        m_pixelConstantBuffer.data.x = TimeManager::GetLifeTime();
+    }
+    
+    if (m_pixelConstantBuffer.data.z * 0.00694 > 8.4)
+    {
+        return;
+    }
 
 
     static XMMATRIX views[6] = {
@@ -172,13 +173,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  0,  1, 0), XMVectorSet(0, 1, 0, 0)),  // +Z
         XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  0, -1, 0), XMVectorSet(0, 1, 0, 0))   // -Z
     };
-    //static int f = 0;
-    //
-    //if (f > 0)
-    //{
-    //    return;
-    //}
-    //f++;
+
     D3D11_VIEWPORT viewport{};
     viewport.Width = static_cast<float>(m_skybox.Resolution);
     viewport.Height = static_cast<float>(m_skybox.Resolution);
@@ -190,7 +185,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
     Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 0, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    //if (sunHasChanged)
+    if (sunHasChanged)
     {
 
 
@@ -240,6 +235,8 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         context->RSSetViewports(1, &viewport);
         float roughness = (float)mip / (float)(m_specular.NumMips - 1);
         m_pixelConstantBuffer.data.y = roughness;
+        Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 0, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
+
         for (int i = 0; i < 6; ++i) 
         {
             m_vertexConstantBuffer.viewProjection = views[i];

@@ -151,7 +151,6 @@ float4 main(PS_INPUT input) : SV_TARGET
 
     float2 randomSeed = Rand3dTo2d(normal + data.x);
     float3 N = normalize(normal);
-    
     // make the simplifying assumption that V equals R equals the normal 
     float3 R = N;
     float3 V = R;
@@ -169,7 +168,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     {
         // generates a sample floattor that's biased towards the preferred alignment direction (importance sampling).
         float2 Xi = Hammersley(i, SAMPLE_COUNT);
-        float3 H = ImportanceSampleGGX_Randomized(Xi, N, data.y, randomSeed);
+        float3 H = ImportanceSampleGGX_Randomized(Xi, N, data.y, randomSeed*10);
         float3 L = normalize(2.0 * dot(V, H) * H - V);
 
         float NdotL = max(dot(N, L), 0.0);
@@ -203,6 +202,6 @@ float4 main(PS_INPUT input) : SV_TARGET
    // float3 blendedColor = (prefilteredColor + lastSpecularMap.SampleLevel(samplerState, normal, data.y * 8).xyz) / data.z * 144;
     
     
-    //return float4(blendedColor, 1.00);
-    return float4(skyboxMap.SampleLevel(samplerState, normal, 0).xyz, 1.00);
+    return float4(blendedColor, 1.00);
+    //return float4(skyboxMap.SampleLevel(samplerState, normal, 0).xyz, 0.02);
 }
