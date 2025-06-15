@@ -328,7 +328,13 @@ void IOManager::SaveSpectralScene(const std::string& sceneName)
 
     obj.emplace("GameObjects", gameObjects);
     
-    Json::Serialize(obj, ProjectDirectory / GetResourceData<IOManager::ResourceType::Scene>().Folder / (sceneName + ".json"));
+    auto path = ProjectDirectory / GetResourceData<IOManager::ResourceType::Scene>().Folder / (sceneName + ".json");
+
+    std::filesystem::create_directories(path.parent_path());
+
+    Json::Serialize(obj, path);
+
+
 
     Logger::Info("Completed Saving Scene: " + sceneName);
 #ifdef EDITOR
@@ -490,7 +496,11 @@ void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
     document.Accept(writer);
     
-    std::ofstream ofs(ProjectDirectory / GetResourceData<IOManager::ResourceType::Material>().Folder / material->GetFilename());
+    std::filesystem::path path = ProjectDirectory / GetResourceData<IOManager::ResourceType::Material>().Folder / material->GetFilename();
+
+    std::filesystem::create_directories(path.parent_path());
+
+    std::ofstream ofs(path);
     if (ofs.is_open()) {
         ofs << buffer.GetString();
         ofs.close();
