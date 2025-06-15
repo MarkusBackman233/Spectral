@@ -166,6 +166,8 @@ public:
 	static void SaveSpectralScene(const std::string& sceneName);
 	static bool LoadSpectralScene(const std::string& filename);
 
+	static bool CreateDefaultScene();
+
 	static void SaveSpectralMaterial(std::shared_ptr<Material> material);
 
 	static void CollectProjectFiles();

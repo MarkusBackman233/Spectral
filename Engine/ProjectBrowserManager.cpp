@@ -66,6 +66,10 @@ ProjectBrowserManager::ProjectBrowserManager()
     {
         IOManager::LoadSpectralScene(projectDescription["LastScene"].AsString());
     }
+    else
+    {
+        IOManager::CreateDefaultScene();
+    }
 
     m_hasLoadedProject = true;
     return;

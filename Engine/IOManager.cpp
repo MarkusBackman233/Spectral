@@ -30,6 +30,10 @@
 #include "AudioManager.h"
 #include "ResourceManager.h"
 #include <rapidjson/prettywriter.h>
+#include "LightComponent.h"
+#include "Light.h"
+#include "MathFunctions.h"
+
 std::string IOManager::IniFailedToFindItem = "NotFound";
 
 std::string IOManager::ProjectName = "";
@@ -424,6 +428,25 @@ bool IOManager::LoadSpectralScene(const std::string& filename)
 
 
     return true;
+}
+
+bool IOManager::CreateDefaultScene()
+{
+    auto sunObject = ObjectManager::GetInstance()->CreateObject("Sun");
+
+    auto lightComponent = ComponentFactory::CreateComponent(sunObject, Component::Type::Light);
+    sunObject->AddComponent(lightComponent);
+    std::static_pointer_cast<LightComponent>(lightComponent)->GetLight()->Type = Light::LightType::Directional;
+
+    Math::Matrix m = sunObject->GetWorldMatrix();
+    
+    m = m * Math::Matrix::MakeRotationX(Math::ConvertToRadians(70.0f));
+    sunObject->SetWorldMatrix(m);
+    sunObject->SetPosition(Math::Vector3(10.0f, 4.0f, 0.0f));
+
+    Editor::GetInstance()->GetEditorCameraController()->GetWorldMatrix().SetPosition(Math::Vector3(0.0f, 2.0f, -3.0f));
+
+    return false;
 }
 
 void IOManager::SaveSpectralMaterial(std::shared_ptr<Material> material)
