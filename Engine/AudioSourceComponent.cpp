@@ -68,7 +68,7 @@ int AudioSourceComponent::IncrementCurrentSample(int frameSize)
 {
 	m_currentSample += frameSize;
 
-	if (GetSamplesLeft() <= 0)
+	if (GetSamplesLeft() <= 416)
 	{
 		m_currentSample = 0;
 		if (m_settings.Looping == false)
@@ -172,7 +172,7 @@ AudioSource::Settings AudioSourceComponent::GetSettings()
 
 int AudioSourceComponent::GetSamplesLeft()
 {
-	return std::max(static_cast<int>(m_audioSource->GetAudioFile().samples[0].size()) - m_currentSample, 0);
+	return std::max(static_cast<int>(m_audioSource->GetAudioFile().samples[0].size()) - m_currentSample , 0);
 }
 
 bool AudioSourceComponent::IsPlaying() const

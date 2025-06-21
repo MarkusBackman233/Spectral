@@ -222,6 +222,7 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
             
             int currentFramesAvailable = std::min(framesAvailable, audioComp->GetSamplesLeft() );
 
+
             m_attenuationBufferMono.numSamples = currentFramesAvailable;
             m_attenuationBufferStereo.numSamples = currentFramesAvailable;
             m_binauralBuffer.numSamples = currentFramesAvailable;
@@ -229,30 +230,16 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
             auto& samples = audioSource->GetAudioFile().samples;
 
             int channels = static_cast<int>(audioSource->GetAudioFile().samples.size());
+
             std::vector<float> outputaudioframe(2 * GetFrameSize(), 0.0f);
 
 
-
             std::vector<float*> data;
-            //std::vector<float> forcedMonoBuffer;// should reuse this instead of creating a new one
-            //
-            //if (channels == 2 && settings.Mono)
-            //{
-            //    forcedMonoBuffer.resize(currentFramesAvailable);
-            //    for (size_t i = 0; i < currentFramesAvailable; i++)
-            //    {
-            //        forcedMonoBuffer[i] = (samples[0][audioComp->GetCurrentSample() + i] + samples[1][audioComp->GetCurrentSample() + i]) * 0.5f;
-            //    }
-            //    channels = 1;
-            //    data.push_back(forcedMonoBuffer.data());
-            //}
-            //else
+            for (size_t i = 0; i < channels; i++)
             {
-                for (size_t i = 0; i < channels; i++)
-                {
-                    data.push_back(&samples[i][audioComp->GetCurrentSample()]);
-                }
+                data.push_back(&samples[i][audioComp->GetCurrentSample()]);
             }
+            
 
             IPLAudioBuffer inBuffer{ channels, currentFramesAvailable, data.data() };
 
@@ -268,8 +255,8 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
                 {
                     attenuationBuffer = &m_attenuationBufferMono;
                 }
-
-                auto cameraPose = Render::GetCamera()->GetWorldMatrix();
+                
+                auto cameraPose = ObjectManager::GetInstance()->GetMainCameraGameObject()->GetWorldMatrix();
 
                 Math::Vector3 sourcePos = audioComp->GetOwner()->GetWorldMatrix().GetPosition();
                 Math::Vector3 camPosNorm = (cameraPose.GetPosition() - sourcePos).GetNormal().TransformNormal(cameraPose.GetInverse());
@@ -304,7 +291,6 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
                     
                     iplDirectEffectApply(audioComp->dirEffect, &params, &inBuffer, attenuationBuffer);
                 }
-
                 {
                     IPLBinauralEffectParams params;
                     params.direction = IPLVector3{ -camPosNorm.x, camPosNorm.y, -camPosNorm.z };
@@ -321,7 +307,7 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
                 }
                 //{
                 //    IPLPanningEffectParams params{ IPLVector3{ -camPosNorm.x, camPosNorm.y, -camPosNorm.z } };
-                //    iplPanningEffectApply(audioComp->surroundEffect, &params, &m_attenuationBuffer, &m_binauralBuffer);
+                //    iplPanningEffectApply(audioComp->surroundEffect, &params, attenuationBuffer, &m_binauralBuffer);
                 //}
                 iplAudioBufferInterleave(m_context, &m_binauralBuffer, outputaudioframe.data());
 

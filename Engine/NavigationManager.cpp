@@ -12,7 +12,10 @@
 
 void NavigationManager::Update(float deltaTime)
 {
-	m_crowd->update(deltaTime, nullptr);
+	if (m_navMesh)
+	{
+		m_crowd->update(deltaTime, nullptr);
+	}
 }
 
 void NavigationManager::DebugRender()
@@ -72,6 +75,8 @@ bool NavigationManager::GenerateNavMesh()
 
 	std::vector<Math::Vector3> vertexes;
 	std::vector<int> triangles;
+
+	bool foundAnyShape = false;
 	
 
 	auto shapes = ObjectManager::GetInstance()->GetComponentsOfType(Component::Type::PhysicsShape);
@@ -89,7 +94,7 @@ bool NavigationManager::GenerateNavMesh()
 					continue;
 				}
 			}
-
+			foundAnyShape = true;
 			switch (meshComp->GetShapeType())
 			{
 			case PhysXManager::PhysicsShape::Box:
@@ -143,6 +148,11 @@ bool NavigationManager::GenerateNavMesh()
 
 
 		}
+	}
+
+	if (!foundAnyShape)
+	{
+		return false;
 	}
 	/*
 	auto meshes = ObjectManager::GetInstance()->GetComponentsOfType(Component::Type::Mesh);
