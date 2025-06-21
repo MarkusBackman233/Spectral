@@ -77,6 +77,6 @@ float4 main(PS_INPUT input) : SV_TARGET
         
         return float4(pow(max(color * pow(fragmentHeight + 0.005, 0.2), color * pow(0.005, 0.2)), 2.2), 1.0);
     }
-    
+    fragmentDirection.z = -fragmentDirection.z;
     return float4(skyboxMap.SampleLevel(samplerState, fragmentDirection, 0).rgb, 1.0f);
 }
