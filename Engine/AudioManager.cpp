@@ -173,7 +173,6 @@ void AudioManager::Deinitialize()
 void AudioManager::ProcessAudioThread(std::stop_token stopToken)
 {
 
-    std::vector<float> mixedAudio(2 * GetFrameSize());
 
     HRESULT hr;
 
@@ -203,7 +202,7 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
             std::cerr << "GetBuffer failed: " << std::hex << hr << "\n";
             break;
         }
-        std::fill(mixedAudio.begin(), mixedAudio.end(), 0.0f);
+        std::vector<float> mixedAudio(2 * GetFrameSize());
 
         auto audioSourceComponents = ObjectManager::GetInstance()->GetComponentsOfType(Component::Type::AudioSource);
         for (auto& audioCompWeak : audioSourceComponents) // might cause some race conition
@@ -255,8 +254,15 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
                 {
                     attenuationBuffer = &m_attenuationBufferMono;
                 }
-                
-                auto cameraPose = ObjectManager::GetInstance()->GetMainCameraGameObject()->GetWorldMatrix();
+                Math::Matrix cameraPose;
+                if (ObjectManager::GetInstance()->GetMainCameraGameObject())
+                {
+                    cameraPose = ObjectManager::GetInstance()->GetMainCameraGameObject()->GetWorldMatrix();
+                }
+                else
+                {
+                    cameraPose = Render::GetCamera()->GetWorldMatrix();
+                }
 
                 Math::Vector3 sourcePos = audioComp->GetOwner()->GetWorldMatrix().GetPosition();
                 Math::Vector3 camPosNorm = (cameraPose.GetPosition() - sourcePos).GetNormal().TransformNormal(cameraPose.GetInverse());
