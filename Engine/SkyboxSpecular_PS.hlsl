@@ -150,10 +150,8 @@ float4 main(PS_INPUT input) : SV_TARGET
     //irradiance /= samples;
 
     float2 randomSeed = Rand3dTo2d(normal + data.x);
-    float3 N = normalize(normal);
-    // make the simplifying assumption that V equals R equals the normal 
-    float3 R = N;
-    float3 V = R;
+    float3 N = normal;
+    float3 V = N;
 
     const uint SAMPLE_COUNT = max(32u * pow(data.y, 0.4), 8u);
 
@@ -168,7 +166,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     {
         // generates a sample floattor that's biased towards the preferred alignment direction (importance sampling).
         float2 Xi = Hammersley(i, SAMPLE_COUNT);
-        float3 H = ImportanceSampleGGX_Randomized(Xi, N, data.y, randomSeed*10);
+        float3 H = ImportanceSampleGGX_Randomized(Xi, N, data.y, randomSeed);
         float3 L = normalize(2.0 * dot(V, H) * H - V);
 
         float NdotL = max(dot(N, L), 0.0);
@@ -193,15 +191,6 @@ float4 main(PS_INPUT input) : SV_TARGET
     
     
     prefilteredColor = prefilteredColor / totalWeight;
-    float accumulationTimeInSeconds = 8.4;
-    
-    //float blendFactor = 1.0 - (min(data.z * 0.00694, accumulationTimeInSeconds) / accumulationTimeInSeconds);
-    //blendFactor *= 0.5;
-    float blendFactor = 0.01f;
-    float3 blendedColor = (blendFactor * prefilteredColor) + ((1.0 - blendFactor) * lastSpecularMap.SampleLevel(samplerState, normal, data.y * 8).xyz);
-   // float3 blendedColor = (prefilteredColor + lastSpecularMap.SampleLevel(samplerState, normal, data.y * 8).xyz) / data.z * 144;
-    
-    
-    return float4(blendedColor, 1.00);
-    //return float4(skyboxMap.SampleLevel(samplerState, normal, 0).xyz, 0.02);
+
+    return float4(prefilteredColor, 0.025);
 }
