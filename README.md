@@ -5,8 +5,17 @@
 * Binaural 3D audio
 * Physically based rendering
 * Dynamic Skybox
+* SSAO
+* FXAA
+* Entity component system
+* Physics engine
 * Project browser
+* Material creator
+* Scriptable gui system
 
+## Supported filetypes
+* Models. ".fbx" ,".blend", ".obj", ".gltf", ".glb"
+* Textures. ".dds" ,".png" ,".jpg", ".jpeg", ".tga"
 
 ## Dependencies
 * [Assimp](https://github.com/assimp/assimp)
