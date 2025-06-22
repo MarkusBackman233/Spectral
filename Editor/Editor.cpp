@@ -523,7 +523,8 @@ void Editor::GameObjectComponentWindow()
         {
             if (ImGui::Button("Apply prefab changes"))
             {
-                std::string filename = m_objectSelector.SelectedGameObject()->GetName();
+                std::string objectName = m_objectSelector.SelectedGameObject()->GetName();
+                std::string filename = objectName;
                 filename.append(IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension);
 
 
@@ -535,10 +536,42 @@ void Editor::GameObjectComponentWindow()
 
                 auto prefab = ResourceManager::GetInstance()->GetResource<Prefab>(filename);
                 prefab->Reload(file);
+                auto& objects = ObjectManager::GetInstance()->GetGameObjects();
+
+
+                std::vector<std::pair<Math::Matrix, Math::Matrix>> objectsToCreate;
+                std::vector<GameObject*> objectsToDestroy;
+
+                for (auto& object : objects)
+                {
+                    if (prefab == object->GetPrefab() && object.get() != m_objectSelector.SelectedGameObject())
+                    {
+                        objectsToCreate.emplace_back(object->GetWorldMatrix(), object->GetLocalMatrix());
+                        objectsToDestroy.push_back(object.get());
+                    }
+                }
+
+                for (GameObject* object : objectsToDestroy)
+                {
+                    ObjectManager::GetInstance()->Destroy(object);
+                }
+
+                for (auto& [worldMatrix, localMatrix] : objectsToCreate)
+                {
+                    auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(objectName);
+                    EditorUtils::DuplicateGameObject(duplicateGameObject, prefab->GetPrefabRoot());
+                    duplicateGameObject->SetLocalMatrixNoUpdate(localMatrix);
+                    duplicateGameObject->SetWorldMatrix(worldMatrix);
+                    duplicateGameObject->SetPrefab(prefab);
+                }
             }
         }
         else
         {
+            if (m_objectSelector.SelectedGameObject()->IsPartOfPrefabHierarchy())
+            {
+                ImGui::BeginDisabled();
+            }
             if (ImGui::Button("Convert to prefab"))
             {
                 std::string filename = m_objectSelector.SelectedGameObject()->GetName();
@@ -550,6 +583,16 @@ void Editor::GameObjectComponentWindow()
                 Json::Serialize(prefabJson, file);
 
                 m_objectSelector.SelectedGameObject()->SetPrefab(ResourceManager::GetInstance()->GetResource<Prefab>(file));
+            }
+
+            if (m_objectSelector.SelectedGameObject()->IsPartOfPrefabHierarchy())
+            {
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                {
+                    ImGui::SetTooltip("This gameobject is part of a prefab hierarchy.");
+                }
+                ImGui::EndDisabled();
+
             }
         }
 

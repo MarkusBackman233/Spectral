@@ -159,7 +159,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         m_pixelConstantBuffer.data.x = TimeManager::GetLifeTime();
     }
     
-    if (m_pixelConstantBuffer.data.z * 0.00694 > 8.4)
+    if (m_pixelConstantBuffer.data.z * 0.00694 > 2.0f)
     {
         return;
     }

@@ -22,6 +22,7 @@ void EditorUtils::DuplicateGameObject(GameObject* duplicate, GameObject* source)
     }
     duplicate->SetWorldMatrixNoUpdate(source->GetWorldMatrix());
     duplicate->SetLocalMatrixNoUpdate(source->GetLocalMatrix());
+    duplicate->SetPrefab(source->GetPrefab());
 }
 
 void EditorUtils::DecomposeMatrix(const Math::Matrix& matrix, Math::Vector3& position, Math::Vector3& rotation, Math::Vector3& scale)

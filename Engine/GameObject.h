@@ -70,6 +70,10 @@ public:
 
 	bool IsPrefab() const;
 	void SetPrefab(std::shared_ptr<Prefab> prefab) { m_prefab = prefab; }
+	std::shared_ptr<Prefab> GetPrefab() { return m_prefab; }
+
+	bool IsPartOfPrefabHierarchy();
+
 private:
 	friend class ObjectManager;
 	void UpdateLocalMatrix();

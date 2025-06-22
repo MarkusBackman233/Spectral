@@ -590,6 +590,11 @@ Json::Object IOManager::SaveGameObject(GameObject* gameObject)
         }
         obj.emplace("LocalMatrix", mat);
     }
+
+    if (gameObject->IsPrefab())
+    {
+        obj.emplace("IsPrefab", true);
+    }
     {
         Json::Array componentsArray;
         for (const auto& comonent : gameObject->GetComponents())
@@ -619,6 +624,9 @@ Json::Object IOManager::SaveGameObject(GameObject* gameObject)
         }
         obj.emplace("Children", childrenArray);
     }
+
+
+
     return std::move(obj);
 }
 
@@ -631,6 +639,16 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
         name = object["Name"].GetString();
     }
     GameObject* gameObject = ObjectManager::GetInstance()->CreateObject(name);
+
+    if (object.HasMember("IsPrefab") && object["IsPrefab"].GetBool())
+    {
+
+        auto prefabObject = ResourceManager::GetInstance()->GetResource<Prefab>(gameObject->GetName() + GetResourceData<ResourceType::Prefab>().SpectralExtension);
+        EditorUtils::DuplicateGameObject(gameObject, prefabObject->GetPrefabRoot());
+        gameObject->SetPrefab(prefabObject);
+    }
+
+
     {
         const rapidjson::Value& jsonMatrix = object["Matrix"];
         Math::Matrix matrix;
@@ -647,7 +665,14 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
                 c++;
             }
         }
-        gameObject->SetWorldMatrixNoUpdate(matrix);
+        if (gameObject->IsPrefab())
+        {
+            gameObject->SetWorldMatrix(matrix);
+        }
+        else
+        {
+            gameObject->SetWorldMatrixNoUpdate(matrix);
+        }
     }
 
     {
@@ -673,7 +698,12 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
     {
         gameObject->SetParent(parent);
     }
+    if (gameObject->IsPrefab())
+    {
+        return;
+    }
 
+    if(object.HasMember("Components"))
     {
         const rapidjson::Value& components = object["Components"];
         for (rapidjson::SizeType i = 0; i < components.Size(); i++) {

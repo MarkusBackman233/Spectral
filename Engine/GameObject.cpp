@@ -267,6 +267,21 @@ bool GameObject::IsPrefab() const
 	return m_prefab != nullptr;
 }
 
+bool GameObject::IsPartOfPrefabHierarchy()
+{
+	if (IsPrefab())
+	{
+		return true;
+	}
+
+	if (GetParent())
+	{
+		return GetParent()->IsPartOfPrefabHierarchy();
+	}
+
+	return false;
+}
+
 void GameObject::UpdateTransform()
 {
 	UpdateLocalMatrix();

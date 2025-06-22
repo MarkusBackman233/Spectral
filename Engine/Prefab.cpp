@@ -67,26 +67,35 @@ void Prefab::LoadGameObject(const rapidjson::Value& object, GameObject* parent)
     {
         m_prefabRoot = gameObject;
     }
+
     gameObject->SetName(object["Name"].GetString());
-    gameObject->SetWorldMatrixNoUpdate(JsonToMatrix(object["Matrix"]));
+
     gameObject->SetLocalMatrixNoUpdate(JsonToMatrix(object["LocalMatrix"]));
 
 
-    const rapidjson::Value& components = object["Components"];
-    for (rapidjson::SizeType i = 0; i < components.Size(); i++) 
+    if (parent != nullptr)
     {
-        const rapidjson::Value& componentObject = components[i];
+        gameObject->SetWorldMatrixNoUpdate(parent->GetWorldMatrix() * JsonToMatrix(object["Matrix"]));
+    }
 
-        auto compName = componentObject["Name"].GetString();
+    if (object.HasMember("Components"))
+    {
+        const rapidjson::Value& components = object["Components"];
+        for (rapidjson::SizeType i = 0; i < components.Size(); i++)
+        {
+            const rapidjson::Value& componentObject = components[i];
 
-        auto component = ComponentFactory::CreateComponent(
-            gameObject,
-            ComponentFactory::ComponentNames.find(compName)->second,
-            nullptr,
-            false
-        );
-        component->LoadComponent(componentObject);
-        gameObject->AddComponent(component);
+            auto compName = componentObject["Name"].GetString();
+
+            auto component = ComponentFactory::CreateComponent(
+                gameObject,
+                ComponentFactory::ComponentNames.find(compName)->second,
+                nullptr,
+                false
+            );
+            component->LoadComponent(componentObject);
+            gameObject->AddComponent(component);
+        }
     }
 
     if (object.HasMember("Children") && object["Children"].IsArray()) 
