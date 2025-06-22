@@ -245,7 +245,7 @@ void GameObject::UpdateLocalMatrix()
 	}
 	else
 	{
-		m_localMatrix = Math::Matrix();
+		m_localMatrix = m_worldMatrix;
 	}
 }
 
@@ -278,7 +278,7 @@ void GameObject::UpdateChildrenGlobalMatrix()
 {
 	for (auto& child : GetChildren())
 	{
-		child->SetWorldMatrix(child->GetLocalMatrix() * GetWorldMatrix());
+		child->SetWorldMatrixNoUpdate(child->GetLocalMatrix() * GetWorldMatrix());
 		child->UpdateChildrenGlobalMatrix();
 	}
 }

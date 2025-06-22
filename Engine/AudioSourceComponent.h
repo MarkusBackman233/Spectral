@@ -39,7 +39,8 @@ public:
 
 	void SetAudioSource(std::shared_ptr<AudioSource> audioSource);
 
-	IPLDirectEffect dirEffect{};
+	IPLDirectEffect dirEffectMono{};
+	IPLDirectEffect dirEffectStereo{};
 	IPLPanningEffect surroundEffect{};
 	IPLBinauralEffect biEffect{};
 	IPLSource source{};

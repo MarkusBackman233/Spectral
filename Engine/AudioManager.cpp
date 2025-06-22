@@ -245,14 +245,16 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
             if (settings.Localize)
             {
                 IPLAudioBuffer* attenuationBuffer = nullptr;
-
+                IPLDirectEffect* dirEffect = nullptr;
                 if (channels == 2)
                 {
                     attenuationBuffer = &m_attenuationBufferStereo;
+                    dirEffect = &audioComp->dirEffectStereo;
                 }
                 else
                 {
                     attenuationBuffer = &m_attenuationBufferMono;
+                    dirEffect = &audioComp->dirEffectMono;
                 }
                 Math::Matrix cameraPose;
                 if (ObjectManager::GetInstance()->GetMainCameraGameObject())
@@ -295,7 +297,7 @@ void AudioManager::ProcessAudioThread(std::stop_token stopToken)
                     }
 
                     
-                    iplDirectEffectApply(audioComp->dirEffect, &params, &inBuffer, attenuationBuffer);
+                    iplDirectEffectApply(*dirEffect, &params, &inBuffer, attenuationBuffer);
                 }
                 {
                     IPLBinauralEffectParams params;

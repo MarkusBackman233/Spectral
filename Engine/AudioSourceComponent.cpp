@@ -48,7 +48,11 @@ void AudioSourceComponent::CreateAudioResources()
 	}
 	{
 		IPLDirectEffectSettings effectSettings{ 1 };
-		iplDirectEffectCreate(AudioManager::GetInstance()->GetContext(), &audioSettings, &effectSettings, &dirEffect);
+		iplDirectEffectCreate(AudioManager::GetInstance()->GetContext(), &audioSettings, &effectSettings, &dirEffectMono);
+	}
+	{
+		IPLDirectEffectSettings effectSettings{ 2 };
+		iplDirectEffectCreate(AudioManager::GetInstance()->GetContext(), &audioSettings, &effectSettings, &dirEffectStereo);
 	}
 	{
 		IPLBinauralEffectSettings effectSettings{};
