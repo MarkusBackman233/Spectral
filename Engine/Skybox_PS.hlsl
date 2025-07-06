@@ -18,6 +18,17 @@ cbuffer GlobalPixelConstantBuffer : register(b0)
     float4 data; // x = deltaTime y = roughness
 };
 
+float Rand3dTo1d(float3 value, float3 dotDir = float3(12.9898, 78.233, 37.719))
+{
+    //make value smaller to avoid artefacts
+    float3 smallValue = sin(value);
+    //get scalar value from 3d vector
+    float random = dot(smallValue, dotDir);
+    //make value more random by making it bigger and then taking teh factional part
+    random = frac(sin(random) * 143758.5453);
+    return random;
+}
+
 
 float3 ReinhardTonemap(in float3 color)
 {
@@ -25,6 +36,8 @@ float3 ReinhardTonemap(in float3 color)
     color = color / (1 + color);
     return color;
 }
+
+
 float4 main(PS_INPUT input) : SV_TARGET
 {
     float3 fragmentDirection = normalize(input.localPos.xyz);
@@ -76,11 +89,17 @@ float4 main(PS_INPUT input) : SV_TARGET
             color += sunColor * factor * 50 * pow(uHeight, 0.99);
         }
         
-        
+        float sunDownFraction = (1.0f - clamp(sunDir.y * 2, 0.0, 1.0));
 
         color = pow(max(color * pow(fragmentHeight + 0.005, 0.2), color * pow(0.005, 0.2)), 2.2);
-        color *= (1.0f - clamp(sunDir.y * 2, 0.0, 1.0));
+        color *= sunDownFraction;
         
+        float rand = Rand3dTo1d(fragmentDirection);
+        if (rand > 0.996 && fragmentDirection.y > 0) // stars
+        {
+            float starBrightness = Rand3dTo1d(fragmentDirection + float3(0.123, 0.123, 0.123)) * (1.0f - sunDownFraction);
+            color = max(float3(starBrightness, starBrightness, starBrightness), color);
+        }
         return float4(color, 1.0);
     }
     fragmentDirection.z = -fragmentDirection.z;
