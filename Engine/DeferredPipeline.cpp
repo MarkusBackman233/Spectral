@@ -47,10 +47,9 @@ void DeferredPipeline::CreateResources(ID3D11Device* device, const Math::Vector2
     textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     device->CreateTexture2D(&textureDesc, nullptr, m_gBufferTextures[GBufferTexture::Albedo].GetAddressOf());
 
-    textureDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+    textureDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     device->CreateTexture2D(&textureDesc, nullptr, m_gBufferTextures[GBufferTexture::Normal].GetAddressOf());
     device->CreateTexture2D(&textureDesc, nullptr, m_gBufferTextures[GBufferTexture::WorldPosition].GetAddressOf());    
-    device->CreateTexture2D(&textureDesc, nullptr, m_gBufferTextures[GBufferTexture::LightPosition].GetAddressOf());
 
     for (int i = 0; i < GBufferTexture::NumTextures; ++i)
     {
@@ -82,7 +81,7 @@ void DeferredPipeline::RenderGBuffer(
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
     context->OMSetBlendState(deviceResources.GetDefaultBlendState(), Math::Vector4(0, 0, 0, 5).Data(), 0xffffffff);
-    ID3D11RenderTargetView* renderTargets[GBufferTexture::NumTextures]{ m_gBufferRTVs[0].Get(), m_gBufferRTVs[1].Get(), m_gBufferRTVs[2].Get(), m_gBufferRTVs[3].Get() };
+    ID3D11RenderTargetView* renderTargets[GBufferTexture::NumTextures]{ m_gBufferRTVs[0].Get(), m_gBufferRTVs[1].Get(), m_gBufferRTVs[2].Get() };
     context->OMSetRenderTargets(GBufferTexture::NumTextures, renderTargets, deviceResources.GetDepthStencil());
     for (int i = 0; i < GBufferTexture::NumTextures; ++i)
     {
@@ -91,7 +90,6 @@ void DeferredPipeline::RenderGBuffer(
 
     Render::SetShaders(m_pPixelShader, m_pVertexShader, m_pInputLayout, context);
     m_vertexConstantBuffer.viewProjection = Render::GetViewProjectionMatrix();
-    m_vertexConstantBuffer.lightMatrix = shadowmanager.GetShadowViewProjectionMatrix();
     m_vertexConstantBuffer.cameraPos = Math::Vector4(Render::GetCameraPosition(),1.0f);
     Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_pVertexConstantBufferData, &m_vertexConstantBuffer, context);
 

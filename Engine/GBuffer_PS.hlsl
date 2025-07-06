@@ -18,7 +18,6 @@ struct PSInput
     float3 tangent : TEXCOORD2;
     float3 binormal : TEXCOORD3;
     float2 texcoord : TEXCOORD4;
-    float4 lpos : TEXCOORD5;
 };
 
 struct PSOutput
@@ -26,7 +25,6 @@ struct PSOutput
     float4 albedo : SV_Target0;
     float4 normal : SV_Target1;
     float4 worldPos : SV_Target2;
-    float4 lightPos : SV_Target3;
 };
 
 cbuffer PixelConstantBuffer : register(b1)
@@ -62,6 +60,5 @@ PSOutput main(PSInput input)
     output.albedo.w = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, input.texcoord).r; // AO
     output.normal.w = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, input.texcoord).r); // Metallic
     output.worldPos.w = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, input.texcoord).r; // roughness
-    output.lightPos = input.lpos;
     return output;
 }

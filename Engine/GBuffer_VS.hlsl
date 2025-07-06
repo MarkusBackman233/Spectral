@@ -1,7 +1,6 @@
 cbuffer VertexConstantBuffer : register(b0)
 {
     matrix ViewProjection;
-    matrix LightProjection;
     float4 CameraPosition;
 };
 
@@ -22,7 +21,6 @@ struct VS_OUTPUT
     float3 tangent : TEXCOORD2;
     float3 binormal : TEXCOORD3;
     float2 texcoord : TEXCOORD4;
-    float4 lpos : TEXCOORD5;
 };
 
 VS_OUTPUT main(VS_INPUT input)
@@ -30,7 +28,6 @@ VS_OUTPUT main(VS_INPUT input)
     VS_OUTPUT output;
     output.position = mul(float4(input.position, 1.0), input.transform);
     output.worldPos = output.position;
-    output.lpos = mul(output.position, LightProjection);
     
     output.position = mul(output.position, ViewProjection);
     

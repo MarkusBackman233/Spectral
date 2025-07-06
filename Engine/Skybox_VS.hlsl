@@ -1,7 +1,6 @@
 cbuffer VertexConstantBuffer : register(b0)
 {
     matrix ViewProjection;
-    matrix LightProjection;
     float4 CameraPosition;
 };
 

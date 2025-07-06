@@ -122,7 +122,17 @@ bool IOManager::LoadFBX(const std::filesystem::path& filename)
 {
     Assimp::Importer importer;
     //const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PopulateArmatureData | aiProcess_PreTransformVertices | aiProcess_FixInfacingNormals | aiProcess_ImproveCacheLocality | aiProcess_JoinIdenticalVertices | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
-    const aiScene* scene = importer.ReadFile(filename.string(), aiProcess_PopulateArmatureData | aiProcess_MakeLeftHanded | aiProcess_Triangulate | aiProcess_GlobalScale | aiProcess_GenNormals | aiProcess_CalcTangentSpace);
+    const aiScene* scene = importer.ReadFile(filename.string(), 
+        aiProcess_PopulateArmatureData | 
+        aiProcess_MakeLeftHanded | 
+        aiProcess_Triangulate | 
+        aiProcess_GlobalScale | 
+        aiProcess_GenNormals | 
+        aiProcess_CalcTangentSpace | 
+        aiProcess_OptimizeMeshes |
+        aiProcess_ImproveCacheLocality |
+        aiProcess_JoinIdenticalVertices
+    );
     
     
     
@@ -183,7 +193,17 @@ bool IOManager::LoadFBX(const std::filesystem::path& filename)
 
     IOManager::ProcessNode(strippedFilename, std::filesystem::path(filename).parent_path(), scene->mRootNode, scene, rootObject, Math::Matrix());
 
+    { // make prefab, convert this to a function
+        std::string filename = rootObject->GetName();
+        filename.append(IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension);
+        auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Prefab>().Folder / filename;
+        std::filesystem::create_directories(file.parent_path());
 
+        auto prefabJson = IOManager::SaveGameObject(rootObject);
+        Json::Serialize(prefabJson, file);
+
+        rootObject->SetPrefab(ResourceManager::GetInstance()->GetResource<Prefab>(file));
+    }
 
 
     return true;
@@ -275,7 +295,18 @@ bool IOManager::LoadDroppedResource(const std::filesystem::path& file)
 
 void IOManager::SaveSpectralModel(std::shared_ptr<Mesh> mesh)
 {
-    WriteObject writeObject(ProjectDirectory / GetResourceData<IOManager::ResourceType::Model>().Folder / mesh->GetFilename());
+    auto path = ProjectDirectory / GetResourceData<IOManager::ResourceType::Model>().Folder;
+    try
+    {
+        std::filesystem::create_directories(path);
+    }
+    catch (const std::exception& e)
+    {
+        Logger::Error(e.what());
+        return;
+    }
+
+    WriteObject writeObject(path / mesh->GetFilename());
     writeObject.Write(mesh->GetFilename());
     writeObject.Write(mesh->vertexes);
     writeObject.Write(mesh->indices32);
@@ -642,8 +673,12 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
 
     if (object.HasMember("IsPrefab") && object["IsPrefab"].GetBool())
     {
-
         auto prefabObject = ResourceManager::GetInstance()->GetResource<Prefab>(gameObject->GetName() + GetResourceData<ResourceType::Prefab>().SpectralExtension);
+        if (!prefabObject)
+        {
+            Logger::Error("Could not load prefab for: " + name);
+            return;
+        }
         EditorUtils::DuplicateGameObject(gameObject, prefabObject->GetPrefabRoot());
         gameObject->SetPrefab(prefabObject);
     }
@@ -730,19 +765,28 @@ void IOManager::LoadGameObject(const rapidjson::Value& object, GameObject* paren
 }
 
 
-void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject)
+void IOManager::ProcessMesh(
+    const std::string& filename, 
+    const std::filesystem::path& path, 
+    aiMesh* mesh, const aiScene* scene, 
+    GameObject* gameObject, 
+    unsigned int subMeshId
+)
 {
     auto meshObject = ObjectManager::GetInstance()->CreateObject(std::string(mesh->mName.data, mesh->mName.length));
     aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
     std::string matNameNoFilename = std::string(material->GetName().C_Str());
     std::string materialName = std::string(filename.c_str()) + "_" + matNameNoFilename;
-    std::string meshName = std::string(std::string(filename.c_str()) + "_" + std::string(mesh->mName.C_Str()) /* + "_" + matNameNoFilename*/);
+    std::string meshName = std::string(std::string(filename.c_str()) + "_" + std::string(mesh->mName.C_Str())  + "_" + std::to_string(rand()));
     std::replace(meshName.begin(), meshName.end(), ':', '_');
     std::replace(meshName.begin(), meshName.end(), '.', '_');    
-    meshName.append(GetResourceData<ResourceType::Model>().SpectralExtension);
 
     std::replace(materialName.begin(), materialName.end(), ':', '_');
     std::replace(materialName.begin(), materialName.end(), '.', '_');
+
+    meshName.append(matNameNoFilename);
+    meshName.append(GetResourceData<ResourceType::Model>().SpectralExtension);
+
     std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>();
     for (UINT i = 0; i < mesh->mNumVertices; i++) {
         Mesh::Vertex vertex{};
@@ -783,9 +827,11 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
     newMesh->CalculateBoundingBox();
     newMesh->m_filename = meshName;
     ResourceManager::GetInstance()->AddResource<Mesh>(newMesh);
-
     materialName.append(GetResourceData<ResourceType::Material>().SpectralExtension);
-    if (materialName != "")
+    
+    std::shared_ptr<Material> m = ResourceManager::GetInstance()->GetResource<Material>(materialName);
+
+    if (!m && materialName != "")
     {
 
         std::shared_ptr<Material> createdMaterial = std::make_shared<Material>();
@@ -834,7 +880,14 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
     }
     else
     {
-        meshComponent->SetMaterial(ResourceManager::GetInstance()->GetResource<Material>("Default.material"));
+        if (m)
+        {
+            meshComponent->SetMaterial(m);
+        }
+        else
+        {
+            meshComponent->SetMaterial(ResourceManager::GetInstance()->GetResource<Material>("Default.material"));
+        }
     }
 
 
@@ -842,10 +895,9 @@ void IOManager::ProcessMesh(const std::string& filename, const std::filesystem::
     
     auto DropfileTask = Concurrency::create_task(
         [newMesh]()
-    {
-        IOManager::SaveSpectralModel(newMesh);
-        //SaveSpectralMaterial(newMesh->GetMaterial());
-    }
+        {
+            IOManager::SaveSpectralModel(newMesh);
+        }
     );
     
 }
@@ -865,13 +917,17 @@ void IOManager::ProcessNode(const std::string& filename, const std::filesystem::
         newGameObject->SetWorldMatrix(matrix * accTransform);
         for (UINT i = 0; i < node->mNumMeshes; i++)
         {
-            aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-            ProcessMesh(filename, path, mesh, scene, newGameObject);
+
+            UINT subMeshId = node->mMeshes[i];
+
+            aiMesh* mesh = scene->mMeshes[subMeshId];
+            ProcessMesh(filename, path, mesh, scene, newGameObject, subMeshId);
         }
         newGameObject->SetParent(parent);
         parent = newGameObject;
     }
-    else {
+    else 
+    {
         matrix = matrix * accTransform;
     }
 

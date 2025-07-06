@@ -1,6 +1,7 @@
 #pragma once
 #include "PostProcessing.h"
 #include "Vector4.h"
+#include "Matrix.h"
 
 class DeferredPipeline;
 class SkyboxManager;
@@ -39,6 +40,8 @@ private:
 	};
 	struct PixelConstantBuffer
 	{
+		Math::Matrix viewProjection;
+		Math::Matrix lightMatrix;
 		Math::Vector4 ambientLighting;
 		Math::Vector4 fogColor;
 		Math::Vector4 cameraPosition;

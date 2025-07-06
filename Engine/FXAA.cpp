@@ -16,7 +16,9 @@ void FXAA::CreateResources(ID3D11Device* device)
 void FXAA::Process(ID3D11DeviceContext* context, const DeviceResources& deviceResources)
 {
     ProfileFunction
-    SetPostProcessingRenderTarget(context, deviceResources);
+    ID3D11RenderTargetView* postPorcessingRenderTarget[] = { deviceResources.GetBackBufferTarget() };
+    context->OMSetRenderTargets(1, postPorcessingRenderTarget, nullptr);
+
     SetVertexBuffer(context);
     Render::SetShaders(m_pixelShader, m_vertexShader, m_inputLayout, context);
     ID3D11ShaderResourceView* srv = deviceResources.RenderTargetSRV();
@@ -24,5 +26,4 @@ void FXAA::Process(ID3D11DeviceContext* context, const DeviceResources& deviceRe
     context->Draw(4, 0);
     ID3D11ShaderResourceView* nullView = nullptr;
     context->PSSetShaderResources(20, 1, &nullView);
-    CopyPostProcessingToRenderTarget(context, deviceResources);
 }

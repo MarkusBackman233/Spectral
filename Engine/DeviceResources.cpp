@@ -164,7 +164,7 @@ void DeviceResources::ConfigureBackBuffer(const Math::Vector2& windowSize)
     textureDesc.Height = static_cast<UINT>(windowSize.y);
     textureDesc.MipLevels = 1;
     textureDesc.ArraySize = 1;
-    textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    textureDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
     textureDesc.SampleDesc.Count = 1;
     textureDesc.Usage = D3D11_USAGE_DEFAULT;
     textureDesc.BindFlags = 0;

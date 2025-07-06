@@ -17,6 +17,7 @@ class GameObject
 {
 public:
 	GameObject();
+	GameObject(size_t id);
 	~GameObject();
 	const Math::Matrix& GetWorldMatrix() { return m_worldMatrix; }
 	const Math::Matrix& GetLocalMatrix() { return m_localMatrix; }
@@ -30,6 +31,8 @@ public:
 
 	void SetWorldMatrixNoUpdate(const Math::Matrix& worldMatrix);
 	void SetLocalMatrixNoUpdate(const Math::Matrix& localMatrix);
+
+	bool HasGameObjectInParentHierarchy(GameObject* gameObject);
 
 	void SetParent(GameObject* newParent);
 	GameObject* GetParent() { return m_parent; }

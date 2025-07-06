@@ -46,7 +46,7 @@ void InstanceManager::Map(ID3D11DeviceContext* context, ID3D11Device* device)
             instanceData.Buffer.Reset();
 
             uint32_t newMaxInstances = instanceData.MaxInstanceCount;
-            while (newMaxInstances < matrices.size())
+            while (newMaxInstances <= matrices.size())
             {
                 newMaxInstances *= 2;
             }

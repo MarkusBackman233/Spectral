@@ -75,6 +75,10 @@ float3 RandomNormalizedXY(float2 seed)
 
 float4 main(PSInput input) : SV_TARGET
 {
+    if (settings.z == 0)
+    {
+        return 1.0f;
+    }
     float3 worldPos = positionMap.Sample(samplerState, input.tex).xyz;
     float3 normal = normalMap.Sample(samplerState, input.tex).xyz;
     float3 randomVector = normalize(float3(Rand3dTo2d(worldPos), 1.0));
@@ -85,7 +89,7 @@ float4 main(PSInput input) : SV_TARGET
 	
     
     float3 center = mul(float4(worldPos, 1.0), viewProjection);
-    
+
     float radius = settings.z;
     float occlusion = 0.0;
     
@@ -106,43 +110,6 @@ float4 main(PSInput input) : SV_TARGET
         float rangeCheck = smoothstep(0.0, 1.0, radius / abs(center.z - sampleDepth));
         occlusion += (sampleDepth <= offset.z - settings.x*10 ? 1.0 : 0.0) * rangeCheck * nDotS;
     }
-
-    /*
-    const uint g_sss_max_steps = 16; // Max ray steps, affects quality and performance.
-    const float g_sss_ray_max_distance = 0.1f; // Max shadow length, longer shadows are less accurate.
-    const float g_sss_thickness = 0.02f; // Depth testing thickness.
-    const float g_sss_step_length = g_sss_ray_max_distance / (float) g_sss_max_steps;
-
-    {
-        float3 samplePos = worldPos;
-        
-        float3 ray_step = float3(0, 0, -1) * g_sss_step_length;
-	
-        // Ray march towards the light
-        float occlusion = 0.0;
-        float2 ray_uv = 0.0f;
-        for (uint i = 0; i < g_sss_max_steps; i++)
-        {
-            samplePos += ray_step;
-            float4 offset = mul(float4(samplePos, 1.0), viewProjection);
-            offset.xy /= offset.w;
-            float sampleDepth = ComputeViewDepth(depthMap.Sample(clampSampler, float2(offset.x * 0.5 + 0.5, -offset.y * 0.5 + 0.5)).r);
-            float depth_delta = offset.z - sampleDepth;
-            
-            bool can_the_camera_see_the_ray = (depth_delta > 0.0f) && (depth_delta < g_sss_thickness);
-            bool occluded_by_the_original_pixel = abs(offset.z - center.z) < g_sss_ray_max_distance;
-            if (depth_delta > 0)
-            {
-                return 0.0f;
-            }
-            //if (depth_delta > 0.0f && depth_delta < g_sss_thickness)
-            //{
-            //    return 0.0;
-            //}
-        }
-    }
-	
-	*/
     occlusion = 1.0 - (occlusion / 64);
     occlusion = pow(occlusion, settings.y);
     return occlusion;

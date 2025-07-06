@@ -16,7 +16,7 @@ public:
 	}
 	ObjectManager();
 	void Deinitialize();
-	GameObject* CreateObject(const std::string& name, bool destroyObjectOnReset = false);
+	GameObject* CreateObject(const std::string& name, bool destroyObjectOnReset = false, size_t forceId = 0);
 	void Destroy(GameObject* gameObject);
 
 	const std::unordered_set<std::unique_ptr<GameObject>>& GetGameObjects() { return m_gameObjects; }

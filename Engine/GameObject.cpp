@@ -24,6 +24,13 @@ GameObject::GameObject()
 
 
 }
+GameObject::GameObject(size_t id)
+	: m_components{}
+	, m_shouldDestroyOnReset(false)
+	, m_prefab(nullptr)
+	, m_id(id)
+{
+}
 
 GameObject::~GameObject()
 {
@@ -109,7 +116,9 @@ void GameObject::SetWorldMatrixNoUpdate(const Math::Matrix& worldMatrix)
 void GameObject::SetLocalMatrixNoUpdate(const Math::Matrix& localMatrix)
 {
 	m_localMatrix = localMatrix;
-}	
+}
+
+
 
 const Math::Vector3& GameObject::GetPosition()
 {
@@ -277,6 +286,21 @@ bool GameObject::IsPartOfPrefabHierarchy()
 	if (GetParent())
 	{
 		return GetParent()->IsPartOfPrefabHierarchy();
+	}
+
+	return false;
+}
+
+bool GameObject::HasGameObjectInParentHierarchy(GameObject* gameObject)
+{
+	if (GetParent() == gameObject)
+	{
+		return true;
+	}
+
+	if (GetParent())
+	{
+		return GetParent()->HasGameObjectInParentHierarchy(gameObject);
 	}
 
 	return false;

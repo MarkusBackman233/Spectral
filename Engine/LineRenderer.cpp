@@ -18,6 +18,13 @@ void LineRenderer::CreateResources(ID3D11Device* device)
 void LineRenderer::Render(ID3D11DeviceContext* context, const DeviceResources& deviceResources)
 {
     ProfileFunction
+
+    ID3D11RenderTargetView* renderTarget = deviceResources.GetBackBufferTarget();
+    ID3D11DepthStencilView* depthStencil = deviceResources.GetDepthStencil();
+
+    context->OMSetRenderTargets(1, &renderTarget, depthStencil);
+
+
     Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_pVertexConstantBufferData, &Render::GetViewProjectionMatrix(), context);
     Render::SetShaders(m_pPixelShader, m_pVertexShader, m_pInputLayout, context);
 

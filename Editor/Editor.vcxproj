@@ -168,6 +168,9 @@
     <ClInclude Include="ScriptPropertyWindow.h" />
     <ClInclude Include="TexturePropertyWindow.h" />
     <ClInclude Include="Undo.h" />
+    <ClInclude Include="UndoCreateGameObject.h" />
+    <ClInclude Include="UndoDeleteGameObject.h" />
+    <ClInclude Include="UndoSetParent.h" />
     <ClInclude Include="UndoTransform.h" />
   </ItemGroup>
   <ItemGroup>
@@ -192,6 +195,9 @@
     <ClCompile Include="ScriptPropertyWindow.cpp" />
     <ClCompile Include="TexturePropertyWindow.cpp" />
     <ClCompile Include="Undo.cpp" />
+    <ClCompile Include="UndoCreateGameObject.cpp" />
+    <ClCompile Include="UndoDeleteGameObject.cpp" />
+    <ClCompile Include="UndoSetParent.cpp" />
     <ClCompile Include="UndoTransform.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

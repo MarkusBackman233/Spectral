@@ -65,16 +65,11 @@ void RenderManager::Render()
     m_pbrRender.Process(context, m_deviceResources, m_deferredPipeline, m_skyboxManager, m_shadowManager, m_SSAO);
     m_FXAA.Process(context, m_deviceResources);
     m_lineRenderer.Render(context, m_deviceResources);
-
-
     m_guizmoRenderer.Render(context, m_deviceResources);
 
-    //ID3D11RenderTargetView* nulltargets[] = { nullptr };
-    //context->OMSetRenderTargets(1, nulltargets, nullptr);
 }
 
 void RenderManager::Present()
 {
-    Render::CopyRenderTarget(m_deviceResources.GetLockedDeviceContext().GetContext(), m_deviceResources.GetBackBufferTarget(), m_deviceResources.GetRenderTarget());
     m_deviceResources.Present();
 }

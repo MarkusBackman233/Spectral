@@ -283,7 +283,7 @@ SkyboxManager::Cubemap SkyboxManager::CreateCubemap(ID3D11DeviceContext* context
     texDesc.Height = resolution;
     texDesc.MipLevels = cubemap.NumMips;
     texDesc.ArraySize = 6;
-    texDesc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+    texDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
     texDesc.SampleDesc.Count = 1;
     texDesc.Usage = D3D11_USAGE_DEFAULT;
     texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;

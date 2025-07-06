@@ -1,13 +1,11 @@
 Texture2D albedoMap : register(t0);
 Texture2D normalMap : register(t1);
 Texture2D positionMap : register(t2);
-Texture2D lightPositionMap : register(t3);
-
-Texture2D shadowDepthMap : register(t4);
-TextureCube iradianceMap : register(t5);
-TextureCube specularMap : register(t6);
-Texture2D specularIntegrationMap : register(t7);
-Texture2D SSAOMap : register(t8);
+Texture2D shadowDepthMap : register(t3);
+TextureCube iradianceMap : register(t4);
+TextureCube specularMap : register(t5);
+Texture2D specularIntegrationMap : register(t6);
+Texture2D SSAOMap : register(t7);
 
 
 SamplerState samplerState : register(s0);
@@ -49,6 +47,9 @@ struct Light
 
 cbuffer GlobalPixelConstantBuffer : register(b0)
 {
+    matrix ViewProjection;
+    matrix LightProjection;
+    
     float4 ambientLighting;
     float4 fogColor;
     float4 cameraPosition;
@@ -187,15 +188,16 @@ float4 main(VVSOutput input) : SV_TARGET
 {
 
     float4 normal = normalMap.Sample(samplerState, input.texcoord);
+    normal.xyz = normalize(normal.xyz);
     float metallic = normal.w;
     clip(-metallic + 1.0);
     
     float ssao = SSAOMap.Sample(clampSampler, input.texcoord);
     float4 albedo = albedoMap.Sample(samplerState, input.texcoord);
-    albedo = pow(albedo, 2.2);
-    float ao = albedo.w + ssao;
+    albedo.rgb = pow(albedo.rgb, 2.2);
+    float ao = saturate(albedo.w + ssao);
+    
     float4 worldPosition = positionMap.Sample(samplerState, input.texcoord);
-    float4 lpos = lightPositionMap.Sample(samplerState, input.texcoord);
     
     float roughness = worldPosition.w;
 
@@ -209,7 +211,7 @@ float4 main(VVSOutput input) : SV_TARGET
 
     
     float3 brdfRec = float3(0.0, 0.0, 0.0);
-    float Shadow = ShadowCalculation(lpos);
+    float Shadow = ShadowCalculation(mul(float4(worldPosition.xyz, 1.0), LightProjection));
     
     float3 sunDirection = float3(0, -1, 0);
     
@@ -236,6 +238,9 @@ float4 main(VVSOutput input) : SV_TARGET
         //    brdfRec += computeReflectance(normal.xyz, viewDir, F0, albedo.rgb, -lights[i].direction.xyz, H, lights[i].color.xyz, intensity, metallic, roughness) * Shadow;
         }
     }
+    
+    
+    
     float NdotV = max(dot(viewDir, normal.xyz), 0.0);
     float3 reflection = normalize(reflect(-viewDir, normal.xyz));
     float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
@@ -253,7 +258,7 @@ float4 main(VVSOutput input) : SV_TARGET
     iradiance = lerp(iradiance * 0.3f, iradiance, ao);
     float3 albedoByDiffuse = kD * albedo.rgb * iradiance.rgb;
     float3 fog = length(worldPosition.xyz - cameraPosition.xyz) * fogColor.xyz * 0.01f * fogColor.a;
-    float3 color = (albedoByDiffuse + specular  + brdfRec * ao) * ssao /*+ fog*/;
+    float3 color = (albedoByDiffuse + specular + brdfRec * ao) * ssao * max(Shadow,0.3) + fog;
     const float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
     
     return float4(color, luminance);

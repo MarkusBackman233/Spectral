@@ -16,7 +16,7 @@ void ObjectManager::Deinitialize()
     m_gameObjects.clear();
 }
 
-GameObject* ObjectManager::CreateObject(const std::string& name, bool destroyObjectOnReset /* = false*/)
+GameObject* ObjectManager::CreateObject(const std::string& name, bool destroyObjectOnReset /* = false*/, size_t forceId /*= 0*/)
 {
 
     if (m_gameObjects.size() >= m_currentlyReserved)
@@ -25,7 +25,7 @@ GameObject* ObjectManager::CreateObject(const std::string& name, bool destroyObj
         m_gameObjects.reserve(m_currentlyReserved);
     }
 
-	auto it = m_gameObjects.emplace(std::make_unique<GameObject>());
+	auto it = m_gameObjects.emplace(!forceId ? std::make_unique<GameObject>() : std::make_unique<GameObject>(forceId));
     GameObject* gameObject = it.first->get();
     gameObject->SetName(name);
 

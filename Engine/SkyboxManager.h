@@ -80,7 +80,6 @@ private:
 	struct VertexConstantBuffer
 	{
 		DirectX::XMMATRIX viewProjection;
-		Math::Matrix lightMatrix;
 		Math::Vector4 cameraPos;
 	} m_vertexConstantBuffer;
 

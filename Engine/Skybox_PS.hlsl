@@ -34,6 +34,9 @@ float4 main(PS_INPUT input) : SV_TARGET
     {
         float3 sunDir = normalize(sun.xyz);
         
+        
+        
+        
         float3 sunColor = float3(1,0,0);
         float sunHeight = max(dot(sunDir, -float3(0, 1, 0)), 0.0);
         {
@@ -74,8 +77,11 @@ float4 main(PS_INPUT input) : SV_TARGET
         }
         
         
+
+        color = pow(max(color * pow(fragmentHeight + 0.005, 0.2), color * pow(0.005, 0.2)), 2.2);
+        color *= (1.0f - clamp(sunDir.y * 2, 0.0, 1.0));
         
-        return float4(pow(max(color * pow(fragmentHeight + 0.005, 0.2), color * pow(0.005, 0.2)), 2.2), 1.0);
+        return float4(color, 1.0);
     }
     fragmentDirection.z = -fragmentDirection.z;
     return float4(skyboxMap.SampleLevel(samplerState, fragmentDirection, 0).rgb, 1.0f);

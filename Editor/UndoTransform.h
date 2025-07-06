@@ -18,6 +18,6 @@ public:
     void Execute() override;
 
 private:
-    std::vector<std::pair<GameObject*, Math::Matrix>> m_undoStates;
+    std::vector<std::pair<size_t, Math::Matrix>> m_undoStates;
 };
 

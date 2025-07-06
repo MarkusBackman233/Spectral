@@ -32,7 +32,8 @@
 #include "Vector4.h"
 #include "MathFunctions.h"
 #include "ResourceManager.h"
-
+#include "UndoCreateGameObject.h"
+#include "UndoSetParent.h"
 using namespace Spectral;
 
 int Editor::ColorPickerMask = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoTooltip 
@@ -190,7 +191,11 @@ void Editor::GameObjectListItem(GameObject* gameObject)
     {
         if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
         {
-            m_objectSelector.SelectedGameObject()->SetParent(gameObject);
+            if (!gameObject->HasGameObjectInParentHierarchy(m_objectSelector.SelectedGameObject()))
+            {
+                AddUndoAction(std::make_shared<UndoSetParent>(m_objectSelector.SelectedGameObject(), m_objectSelector.SelectedGameObject()->GetParent()));
+                m_objectSelector.SelectedGameObject()->SetParent(gameObject);
+            }
         }
         ImGui::EndDragDropTarget();
     }
@@ -272,6 +277,7 @@ void Editor::PropertiesWindow()
                 {
                     m_objectSelector.SelectedGameObject()->SetName(cstrText);
                 }
+                ImGui::Text(std::to_string(m_objectSelector.SelectedGameObject()->GetId()).c_str());
                 ImGui::Separator();
                 TransformWindow();
                 ImGui::Separator();
@@ -343,6 +349,7 @@ void Editor::TopMenu()
             auto CreateMeshObject = [&](const std::string& gameObjectName, const std::string& meshName)
             {
                 auto gameObject = ObjectManager::GetInstance()->CreateObject(gameObjectName);
+                AddUndoAction(std::make_shared<UndoCreateGameObject>(gameObject));
                 gameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
                 m_objectSelector.SetSelectedGameObject(gameObject);
                 auto meshComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Mesh);
@@ -366,6 +373,7 @@ void Editor::TopMenu()
             if (ImGui::MenuItem("Terrain", ""))
             {
                 auto gameObject = ObjectManager::GetInstance()->CreateObject("Terrain");
+                AddUndoAction(std::make_shared<UndoCreateGameObject>(gameObject));
                 gameObject->SetPosition(GetPositionInFontOfCamera(100.0f));
                 m_objectSelector.SetSelectedGameObject(gameObject);
                 auto terrainComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Terrain);
@@ -375,12 +383,14 @@ void Editor::TopMenu()
             if (ImGui::MenuItem("Empty GameObject", ""))
             {
                 auto newGameObject = ObjectManager::GetInstance()->CreateObject("new GameObject");
+                AddUndoAction(std::make_shared<UndoCreateGameObject>(newGameObject));
                 newGameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
                 m_objectSelector.SetSelectedGameObject(newGameObject);
             }            
             if (ImGui::MenuItem("Point Light", ""))
             {
                 auto newGameObject = ObjectManager::GetInstance()->CreateObject("new Point Light");
+                AddUndoAction(std::make_shared<UndoCreateGameObject>(newGameObject));
                 newGameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
                 newGameObject->AddComponent(ComponentFactory::CreateComponent(newGameObject,Component::Type::Light));
                 m_objectSelector.SetSelectedGameObject(newGameObject);
@@ -394,6 +404,7 @@ void Editor::TopMenu()
                 {
 
                     auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(prefabObject->GetName());
+                    AddUndoAction(std::make_shared<UndoCreateGameObject>(duplicateGameObject));
                     EditorUtils::DuplicateGameObject(duplicateGameObject, prefabObject);
 
                     duplicateGameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
@@ -449,7 +460,25 @@ void Editor::TopMenu()
             ImGui::PopItemFlag();
             ImGui::PopStyleVar();
         }
-        ImGui::Text(std::string(" | FPS: " + std::to_string(1.0f / TimeManager::GetDeltaTime())).c_str());
+
+        static int lastFps[5]{};
+
+        int currentFps = static_cast<int>(1.0f / TimeManager::GetDeltaTime());
+
+        // Shift values back
+        for (int i = 4; i > 0; --i) {
+            lastFps[i] = lastFps[i - 1];
+        }
+        lastFps[0] = currentFps;
+
+        // Average the last 5 FPS values
+        int fpsSum = 0;
+        for (int i = 0; i < 5; ++i) {
+            fpsSum += lastFps[i];
+        }
+        int averageFps = fpsSum / 5;
+
+        ImGui::Text(std::string(" | FPS: " + std::to_string(averageFps)).c_str());
 
 
         ImGui::SetCursorPosX(m_mainViewport->WorkSize.x / 2);
@@ -494,6 +523,7 @@ void Editor::GameObjectsWindow()
                 {
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
                     {
+                        AddUndoAction(std::make_shared<UndoSetParent>(m_objectSelector.SelectedGameObject(), m_objectSelector.SelectedGameObject()->GetParent()));
                         m_objectSelector.SelectedGameObject()->SetParent(nullptr);
                     }
                     ImGui::EndDragDropTarget();
@@ -559,6 +589,7 @@ void Editor::GameObjectComponentWindow()
                 for (auto& [worldMatrix, localMatrix] : objectsToCreate)
                 {
                     auto duplicateGameObject = ObjectManager::GetInstance()->CreateObject(objectName);
+                    AddUndoAction(std::make_shared<UndoCreateGameObject>(duplicateGameObject));
                     EditorUtils::DuplicateGameObject(duplicateGameObject, prefab->GetPrefabRoot());
                     duplicateGameObject->SetLocalMatrixNoUpdate(localMatrix);
                     duplicateGameObject->SetWorldMatrix(worldMatrix);

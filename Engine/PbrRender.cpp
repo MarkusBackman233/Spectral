@@ -41,7 +41,6 @@ void PbrRender::Process(
         deferredPipeline.GetSRV(DeferredPipeline::GBufferTexture::Albedo), 
         deferredPipeline.GetSRV(DeferredPipeline::GBufferTexture::Normal),
         deferredPipeline.GetSRV(DeferredPipeline::GBufferTexture::WorldPosition),
-        deferredPipeline.GetSRV(DeferredPipeline::GBufferTexture::LightPosition),
         shadowManager.GetShadowTexture().Get(),
         skyboxManager.GetIrradianceCubemap(),
         skyboxManager.GetSpecularCubemap(),
@@ -52,6 +51,8 @@ void PbrRender::Process(
 
     auto& lightSettings = scene.GetLightingSettings();
 
+    m_pixelConstantBuffer.viewProjection = Render::GetViewProjectionMatrix();
+    m_pixelConstantBuffer.lightMatrix = shadowManager.GetShadowViewProjectionMatrix();
     m_pixelConstantBuffer.ambientLighting = lightSettings.AmbientLight;
     m_pixelConstantBuffer.fogColor = lightSettings.FogColor;
     m_pixelConstantBuffer.cameraPosition.x = Render::GetCameraPosition().x;

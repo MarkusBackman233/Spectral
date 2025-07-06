@@ -12,6 +12,7 @@
 #include "Editor.h"
 #include "UndoTransform.h"
 #include "AudioSourceComponent.h"
+#include "UndoDeleteGameObject.h"
 
 using namespace Spectral;
 
@@ -94,8 +95,13 @@ void ObjectSelector::DeselectAllChildren(GameObject* gameObject)
 
 void ObjectSelector::HandleSelectedGameObject(Editor* editor)
 {
+    static std::vector<std::pair<GameObject*, Math::Matrix>> beforeUsed;
+
     if (Input::GetKeyHeld(InputId::Delete))
     {
+        beforeUsed.clear();
+        editor->AddUndoAction(std::make_unique<UndoDeleteGameObject>(m_selectedGameObjects));
+
         for (GameObject* gameObject : m_selectedGameObjects)
         {
             ObjectManager::GetInstance()->Destroy(gameObject);
@@ -143,7 +149,6 @@ void ObjectSelector::HandleSelectedGameObject(Editor* editor)
         object->SetWorldMatrix(localMatrix * SelectedGameObject()->GetWorldMatrix());
     }
 
-    static std::vector<std::pair<GameObject*, Math::Matrix>> beforeUsed;
     static bool wasUsing = false;
     if (ImGuizmo::IsUsingAny())
     {

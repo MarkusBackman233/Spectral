@@ -18,7 +18,6 @@ public:
 		Albedo,
 		Normal,
 		WorldPosition,
-		LightPosition,
 
 		NumTextures
 	};
@@ -53,7 +52,6 @@ private:
 	struct VertexConstantBuffer
 	{
 		Math::Matrix viewProjection;
-		Math::Matrix lightMatrix;
 		Math::Vector4 cameraPos;
 	};
 

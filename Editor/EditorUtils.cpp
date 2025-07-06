@@ -8,17 +8,29 @@
 #include "Vector2.h"
 
 
-void EditorUtils::DuplicateGameObject(GameObject* duplicate, GameObject* source)
+void EditorUtils::DuplicateGameObject(GameObject* duplicate, GameObject* source, bool createViaObjectManager /*= true*/, bool duplicateId /*= false*/)
 {
-    for (auto* child : source->GetChildren())
+    for (GameObject* child : source->GetChildren())
     {
-        GameObject* duplicateGameObject = ObjectManager::GetInstance()->CreateObject(child->GetName());
+        GameObject* duplicateGameObject = nullptr;
+
+        if (createViaObjectManager)
+        {
+            duplicateGameObject = ObjectManager::GetInstance()->CreateObject(child->GetName(), false, duplicateId ? child->GetId() : 0);
+        }
+        else
+        {
+            duplicateGameObject = new GameObject(child->GetId());
+            duplicateGameObject->SetName(child->GetName());
+        }
+
+
         duplicateGameObject->SetParent(duplicate);
-        DuplicateGameObject(duplicateGameObject, child);
+        DuplicateGameObject(duplicateGameObject, child, createViaObjectManager);
     }
     for (const auto& component : source->GetComponents())
     {
-        duplicate->AddComponent(ComponentFactory::CreateComponent(duplicate, component->GetComponentType(), component));
+        duplicate->AddComponent(ComponentFactory::CreateComponent(duplicate, component->GetComponentType(), component, createViaObjectManager));
     }
     duplicate->SetWorldMatrixNoUpdate(source->GetWorldMatrix());
     duplicate->SetLocalMatrixNoUpdate(source->GetLocalMatrix());

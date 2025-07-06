@@ -176,7 +176,7 @@ public:
 	static void LoadGameObject(const rapidjson::Value& object, GameObject* parent);
 private: 
 
-	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject);
+	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject, unsigned int subMeshId);
 	static void ProcessNode(const std::string& filename, const std::filesystem::path& path, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform);
 
 	static std::filesystem::path GetPath(const std::string& filename, const std::string& Extension);
