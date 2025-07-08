@@ -19,6 +19,7 @@ RenderManager::RenderManager()
     m_SSAO.CreateResources(device, windowSize);
     m_pbrRender.CreateResources(device);
     m_skyboxManager.CreateResources(context, device);
+    m_cloudGenerator.CreateResources(device);
     m_shadowManager.CreateResources(device);
     m_lineRenderer.CreateResources(device);
     m_FXAA.CreateResources(device);
@@ -62,6 +63,7 @@ void RenderManager::Render()
     m_deferredPipeline.RenderGBuffer(context, m_deviceResources, m_instanceManager, m_shadowManager);
     m_SSAO.Process(context, m_deviceResources, m_deferredPipeline);
     m_skyboxManager.RenderSkybox(context, m_deviceResources.GetRenderTarget());
+    m_cloudGenerator.Render(context, m_deviceResources, m_skyboxManager);
     m_pbrRender.Process(context, m_deviceResources, m_deferredPipeline, m_skyboxManager, m_shadowManager, m_SSAO);
     m_FXAA.Process(context, m_deviceResources);
     m_lineRenderer.Render(context, m_deviceResources);

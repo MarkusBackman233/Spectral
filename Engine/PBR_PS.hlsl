@@ -50,6 +50,9 @@ cbuffer GlobalPixelConstantBuffer : register(b0)
     matrix ViewProjection;
     matrix LightProjection;
     
+    matrix InvView;
+    matrix InvProjection;
+    
     float4 ambientLighting;
     float4 fogColor;
     float4 cameraPosition;
@@ -182,22 +185,105 @@ struct VVSOutput
     float4 Pos : SV_Position;
     float2 texcoord : TEXCOORD0;
 };
+/*
+bool IsOccluded(float3 lightPos, float3 fragPos, Texture2D positionMap)
+{
+    float3 rayDir = normalize(fragPos - lightPos);
+    float totalDist = length(fragPos - lightPos);
+    const int steps = 10;
+    float stepSize = totalDist / steps;
 
+    for (int j = 1; j < steps; ++j)
+    {
+        float t = stepSize * j;
+        float3 samplePoint = lightPos + rayDir * t;
+
+        // Project sample point to screen space
+        float4 clip = mul(float4(samplePoint, 1.0), ViewProjection);
+        clip /= clip.w;
+        clip.y = -clip.y;
+        float2 uv = clip.xy * 0.5 + 0.5;
+
+        // Skip samples outside screen
+        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+            continue;
+
+        float4 scenePos = positionMap.SampleLevel(samplerState, uv, 0);
+
+        // Compare world-space distance between ray point and scene geometry
+        if (length(fragPos.xyz - samplePoint) < 0.15f) // small epsilon
+            return false;
+        if (length(scenePos.xyz - samplePoint) < 0.05f) // small epsilon
+            return true; // Occluded
+    }
+
+    return false; // No blocker found
+}
+*/
+bool IsOccluded(float3 lightPos, float3 fragPos, Texture2D positionMap, float distanceToLight)
+{
+    const int steps = 20;
+    float3 rayDir = normalize(fragPos - lightPos);
+    float totalDist = length(fragPos - lightPos);
+    float stepSize = totalDist / steps;
+
+    for (int j = 1; j < steps; ++j)
+    {
+        float3 samplePoint = lightPos + rayDir * (j * stepSize);
+
+        float4 clip = mul(float4(samplePoint, 1.0), ViewProjection);
+        clip /= clip.w;
+        clip.y = -clip.y;
+        float2 uv = clip.xy * 0.5 + 0.5;
+
+        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
+            continue;
+
+        float sceneDepth = positionMap.SampleLevel(samplerState, uv, 0).r;
+        float lightDepth = clip.z;
+
+        if (sceneDepth < lightDepth - 0.01f)  // small bias to avoid z-fighting
+        {
+            return true; // Occluded
+        }
+    }
+
+    return false; // No occlusion found
+}
+
+float3 ReconstructWorldPosition(float2 uv, float depth)
+{
+    uv.y = 1.0 - uv.y; // Flip Y
+
+    float ndcZ = depth * 2.0f - 1.0f;
+
+    float4 clipPos;
+    clipPos.xy = uv * 2.0f - 1.0f;
+    clipPos.z = ndcZ;
+    clipPos.w = 1.0f;
+
+    float4 viewPos = mul(clipPos, InvProjection);
+    viewPos /= viewPos.w;
+
+    float4 worldPos = mul(viewPos, InvView);
+    return worldPos.xyz;
+}
 
 float4 main(VVSOutput input) : SV_TARGET
 {
-
-    float4 normal = normalMap.Sample(samplerState, input.texcoord);
+    float4 normal = normalMap.SampleLevel(samplerState, input.texcoord, 0);
     normal.xyz = normalize(normal.xyz);
     float metallic = normal.w;
     clip(-metallic + 1.0);
     
-    float ssao = SSAOMap.Sample(clampSampler, input.texcoord);
-    float4 albedo = albedoMap.Sample(samplerState, input.texcoord);
+    float ssao = SSAOMap.SampleLevel(clampSampler, input.texcoord, 0);
+    float4 albedo = albedoMap.SampleLevel(samplerState, input.texcoord, 0);
     albedo.rgb = pow(albedo.rgb, 2.2);
     float ao = saturate(albedo.w + ssao);
     
-    float4 worldPosition = positionMap.Sample(samplerState, input.texcoord);
+    float4 worldPosition = positionMap.SampleLevel(samplerState, input.texcoord, 0);
+    
+    float depth = length(worldPosition.xyz - cameraPosition.xyz);
     
     float roughness = worldPosition.w;
 
@@ -214,7 +300,7 @@ float4 main(VVSOutput input) : SV_TARGET
     float Shadow = ShadowCalculation(mul(float4(worldPosition.xyz, 1.0), LightProjection));
     
     float3 sunDirection = float3(0, -1, 0);
-    
+    float3 fogLightTerm =float3(0, 0, 0);
     for (float i = 0.0; i < cameraPosition.w; i++)
     {
         if (lights[i].lightType == PointLight)
@@ -228,6 +314,33 @@ float4 main(VVSOutput input) : SV_TARGET
             
             float3 H = normalize(viewDir + lightDirection);
             brdfRec += computeReflectance(normal.xyz, viewDir, F0, albedo.rgb, lightDirection, H, lights[i].color.xyz, intensity, metallic, roughness);
+            
+            //float4 lightClipPos = mul(float4(lights[i].position.xyz, 1.0), ViewProjection);
+            //lightClipPos /= lightClipPos.w;
+            //lightClipPos.y = -lightClipPos.y; 
+            //
+            //float2 lightScreenPos = lightClipPos.xy * 0.5 + 0.5;
+            //
+            //float2 delta = input.texcoord - lightScreenPos;
+            //float screenDistance = length(delta);
+            //
+            //float distanceToLight = length(lights[i].position.xyz - cameraPosition.xyz);
+            //
+            //float screenRadius = 6 / distanceToLight;
+            //
+            //float flare = saturate(1.0 - (screenDistance / screenRadius));
+            //
+            //flare = pow(flare, 5.0);
+            //
+            //
+            //
+            ////if (!IsOccluded(lights[i].position.xyz, worldPosition.xyz, positionMap))
+            //if (!IsOccluded(lights[i].position.xyz, worldPosition.xyz, positionMap, distanceToLight))
+            //{
+            //    fogLightTerm += lights[i].color.rgb * flare;
+            //    
+            //}
+
         }
         else if (lights[i].lightType == DirectionalLight)
         {
@@ -257,8 +370,11 @@ float4 main(VVSOutput input) : SV_TARGET
     
     iradiance = lerp(iradiance * 0.3f, iradiance, ao);
     float3 albedoByDiffuse = kD * albedo.rgb * iradiance.rgb;
-    float3 fog = length(worldPosition.xyz - cameraPosition.xyz) * fogColor.xyz * 0.01f * fogColor.a;
-    float3 color = (albedoByDiffuse + specular + brdfRec * ao) * ssao * max(Shadow,0.3) + fog;
+    float3 fog = depth * fogColor.xyz * 0.01f * fogColor.a;
+    float3 color = (albedoByDiffuse + specular + brdfRec * ao) * ssao * max(Shadow, 0.3) + 
+    iradianceMap.SampleLevel(samplerState, -viewDir, 0).rgb * fog * clamp(smoothstep(0.0, 1.0, (50.0f - worldPosition.y) * 0.02),
+    0.0f, 1.0f);
+    +fogLightTerm;
     const float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
     
     return float4(color, luminance);

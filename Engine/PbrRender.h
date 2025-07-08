@@ -42,6 +42,10 @@ private:
 	{
 		Math::Matrix viewProjection;
 		Math::Matrix lightMatrix;
+
+		Math::Matrix invView;
+		Math::Matrix invProj;
+
 		Math::Vector4 ambientLighting;
 		Math::Vector4 fogColor;
 		Math::Vector4 cameraPosition;

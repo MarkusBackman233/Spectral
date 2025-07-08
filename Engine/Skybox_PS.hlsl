@@ -42,7 +42,6 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
     float3 fragmentDirection = normalize(input.localPos.xyz);
     float fragmentHeight = max(dot(fragmentDirection, float3(0, 1, 0)), 0.0);
-    
     if (sun.w == 1.0f)
     {
         float3 sunDir = normalize(sun.xyz);
@@ -56,22 +55,21 @@ float4 main(PS_INPUT input) : SV_TARGET
             int s = sign(sunHeight);
             sunHeight *= s;
             sunHeight = saturate(sunHeight);
-            sunColor = lerp(float3(1.00000, 0.31765, 0.00392), float3(1.0, 1.0, 1.0), pow(sunHeight,0.5));
+            sunColor = lerp(float3(1.00000, 0.31765, 0.00392), float3(1.0, 1.0, 1.0), pow(sunHeight,1.5));
         }
 
-        float3 deepColor = float3(0.00092, 0.29216, 0.62549);
+        float3 deepColor = pow(float3(0.00092, 0.29216, 0.62549),1.1);
         float3 lightColor = float3(0.898, 0.902, 0.922);
 
         
         float3 color;
         { // atmosphere
-            int s = sign(fragmentHeight);
 
             fragmentHeight = saturate(fragmentHeight);
             
             float sunRotation = dot(normalize(input.localPos.xz), -normalize(sun.xz));
             
-            float3 horizonColor = lerp(lightColor * (1.0 - (sunHeight * 0.5 + 0.1)), sunColor,  (sunHeight)+sunRotation * 0.2);
+            float3 horizonColor = lerp(lightColor * (1.0 - (sunHeight * 0.5 + 0.1)), sunColor,  sunHeight + sunRotation * 0.2);
             color = lerp(horizonColor, deepColor, fragmentHeight);
         }
         
@@ -100,6 +98,7 @@ float4 main(PS_INPUT input) : SV_TARGET
             float starBrightness = Rand3dTo1d(fragmentDirection + float3(0.123, 0.123, 0.123)) * (1.0f - sunDownFraction);
             color = max(float3(starBrightness, starBrightness, starBrightness), color);
         }
+        
         return float4(color, 1.0);
     }
     fragmentDirection.z = -fragmentDirection.z;

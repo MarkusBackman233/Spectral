@@ -13,6 +13,7 @@
 #include "WindowsManager.h"
 #include "InstanceManager.h"
 #include "GuiManager.h"
+#include "CloudGenerator.h"
 
 class RenderManager
 {
@@ -46,6 +47,7 @@ private:
 	LineRenderer m_lineRenderer;
 	GuizmoRenderer m_guizmoRenderer;
 	GuiManager m_guiManager;
+	CloudGenerator m_cloudGenerator;
     FXAA m_FXAA;
     SSAO m_SSAO;
 	std::unique_ptr<PerspectiveCamera> m_camera;

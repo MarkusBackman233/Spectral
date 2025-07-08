@@ -8,6 +8,7 @@
 #include "ProfilerManager.h"
 #include "Light.h"
 #include "TimeManager.h"
+#include "CloudGenerator.h"
 
 using namespace DirectX;
 
@@ -106,6 +107,7 @@ void SkyboxManager::CreateResources(ID3D11DeviceContext* context, ID3D11Device* 
 void SkyboxManager::RenderSkybox(ID3D11DeviceContext* context, ID3D11RenderTargetView* renderTarget)
 {
     ProfileFunction
+
     context->PSSetShaderResources(0, 1, m_skybox.Resource.GetAddressOf());
     Render::SetShaders(m_skyboxPixelShader, m_skyboxVertexShader, m_pInputLayout, context);
     m_pixelConstantBuffer.skyboxColor.w = 0.0f;

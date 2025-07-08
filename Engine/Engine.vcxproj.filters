@@ -357,6 +357,9 @@
     <ClCompile Include="Prefab.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CloudGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Vector3.h">
@@ -686,6 +689,9 @@
     <ClInclude Include="Prefab.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CloudGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -740,6 +746,12 @@
       <Filter>Source Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="SkyboxSpecular_PS.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Cloud_PS.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Cloud_VS.hlsl">
       <Filter>Source Files\Shaders</Filter>
     </FxCompile>
   </ItemGroup>

@@ -52,6 +52,8 @@ void PbrRender::Process(
     auto& lightSettings = scene.GetLightingSettings();
 
     m_pixelConstantBuffer.viewProjection = Render::GetViewProjectionMatrix();
+    m_pixelConstantBuffer.invView = Render::GetViewMatrix().GetInverse();
+    m_pixelConstantBuffer.invProj = Render::GetProjectionMatrix().GetInverse();
     m_pixelConstantBuffer.lightMatrix = shadowManager.GetShadowViewProjectionMatrix();
     m_pixelConstantBuffer.ambientLighting = lightSettings.AmbientLight;
     m_pixelConstantBuffer.fogColor = lightSettings.FogColor;
