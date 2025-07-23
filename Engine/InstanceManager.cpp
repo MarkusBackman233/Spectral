@@ -1,6 +1,8 @@
 #include "InstanceManager.h"
 #include "iRender.h"
 #include "ProfilerManager.h"
+#include "Mesh.h"
+#include "IMaterial.h"
 
 constexpr uint32_t InitialMaxInstances = 8;
 

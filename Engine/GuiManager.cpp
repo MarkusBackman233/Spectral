@@ -12,8 +12,14 @@ void GuiManager::CreateResources(ID3D11Device* device, HWND hwnd, ID3D11DeviceCo
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
+	ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad | ImGuiConfigFlags_DockingEnable;
 	ImGui::StyleColorsDark();
+	ImGui::GetStyle().WindowMenuButtonPosition = ImGuiDir::ImGuiDir_Right;
+	ImGui::GetStyle().TabRounding = 0;
+	ImGui::GetStyle().WindowBorderSize = 0;
+	ImGui::GetStyle().FrameBorderSize = 1;
+	ImGui::GetStyle().WindowPadding = ImVec2(2, 2);
+	ImGui::GetStyle().TreeLinesFlags = ImGuiTreeNodeFlags_DrawLinesFull;
 	ImGui_ImplWin32_Init(hwnd);
 	ImGui_ImplDX11_Init(device, context);
 }

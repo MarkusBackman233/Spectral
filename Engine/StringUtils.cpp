@@ -62,3 +62,15 @@ bool StringUtils::StringContainsCaseInsensitive(std::string string, std::string 
     std::transform(subString.begin(), subString.end(), subString.begin(), ::tolower);
     return string.find(subString) != std::string::npos;
 }
+
+bool StringUtils::StringEqualsCaseInsensitive(const std::string& a, const std::string& b)
+{
+    if (a.size() != b.size())
+        return false;
+
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::tolower(a[i]) != std::tolower(b[i]))
+            return false;
+    }
+    return true;
+}

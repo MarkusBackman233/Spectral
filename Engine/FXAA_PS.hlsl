@@ -2122,5 +2122,5 @@ float4 main(VVSOutput input) : SV_Target
     const float luminance = dot(color.rgb, float3(0.2126, 0.7152, 0.0722));
     const float mappedLuminance = (luminance * (1.0 + luminance / (pureWhite * pureWhite))) / (exposure + luminance);
     const float3 mappedColor = (mappedLuminance / luminance) * color;
-   return float4(pow(mappedColor.rgb, 1.0 / 2.2), 1.0);
+    return float4(pow(color.rgb, 1.0 / 2.2), 1.0);
 }

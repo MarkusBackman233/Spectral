@@ -2,6 +2,9 @@
 #include "iRender.h"
 #include "ProfilerManager.h"
 #include "DeviceResources.h"
+#ifdef EDITOR
+#include <Editor.h>
+#endif
 FXAA::FXAA()
     : PostProcessing()
 {
@@ -16,8 +19,21 @@ void FXAA::CreateResources(ID3D11Device* device)
 void FXAA::Process(ID3D11DeviceContext* context, const DeviceResources& deviceResources)
 {
     ProfileFunction
-    ID3D11RenderTargetView* postPorcessingRenderTarget[] = { deviceResources.GetBackBufferTarget() };
-    context->OMSetRenderTargets(1, postPorcessingRenderTarget, nullptr);
+
+        ID3D11RenderTargetView* renderTarget[1]{};
+#ifdef EDITOR
+    if (Editor::GetInstance()->IsStarted())
+    {
+        renderTarget[0] = {deviceResources.GetBackBufferTarget()};
+    }
+    else
+    {
+        renderTarget[0] = { deviceResources.GetPostRenderTarget() };
+    }
+#else
+    renderTarget[0] = { deviceResources.GetBackBufferTarget() };
+#endif
+    context->OMSetRenderTargets(1, renderTarget, nullptr);
 
     SetVertexBuffer(context);
     Render::SetShaders(m_pixelShader, m_vertexShader, m_inputLayout, context);

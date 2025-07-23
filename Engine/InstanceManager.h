@@ -2,15 +2,15 @@
 #include <d3d11.h>
 #include <unordered_map>
 #include <wrl.h>
-
 #include "Matrix.h"
-#include "Mesh.h"
-#include "Material.h"
+
+class Mesh;
+class IMaterial;
 
 struct DrawableInstance
 {
 	std::shared_ptr<Mesh> Mesh;
-	std::shared_ptr<Material> Material;
+	std::shared_ptr<IMaterial> Material;
 
 
 	bool operator==(const DrawableInstance& other) const
@@ -27,7 +27,7 @@ namespace std
 		size_t operator()(const DrawableInstance& instance) const
 		{
 			size_t h1 = std::hash<std::shared_ptr<Mesh>>{}(instance.Mesh);
-			size_t h2 = std::hash<std::shared_ptr<Material>>{}(instance.Material);
+			size_t h2 = std::hash<std::shared_ptr<IMaterial>>{}(instance.Material);
 			return h1 ^ (h2 << 1);
 		}
 	};

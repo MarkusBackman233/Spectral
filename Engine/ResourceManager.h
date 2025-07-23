@@ -7,7 +7,7 @@
 #include "Texture.h"
 #include "AudioSource.h"
 #include "Mesh.h"
-#include "Material.h"
+#include "DefaultMaterial.h"
 #include "Script.h"
 #include "IOManager.h"
 #include "Prefab.h"

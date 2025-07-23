@@ -145,7 +145,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         if (auto* sun = scene.GetSun())
         {
     
-            if (m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.y != sun->Direction.y || m_pixelConstantBuffer.skyboxColor.z != sun->Direction.z)
+            if (m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.y != sun->Direction.y || m_pixelConstantBuffer.skyboxColor.z != -sun->Direction.z)
             {
                 sunHasChanged = true;
                 m_pixelConstantBuffer.data.z = 0.0f;
@@ -153,7 +153,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
     
             m_pixelConstantBuffer.skyboxColor.x = sun->Direction.x;
             m_pixelConstantBuffer.skyboxColor.y = sun->Direction.y;
-            m_pixelConstantBuffer.skyboxColor.z = sun->Direction.z;
+            m_pixelConstantBuffer.skyboxColor.z = -sun->Direction.z;
     
         }
     
@@ -168,10 +168,10 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
 
 
     static XMMATRIX views[6] = {
-        XMMatrixLookToLH(XMVectorSet(0,  0,  0, 0), XMVectorSet(1,  0,  0, 0), XMVectorSet(0, 1, 0, 0)),  // +X
-        XMMatrixLookToLH(XMVectorSet(0,  0,  0, 0), XMVectorSet(-1,  0,  0, 0), XMVectorSet(0, 1, 0, 0)),  // -X
-        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  1,  0, 0), XMVectorSet(0, 0, -1, 0)), // +Y
-        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0, -1,  0, 0), XMVectorSet(0, 0,  1, 0)), // -Y
+        XMMatrixLookToLH(XMVectorSet(0,  0,  0, 0), XMVectorSet(-1,  0,  0, 0), XMVectorSet(0, 1, 0, 0)),  // +X
+        XMMatrixLookToLH(XMVectorSet(0,  0,  0, 0), XMVectorSet(1,  0,  0, 0), XMVectorSet(0, 1, 0, 0)),  // -X
+        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  -1,  0, 0), XMVectorSet(0, 0, 1, 0)), // +Y
+        XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0, 1,  0, 0), XMVectorSet(0, 0,  -1, 0)), // -Y
         XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  0,  1, 0), XMVectorSet(0, 1, 0, 0)),  // +Z
         XMMatrixLookToLH(XMVectorZero(), XMVectorSet(0,  0, -1, 0), XMVectorSet(0, 1, 0, 0))   // -Z
     };

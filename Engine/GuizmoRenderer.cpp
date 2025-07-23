@@ -55,10 +55,6 @@ void GuizmoRenderer::Render(ID3D11DeviceContext* context, const DeviceResources&
 
             auto camMat = Render::GetCamera()->GetWorldMatrix();
             camMat.SetPosition(Math::Vector3(0.0f, 0.0f, 0.0f));
-            float width = 0.5f;
-
-            Math::Vector3 r = camMat.GetRight() * width;
-            Math::Vector3 up = camMat.GetUp() * width;
 
             Math::Vector3 corner1 = position + Math::Vector3(-0.5f, -0.5f, 0.0f).Transform(camMat);
             Math::Vector3 corner2 = position + Math::Vector3(0.5f, -0.5f, 0.0f).Transform(camMat);

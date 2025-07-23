@@ -106,7 +106,7 @@ Matrix Matrix::MakeRotationXYZAndTranslate(const Vector3& xyzAngleInRad, const V
 
 Matrix Matrix::MakePerspective(float fov, float aspectRatio, float nearClip, float farClip)
 {
-	return DxMathUtils::ToSp(DirectX::XMMatrixPerspectiveFovRH(fov, aspectRatio, nearClip, farClip));
+	return DxMathUtils::ToSp(DirectX::XMMatrixPerspectiveFovLH(fov, aspectRatio, nearClip, farClip));
 }
 
 void Matrix::LookAt(const Vector3& pos, const Vector3& target, const Vector3& up)
@@ -196,7 +196,7 @@ void Matrix::SetPosition(const Vector3& pos)
 
 Vector3 Matrix::GetScale() const
 {
-	return Vector3(RightLength(), UpLength(), FrontLength());
+	return Vector3(LeftLength(), UpLength(), FrontLength());
 }
 
 Vector4 Matrix::GetQuaternion() const
@@ -265,9 +265,9 @@ Vector3 Matrix::operator*(const Vector3& A) const
 	return vector;
 }
 
-Vector3 Matrix::GetRight() const
+Vector3 Matrix::GetLeft() const
 {
-	return Vector3(data[0][0], data[0][1], data[0][2]).GetNormal();
+	return -Vector3(data[0][0], data[0][1], data[0][2]).GetNormal();
 }
 
 Vector3 Matrix::GetUp() const
@@ -281,7 +281,7 @@ Vector3 Matrix::GetFront() const
 }
 
 
-float Matrix::RightLength() const
+float Matrix::LeftLength() const
 {
 	return Vector3(data[0][0], data[0][1], data[0][2]).Length();
 }
@@ -296,7 +296,7 @@ float Matrix::FrontLength() const
 	return Vector3(data[2][0], data[2][1], data[2][2]).Length();
 }
 
-void Matrix::SetRight(const Vector3& direction)
+void Matrix::SetLeft(const Vector3& direction)
 {
 	data[0][0] = direction.x;
 	data[0][1] = direction.y;

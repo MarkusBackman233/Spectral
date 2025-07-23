@@ -24,13 +24,13 @@ void ScriptPropertyWindow::PopulateWindow()
         ImGui::SetNextItemWidth(200);
         if (ImGui::InputText("Script Name##ObjectName", buffer, sizeof(buffer))) {
             ScriptName = buffer;
-            ScriptName.append(IOManager::GetResourceData<IOManager::ResourceType::Script>().SpectralExtension);
+            ScriptName.append(IOManager::GetResourceData<ResourceType::Script>().SpectralExtension);
         }
 
         ImGui::NewLine();
         if (ImGui::Button("Create", ImVec2(200, 30))) {
             auto file = IOManager::ProjectDirectory /
-                IOManager::GetResourceData<IOManager::ResourceType::Script>().Folder / ScriptName;
+                IOManager::GetResourceData<ResourceType::Script>().Folder / ScriptName;
 
             std::filesystem::create_directories(file.parent_path());
             std::ofstream lua_file(file);

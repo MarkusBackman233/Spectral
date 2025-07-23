@@ -250,7 +250,16 @@ LRESULT CALLBACK WindowsManager::StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM w
         {
             return 0;
         }
-        RenderManager::GetInstance()->OnWindowResize();
+
+        RenderManager::GetInstance()->OnWindowResize(Math::Vector2(static_cast<float>(width), static_cast<float>(height)));
+#ifdef EDITOR
+        if (Editor::GetInstance()->IsStarted())
+        {
+            RenderManager::GetInstance()->OnViewportResize(Math::Vector2(0.0f,0.0f), Math::Vector2(static_cast<float>(width), static_cast<float>(height)));
+        }
+#endif // EDITOR
+
+
         break;
     }
 #ifdef EDITOR

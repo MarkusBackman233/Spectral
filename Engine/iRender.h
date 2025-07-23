@@ -24,7 +24,7 @@ struct D3D11_BUFFER_DESC;
 struct D3D11_SUBRESOURCE_DATA;
 
 class Mesh;
-class Material;
+class IMaterial;
 class MeshComponent;
 class LockedContext;
 class Texture;
@@ -103,7 +103,7 @@ namespace Render
 	HRESULT CreateConstantBuffer(ID3D11Device* device, size_t size, Microsoft::WRL::ComPtr<ID3D11Buffer>& buffer);
 	void	UpdateConstantBuffer(SHADER_TYPE shaderType, int slotIndex, Microsoft::WRL::ComPtr<ID3D11Buffer>& destinationData, const void* sourceData, ID3D11DeviceContext* context);
 
-	void	DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, const Math::Matrix& matrix);
+	void	DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<IMaterial> material, const Math::Matrix& matrix);
 	void	DrawText2D(const std::string& text, const Math::Vector2& position);
 	void	DrawText2D(const std::string& text, const Math::Vector2& position);
 	void	DrawLine(const Math::Vector3& start, const Math::Vector3& end, const Math::Vector4& color = Math::Vector4(1,1,1,1));
@@ -113,6 +113,8 @@ namespace Render
 	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture);
 
 	Math::Vector2i	GetWindowSize();
+	Math::Vector2	GetViewportSizef();
+	Math::Vector2	GetViewportPosition();
 	Math::Vector2	GetWindowSizef();
 	void SetWindowSize(const Math::Vector2i& size);
 	void SetWindowIcon(const std::string& iconName);

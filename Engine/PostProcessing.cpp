@@ -12,10 +12,10 @@ PostProcessing::PostProcessing()
 void PostProcessing::CreatePostProcessingResources(ID3D11Device* device)
 {
     std::vector<Vertex> vertices = {
-        { Math::Vector3(-1.0f,  1.0f, 0.0f), Math::Vector2(0.0f, 0.0f) },
-        { Math::Vector3(1.0f,  1.0f, 0.0f), Math::Vector2(1.0f, 0.0f) },
-        { Math::Vector3(-1.0f, -1.0f, 0.0f), Math::Vector2(0.0f, 1.0f) },
-        { Math::Vector3(1.0f, -1.0f, 0.0f), Math::Vector2(1.0f, 1.0f) },
+        { Math::Vector3(-1.0f,  1.0f, 0.0f), Math::Vector2(0.0f, 0.0f) }, // 0
+        { Math::Vector3(-1.0f, -1.0f, 0.0f), Math::Vector2(0.0f, 1.0f) }, // 2
+        { Math::Vector3(1.0f,   1.0f, 0.0f), Math::Vector2(1.0f, 0.0f) }, // 1
+        { Math::Vector3(1.0f,  -1.0f, 0.0f), Math::Vector2(1.0f, 1.0f) }, // 3
     };
 
     m_vertexBuffer = Render::CreateVertexBuffer(device, vertices);

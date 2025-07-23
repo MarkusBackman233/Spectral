@@ -12,6 +12,7 @@ public:
 	static std::string WideStringToString(const std::wstring& string);
 
 	static bool StringContainsCaseInsensitive(std::string string, std::string subString);
+	static bool StringEqualsCaseInsensitive(const std::string& a, const std::string& b);
 
 };
 

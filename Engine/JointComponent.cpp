@@ -37,7 +37,7 @@ void JointComponent::Start()
 
 void JointComponent::Render()
 {
-	Render::DrawLine(m_owner->GetWorldMatrix().GetPosition(), m_owner->GetWorldMatrix().GetPosition() + m_owner->GetWorldMatrix().GetRight());
+	Render::DrawLine(m_owner->GetWorldMatrix().GetPosition(), m_owner->GetWorldMatrix().GetPosition() + m_owner->GetWorldMatrix().GetLeft());
 }
 
 Json::Object JointComponent::SaveComponent()

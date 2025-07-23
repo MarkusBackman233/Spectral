@@ -122,7 +122,7 @@ GameObject* Script::CreateGameObject(const std::string& name)
 
 GameObject* Script::SpawnPrefab(const std::string& name)
 {
-    auto prefabObject = ResourceManager::GetInstance()->GetResource<Prefab>(name + IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension)->GetPrefabRoot();
+    auto prefabObject = ResourceManager::GetInstance()->GetResource<Prefab>(name + IOManager::GetResourceData<ResourceType::Prefab>().SpectralExtension)->GetPrefabRoot();
     if (!prefabObject)
     {
         Logger::Error(std::string("Could not find prefab with name: ") + name);
@@ -185,7 +185,7 @@ void Script::ReloadScript()
     m_exposedVariables.clear();
     //m_lua = sol::state();
 
-    auto filepath = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Script>().Folder / m_filename;
+    auto filepath = IOManager::ProjectDirectory / IOManager::GetResourceData<ResourceType::Script>().Folder / m_filename;
     try {
         m_lua.script_file(filepath.string());
         SetBindings();
@@ -324,7 +324,7 @@ void Script::SetBindings()
             "SetPosition", &Math::Matrix::SetPosition,
             "LookAt", &Math::Matrix::LookAt,
             "GetFront", &Math::Matrix::GetFront,
-            "GetRight", &Math::Matrix::GetRight,
+            "GetLeft", &Math::Matrix::GetLeft,
             "GetUp", &Math::Matrix::GetUp
         );
 

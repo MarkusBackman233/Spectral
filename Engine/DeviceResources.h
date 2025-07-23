@@ -25,14 +25,18 @@ public:
     void CreateResources(HWND hWnd, const Math::Vector2& windowSize);
 
     void ConfigureBackBuffer(const Math::Vector2& windowSize);
+    void ConfigureViewport(const Math::Vector2& windowSize);
     void ReleaseBackBuffer();
+    void ReleaseViewport();
     void ResizeSwapchain();
 
     ID3D11Device* GetDevice() const { return m_pd3dDevice.Get(); };
     LockedContext GetLockedDeviceContext();
     ID3D11RenderTargetView* GetBackBufferTarget() const { return m_pBackbufferRenderTarget.Get(); }
     ID3D11RenderTargetView* GetRenderTarget() const { return m_pRenderTarget.Get(); }
+
     ID3D11RenderTargetView* GetPostRenderTarget() const { return m_pPostRenderTarget.Get(); }
+    ID3D11ShaderResourceView* GetPostSRV() const { return m_pPostSRV.Get(); }
 
     ID3D11DepthStencilView* GetDepthStencil() const { return m_pDepthStencilView.Get(); }
     ID3D11ShaderResourceView* GetDepthSRV() const { return m_pDepthSRV.Get(); }
@@ -70,6 +74,7 @@ private:
 
 
     Microsoft::WRL::ComPtr<ID3D11Texture2D>          m_pPostProcessingRenderTexture;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_pPostSRV;
     Microsoft::WRL::ComPtr<ID3D11RenderTargetView>   m_pPostRenderTarget;
 
 

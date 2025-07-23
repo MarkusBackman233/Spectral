@@ -2,11 +2,11 @@
 #include "MaterialPropertyWindow.h"
 #include "src/IMGUI/imgui_internal.h"
 #include "StringUtils.h"
-#include "Material.h"
+#include "DefaultMaterial.h"
 #include "ResourceManager.h"
 #include "IOManager.h"
 
-MaterialPropertyWindow::MaterialPropertyWindow(std::function<void(std::shared_ptr<Material>)> onSelectedMaterial)
+MaterialPropertyWindow::MaterialPropertyWindow(std::function<void(std::shared_ptr<DefaultMaterial>)> onSelectedMaterial)
     : m_onSelectedMaterial(onSelectedMaterial)
 {
 
@@ -30,17 +30,17 @@ void MaterialPropertyWindow::PopulateWindow()
         }
         if (ImGui::Button("Create", buttonSize))
         { 
-            materialName.append(IOManager::GetResourceData<IOManager::ResourceType::Material>().SpectralExtension);
+            materialName.append(IOManager::GetResourceData<ResourceType::Material>().SpectralExtension);
 
-            auto material = std::make_shared<Material>();
+            auto material = std::make_shared<DefaultMaterial>();
             material->m_filename = materialName;
             material->SetTexture(0, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_albedo.bmp"));
             material->SetTexture(1, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_normal.bmp"));
             IOManager::SaveSpectralMaterial(material);
 
             auto file = IOManager::ProjectDirectory /
-                IOManager::GetResourceData<IOManager::ResourceType::Material>().Folder / materialName;
-            ResourceManager::GetInstance()->GetResource<Material>(file);
+                IOManager::GetResourceData<ResourceType::Material>().Folder / materialName;
+            ResourceManager::GetInstance()->GetResource<DefaultMaterial>(file);
             materialName = "";
             ImGui::CloseCurrentPopup();
         }
@@ -51,7 +51,7 @@ void MaterialPropertyWindow::PopulateWindow()
         ImGui::OpenPopup("New Material");
     }
     ImGui::Separator();
-    auto materials = ResourceManager::GetInstance()->GetResources<Material>();
+    auto materials = ResourceManager::GetInstance()->GetResources<DefaultMaterial>();
 
     for (const auto& material : materials)
     {

@@ -367,15 +367,17 @@ float4 main(VVSOutput input) : SV_TARGET
     float3 kS = F;
     float3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;
-    
     iradiance = lerp(iradiance * 0.3f, iradiance, ao);
     float3 albedoByDiffuse = kD * albedo.rgb * iradiance.rgb;
-    float3 fog = depth * fogColor.xyz * 0.01f * fogColor.a;
+    
+
+    float3 fog = min(pow(depth * 0.01, 1.0 + fogColor.a), 1.0) * fogColor.xyz ;
     float3 color = (albedoByDiffuse + specular + brdfRec * ao) * ssao * max(Shadow, 0.3) + 
     iradianceMap.SampleLevel(samplerState, -viewDir, 0).rgb * fog * clamp(smoothstep(0.0, 1.0, (50.0f - worldPosition.y) * 0.02),
     0.0f, 1.0f);
     +fogLightTerm;
     const float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
+    
     
     return float4(color, luminance);
 }

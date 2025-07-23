@@ -11,7 +11,7 @@ struct aiNode;
 
 class Mesh;
 class GameObject;
-class Material;
+class DefaultMaterial;
 
 namespace Math
 {
@@ -115,7 +115,18 @@ public:
 private:
 	std::ifstream m_file;
 };
+enum class ResourceType
+{
+	Model,
+	Texture,
+	Audio,
+	Scene,
+	Script,
+	Material,
+	Prefab,
 
+	Num
+};
 
 class IOManager
 {
@@ -126,18 +137,7 @@ public:
 	static std::filesystem::path ProjectDirectory;
 	static std::filesystem::path ExecutableDirectory;
 
-	enum class ResourceType
-	{
-		Model,
-		Texture,
-		Audio,
-		Scene,
-		Script,
-		Material,
-		Prefab,
 
-		Num
-	};
 
 	struct IOResourceData
 	{
@@ -145,7 +145,6 @@ public:
 		std::string SpectralExtension;
 		std::vector<std::string> SupportedExtensions;
 	};
-
 	static std::array<IOResourceData, static_cast<uint8_t>(ResourceType::Num)> IOResources;
 
 	template <ResourceType T>
@@ -168,7 +167,7 @@ public:
 
 	static bool CreateDefaultScene();
 
-	static void SaveSpectralMaterial(std::shared_ptr<Material> material);
+	static void SaveSpectralMaterial(std::shared_ptr<DefaultMaterial> material);
 
 	static void CollectProjectFiles();
 

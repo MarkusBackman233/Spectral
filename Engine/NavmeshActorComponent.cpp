@@ -71,7 +71,7 @@ void NavmeshActorComponent::Update(float deltaTime)
         auto scale = m_owner->GetWorldMatrix().GetScale();
 
         mat.SetFront(mat.GetFront() * scale.z);
-        mat.SetRight(mat.GetRight() * scale.x);
+        mat.SetLeft(mat.GetLeft() * scale.x);
         mat.SetUp(mat.GetUp() * scale.y);
 
         position.y += m_agentParams.height;

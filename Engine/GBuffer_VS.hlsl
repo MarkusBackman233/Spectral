@@ -7,6 +7,7 @@ cbuffer VertexConstantBuffer : register(b0)
 struct VS_INPUT
 {
     float3 position : POSITION;
+    float4 color : COLOR;
     float2 textureUV : TEXCOORD;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
@@ -16,6 +17,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
     float4 position : SV_POSITION;
+    float4 color : COLOR;
     float3 worldPos : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 tangent : TEXCOORD2;
@@ -40,6 +42,6 @@ VS_OUTPUT main(VS_INPUT input)
     
     
     output.texcoord = input.textureUV;
-
+    output.color = input.color;
     return output;
 }

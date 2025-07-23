@@ -20,7 +20,7 @@ namespace Render
 		return RenderManager::GetInstance()->GetDeviceResources()->GetDefaultSamplerState();
 	}
 
-	void DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, const Math::Matrix& matrix)
+	void DrawInstance(std::shared_ptr<Mesh> mesh, std::shared_ptr<IMaterial> material, const Math::Matrix& matrix)
 	{
 		RenderManager::GetInstance()->GetInstanceManager()->AddInstance(DrawableInstance{ mesh,material }, matrix);
 	}
@@ -43,7 +43,7 @@ namespace Render
 	}
 	Math::Vector3 GetCameraDirection()
 	{
-		return -RenderManager::GetInstance()->GetCamera()->GetWorldMatrix().GetFront();
+		return RenderManager::GetInstance()->GetCamera()->GetWorldMatrix().GetFront();
 	}
 
 
@@ -155,6 +155,16 @@ namespace Render
 		Math::Vector2 windowSize = RenderManager::GetInstance()->GetWindowsManager()->GetWindowSize();
 
 		return Math::Vector2i(static_cast<int>(windowSize.x), static_cast<int>(windowSize.y));
+	}
+
+	Math::Vector2 GetViewportSizef()
+	{
+		return RenderManager::GetInstance()->GetViewportSize();
+	}
+
+	Math::Vector2 GetViewportPosition()
+	{
+		return RenderManager::GetInstance()->GetViewportPos();
 	}
 
 	Math::Vector2 GetWindowSizef()

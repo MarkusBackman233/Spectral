@@ -42,6 +42,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
     float3 fragmentDirection = normalize(input.localPos.xyz);
     float fragmentHeight = max(dot(fragmentDirection, float3(0, 1, 0)), 0.0);
+    
     if (sun.w == 1.0f)
     {
         float3 sunDir = normalize(sun.xyz);

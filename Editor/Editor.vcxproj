@@ -152,10 +152,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AssetBrowser.h" />
     <ClInclude Include="AudioSourcePropertyWindow.h" />
     <ClInclude Include="ComponentPropertyWindow.h" />
     <ClInclude Include="Editor.h" />
     <ClInclude Include="EditorCameraController.h" />
+    <ClInclude Include="EditorGUI.h" />
     <ClInclude Include="EditorUtils.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MaterialPropertyWindow.h" />
@@ -166,7 +168,9 @@
     <ClInclude Include="PropertyWindow.h" />
     <ClInclude Include="PropertyWindowFactory.h" />
     <ClInclude Include="ScriptPropertyWindow.h" />
+    <ClInclude Include="TerrainEditor.h" />
     <ClInclude Include="TexturePropertyWindow.h" />
+    <ClInclude Include="Thumbnail.h" />
     <ClInclude Include="Undo.h" />
     <ClInclude Include="UndoCreateGameObject.h" />
     <ClInclude Include="UndoDeleteGameObject.h" />
@@ -174,10 +178,12 @@
     <ClInclude Include="UndoTransform.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AssetBrowser.cpp" />
     <ClCompile Include="AudioSourcePropertyWindow.cpp" />
     <ClCompile Include="ComponentPropertyWindow.cpp" />
     <ClCompile Include="Editor.cpp" />
     <ClCompile Include="EditorCameraController.cpp" />
+    <ClCompile Include="EditorGUI.cpp" />
     <ClCompile Include="EditorUtils.cpp" />
     <ClCompile Include="MaterialPropertyWindow.cpp" />
     <ClCompile Include="MeshPropertyWindow.cpp" />
@@ -193,7 +199,9 @@
     <ClCompile Include="PropertyWindow.cpp" />
     <ClCompile Include="PropertyWindowFactory.cpp" />
     <ClCompile Include="ScriptPropertyWindow.cpp" />
+    <ClCompile Include="TerrainEditor.cpp" />
     <ClCompile Include="TexturePropertyWindow.cpp" />
+    <ClCompile Include="Thumbnail.cpp" />
     <ClCompile Include="Undo.cpp" />
     <ClCompile Include="UndoCreateGameObject.cpp" />
     <ClCompile Include="UndoDeleteGameObject.cpp" />

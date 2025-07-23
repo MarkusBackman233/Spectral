@@ -10,10 +10,11 @@ public:
 	virtual void CreateViewAndPerspective() override;
 	void UpdateAspectRatio(Math::Vector2 size);
 
-private:
 	float m_fov;
 	float m_nearClip;
 	float m_farClip;
 	float m_aspectRatio;
+private:
+
 };
 

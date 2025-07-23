@@ -34,6 +34,8 @@
 #include "ResourceManager.h"
 #include "UndoCreateGameObject.h"
 #include "UndoSetParent.h"
+#include "TerrainEditor.h"
+
 using namespace Spectral;
 
 int Editor::ColorPickerMask = ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoSmallPreview | ImGuiColorEditFlags_NoTooltip 
@@ -45,6 +47,7 @@ Editor::Editor()
     , m_currentGizmoMode(ImGuizmo::WORLD)
     , m_useSnap(false)
     , m_started(false)
+    , m_isViewportHovered(false)
     , m_windowsOpen(true)
     , m_rightMenuSizeX(400)
     , m_leftMenuSizeX(200)
@@ -52,7 +55,7 @@ Editor::Editor()
     , m_propertyWindow(nullptr)
 {
     ImGuizmo::AllowAxisFlip(false);
-    m_defaultWindowFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
+    m_defaultWindowFlags = ImGuiWindowFlags_None;
     Logger::Info("Welcome!");
 }
 
@@ -63,6 +66,7 @@ Editor::~Editor()
 
 void Editor::PreRender()
 {
+
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
@@ -72,17 +76,36 @@ void Editor::PreRender()
 void Editor::Render()
 {
     ImGui::Render();
-
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 }
 void Editor::Update(float deltaTime)
 {
+
     m_mainViewport = ImGui::GetMainViewport(); 
     PreRender();
+
+
     TopMenu();
-    
+    ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
+
 
     RenderManager::GetInstance()->GetGuiManager()->Render();
+
+    if (m_terrainEditor)
+    {
+        bool stayOpen = m_terrainEditor->Update();
+
+        if (!stayOpen)
+        {
+            m_terrainEditor.reset();
+            m_terrainEditor = nullptr;
+        };
+        m_editorCameraController.Update(deltaTime);
+        Viewport(false);
+        return;
+    }
+
+
     //ImGui::SetNextWindowSize(ImVec2(500,500));
     //if (ImGui::Begin("Viewport"))
     //{
@@ -93,16 +116,13 @@ void Editor::Update(float deltaTime)
     //    ImGui::End();
     //}
     //
-    ImGui::SetNextWindowSize(ImVec2(350, 450), ImGuiCond_FirstUseEver);
 
     bool open = true;
 
-    m_editorCameraController.Update(deltaTime);
 
     if (!m_started)
     {
         m_objectSelector.HandleRaycastSelection();
-        ImGui::ShowStyleEditor();
         ImGui::ShowDemoWindow();
         DrawGrid();
         for (auto* selectedGameObject : m_objectSelector.GetSelectedGameObjects())
@@ -119,14 +139,14 @@ void Editor::Update(float deltaTime)
             }
             
         }
-
+        m_assetBrowser.Update();
         PropertiesWindow();
         GameObjectsWindow();
-        if (m_objectSelector.SelectedGameObject())
-        {
-            m_objectSelector.HandleSelectedGameObject(this);
-        }
+        Viewport();
+
     }
+    m_editorCameraController.Update(deltaTime);
+
     /*
     if (ImGui::Begin("Profiling"))
     {
@@ -169,8 +189,13 @@ void Editor::HandleDropFile(const std::filesystem::path& filename)
     );
 }
 
-void Editor::GameObjectListItem(GameObject* gameObject)
+void Editor::GameObjectListItem(GameObject* gameObject, const ImGuiTextFilter& filter)
 {
+    if (!filter.PassFilter(gameObject->GetName().c_str()))
+    {
+        return;
+    }
+
     ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow |
         ImGuiTreeNodeFlags_OpenOnDoubleClick |
         ImGuiTreeNodeFlags_SpanAvailWidth | // Makes the whole row clickable/highlightable
@@ -223,7 +248,7 @@ void Editor::GameObjectListItem(GameObject* gameObject)
     {
         for (auto& childObject : children)
         {
-            GameObjectListItem(childObject);
+            GameObjectListItem(childObject, filter);
         }
         ImGui::TreePop();
     }
@@ -242,9 +267,8 @@ bool Editor::EditTransform(Math::Matrix& matrix)
         if (Input::GetKeyHeld(InputId::R))
             m_currentGizmoOperation = ImGuizmo::SCALE;        
     }
-
-    const ImGuiIO& io = ImGui::GetIO();
-    ImGuizmo::SetRect(0, 0, io.DisplaySize.x, io.DisplaySize.y);
+    
+    ImGuizmo::SetRect(Render::GetViewportPosition().x, Render::GetViewportPosition().y, Render::GetViewportSizef().x, Render::GetViewportSizef().y);
 
     bool isUsingGuizmo = ImGuizmo::Manipulate(
         Render::GetViewMatrix().Data(),
@@ -259,61 +283,58 @@ bool Editor::EditTransform(Math::Matrix& matrix)
     return isUsingGuizmo;
 }
 
+void Editor::OpenTerrainEditor(TerrainComponent* terrainComponent)
+{
+    m_terrainEditor = std::make_shared<TerrainEditor>(terrainComponent);
+}
+
 void Editor::PropertiesWindow()
 {
 
-    ImGui::SetNextWindowPos(ImVec2(m_mainViewport->WorkPos.x + m_mainViewport->WorkSize.x - m_rightMenuSizeX, m_mainViewport->WorkPos.y), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2((float)m_rightMenuSizeX , m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y ), ImGuiCond_Always);
-    ImGui::Begin("Properties Editor", &m_windowsOpen, m_defaultWindowFlags);
-    if (ImGui::BeginTabBar("RightTabBar", ImGuiTabBarFlags_None))
+    if (ImGui::Begin("Object Properties"))
     {
-        if (ImGui::BeginTabItem("Object Properties"))
+        if (m_objectSelector.SelectedGameObject() != nullptr)
         {
-            if (m_objectSelector.SelectedGameObject() != nullptr)
+            std::string objectText = m_objectSelector.SelectedGameObject()->GetName();
+            auto cstrText = (char*)objectText.c_str();
+            if (ImGui::InputText("##ObjectName", cstrText, 255))
             {
-                std::string objectText = m_objectSelector.SelectedGameObject()->GetName();
-                auto cstrText = (char*)objectText.c_str();
-                if (ImGui::InputText("##ObjectName", cstrText, 255))
-                {
-                    m_objectSelector.SelectedGameObject()->SetName(cstrText);
-                }
-                ImGui::Text(std::to_string(m_objectSelector.SelectedGameObject()->GetId()).c_str());
-                ImGui::Separator();
-                TransformWindow();
-                ImGui::Separator();
-
-                GameObjectComponentWindow();
+                m_objectSelector.SelectedGameObject()->SetName(cstrText);
             }
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("Scene"))
-        {
-            auto& scene = SceneManager::GetInstance()->GetCurrentScene();
-            ImGui::Text("Ambient Lighting");
-            ImGui::ColorPicker4("Ambient Lighting", scene.GetLightingSettings().AmbientLight.Data(), ColorPickerMask);
-            ImGui::DragFloat("Ambient Lighting Intensity", &scene.GetLightingSettings().AmbientLight.w, 0.005f, 0.0f,1.0f);
+            ImGui::Text(std::to_string(m_objectSelector.SelectedGameObject()->GetId()).c_str());
             ImGui::Separator();
-            ImGui::Text("Fog Color");
-            ImGui::ColorPicker4("Fog Color", scene.GetLightingSettings().FogColor.Data(), ColorPickerMask);
-            ImGui::DragFloat("Fog Intensity", &scene.GetLightingSettings().FogColor.w,0.005f,0.0f,1.0f);
+            TransformWindow();
+            ImGui::Separator();
 
-
-            ImGui::SeparatorText("Shadow Camera");
-            ImGui::SliderFloat("Size",      &scene.GetLightingSettings().ShadowCameraSize, 10.0f, 1000.0f);
-            ImGui::SliderFloat("Near Depth",&scene.GetLightingSettings().NearDepth,10.0f,1000.0f);
-            ImGui::SliderFloat("Far Depth", &scene.GetLightingSettings().FarDepth,10.0f,1000.0f);
-            ImGui::SliderFloat("Distance",  &scene.GetLightingSettings().CameraDistance,10.0f,1000.0f);
-            ImGui::SeparatorText("General");
-            ImGui::SliderFloat("gamma",  &scene.GetLightingSettings().gamma,0.5f,3.0f);
-
-            ImGui::SliderFloat("SSAOIntensity",  &scene.GetLightingSettings().SSAOIntensity,0.0f,10.0f);
-            ImGui::SliderFloat("SSAORadius",  &scene.GetLightingSettings().SSAORadius,0.0f,10.0f);
-            ImGui::SliderFloat("SSAOBias",  &scene.GetLightingSettings().SSAOBias,0.0f,0.1f);
-            ImGui::EndTabItem();
+            GameObjectComponentWindow();
         }
-        ImGui::EndTabBar();
     }
+    ImGui::End();
+    if (ImGui::Begin("Scene"))
+    {
+        auto& scene = SceneManager::GetInstance()->GetCurrentScene();
+        ImGui::Text("Ambient Lighting");
+        ImGui::ColorPicker4("Ambient Lighting", scene.GetLightingSettings().AmbientLight.Data(), ColorPickerMask);
+        ImGui::DragFloat("Ambient Lighting Intensity", &scene.GetLightingSettings().AmbientLight.w, 0.005f, 0.0f, 1.0f);
+        ImGui::Separator();
+        ImGui::Text("Fog Color");
+        ImGui::ColorPicker4("Fog Color", scene.GetLightingSettings().FogColor.Data(), ColorPickerMask);
+        ImGui::DragFloat("Fog Intensity", &scene.GetLightingSettings().FogColor.w, 0.005f, 0.0f, 1.0f);
 
+
+        ImGui::SeparatorText("Shadow Camera");
+        ImGui::SliderFloat("Size", &scene.GetLightingSettings().ShadowCameraSize, 10.0f, 1000.0f);
+        ImGui::SliderFloat("Near Depth", &scene.GetLightingSettings().NearDepth, 10.0f, 1000.0f);
+        ImGui::SliderFloat("Far Depth", &scene.GetLightingSettings().FarDepth, 10.0f, 1000.0f);
+        ImGui::SliderFloat("Distance", &scene.GetLightingSettings().CameraDistance, 10.0f, 1000.0f);
+        ImGui::SeparatorText("General");
+        ImGui::SliderFloat("gamma", &scene.GetLightingSettings().gamma, 0.5f, 3.0f);
+
+        ImGui::SliderFloat("SSAOIntensity", &scene.GetLightingSettings().SSAOIntensity, 0.0f, 10.0f);
+        ImGui::SliderFloat("SSAORadius", &scene.GetLightingSettings().SSAORadius, 0.0f, 10.0f);
+        ImGui::SliderFloat("SSAOBias", &scene.GetLightingSettings().SSAOBias, 0.0f, 0.1f);
+
+    }
     ImGui::End();
 }
 
@@ -465,13 +486,11 @@ void Editor::TopMenu()
 
         int currentFps = static_cast<int>(1.0f / TimeManager::GetDeltaTime());
 
-        // Shift values back
         for (int i = 4; i > 0; --i) {
             lastFps[i] = lastFps[i - 1];
         }
         lastFps[0] = currentFps;
 
-        // Average the last 5 FPS values
         int fpsSum = 0;
         for (int i = 0; i < 5; ++i) {
             fpsSum += lastFps[i];
@@ -488,6 +507,7 @@ void Editor::TopMenu()
             if (ImGui::ArrowButton("PlayId", ImGuiDir_Right))
             {
                 m_started = true;
+                RenderManager::GetInstance()->OnViewportResize(Math::Vector2(0.0f,0.0f), Render::GetWindowSizef());
             }
         }
         else if (ImGui::Button("X"))
@@ -501,43 +521,32 @@ void Editor::TopMenu()
 
 void Editor::GameObjectsWindow()
 {
-    ImGui::SetNextWindowPos(ImVec2(0, m_mainViewport->WorkPos.y), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2((float)m_leftMenuSizeX, m_mainViewport->WorkPos.y + m_mainViewport->WorkSize.y ), ImGuiCond_Always);
-    ImGui::Begin("GameObjects", &m_windowsOpen, m_defaultWindowFlags);
-    if (ImGui::BeginTabBar("Stuff"))
+    if (ImGui::Begin("Game Objects"))
     {
-        if (ImGui::BeginTabItem("Game Objects"))
+        static ImGuiTextFilter filter;
+        filter.Draw("Search");
+        if (ImGui::BeginListBox("##GOList", ImGui::GetContentRegionAvail()))
         {
-            if (ImGui::BeginListBox("##GOList", ImGui::GetContentRegionAvail()))
+            auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
+            for (const auto& gameObject : gameObjects)
             {
-                auto& gameObjects = ObjectManager::GetInstance()->GetGameObjects();
-                for (const auto& gameObject : gameObjects)
+                if (gameObject->GetParent() == nullptr)
                 {
-                    if (gameObject->GetParent() == nullptr)
-                    {
-                        GameObjectListItem(gameObject.get());
-                    }
+                    GameObjectListItem(gameObject.get(), filter);
                 }
-                ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 100.0f)));
-                if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
-                {
-                    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
-                    {
-                        AddUndoAction(std::make_shared<UndoSetParent>(m_objectSelector.SelectedGameObject(), m_objectSelector.SelectedGameObject()->GetParent()));
-                        m_objectSelector.SelectedGameObject()->SetParent(nullptr);
-                    }
-                    ImGui::EndDragDropTarget();
-                }
-                ImGui::EndListBox();
             }
-            ImGui::EndTabItem();
+            ImGui::Dummy(ImVec2(ImGui::GetContentRegionAvail().x, std::max(ImGui::GetContentRegionAvail().y, 100.0f)));
+            if (ImGui::BeginDragDropTarget() && m_objectSelector.SelectedGameObject())
+            {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("_GAMEOBJECT"))
+                {
+                    AddUndoAction(std::make_shared<UndoSetParent>(m_objectSelector.SelectedGameObject(), m_objectSelector.SelectedGameObject()->GetParent()));
+                    m_objectSelector.SelectedGameObject()->SetParent(nullptr);
+                }
+                ImGui::EndDragDropTarget();
+            }
+            ImGui::EndListBox();
         }
-        if (ImGui::BeginTabItem("Navmeshes"))
-        {
-
-            ImGui::EndTabItem();
-        }
-        ImGui::EndTabBar();
     }
     ImGui::End();
 
@@ -555,10 +564,10 @@ void Editor::GameObjectComponentWindow()
             {
                 std::string objectName = m_objectSelector.SelectedGameObject()->GetName();
                 std::string filename = objectName;
-                filename.append(IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension);
+                filename.append(IOManager::GetResourceData<ResourceType::Prefab>().SpectralExtension);
 
 
-                auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Prefab>().Folder / filename;
+                auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<ResourceType::Prefab>().Folder / filename;
                 std::filesystem::create_directories(file.parent_path());
 
                 auto prefabJson = IOManager::SaveGameObject(m_objectSelector.SelectedGameObject());
@@ -606,8 +615,8 @@ void Editor::GameObjectComponentWindow()
             if (ImGui::Button("Convert to prefab"))
             {
                 std::string filename = m_objectSelector.SelectedGameObject()->GetName();
-                filename.append(IOManager::GetResourceData<IOManager::ResourceType::Prefab>().SpectralExtension);
-                auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<IOManager::ResourceType::Prefab>().Folder / filename;
+                filename.append(IOManager::GetResourceData<ResourceType::Prefab>().SpectralExtension);
+                auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<ResourceType::Prefab>().Folder / filename;
                 std::filesystem::create_directories(file.parent_path());
 
                 auto prefabJson = IOManager::SaveGameObject(m_objectSelector.SelectedGameObject());
@@ -794,6 +803,108 @@ void Editor::DrawGrid()
     for (int i = 0; i < gridSize + 1; i++)
     {
         Render::DrawLine(Math::Vector3(0, 0, i * scale) + offset, Math::Vector3(gridSize * scale, 0, i * scale) + offset, color);
+    }
+}
+
+void Editor::Viewport(bool enableObjectSelection)
+{
+    static ImVec2 prevSize = ImVec2(0, 0);
+
+
+
+    if (ImGui::Begin("Viewport"))
+    {
+        ImVec2 imageSize = ImGui::GetContentRegionAvail();
+        ImVec2 imagePos = ImGui::GetCursorScreenPos();
+        m_isViewportHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem);
+
+        ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+        ImVec2 currentSize = imageSize;
+        if (currentSize.x != prevSize.x || currentSize.y != prevSize.y)
+        {
+            RenderManager::GetInstance()->OnViewportResize(Math::Vector2(imagePos.x, imagePos.y), Math::Vector2(currentSize.x, currentSize.y));
+            prevSize = currentSize;
+        }
+        ImGui::Image(RenderManager::GetInstance()->GetDeviceResources()->GetPostSRV(), currentSize);
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
+            {
+                Math::Vector3 rayOrigin, rayDirection;
+                if (!EditorUtils::CursorToWorldDirection(rayOrigin, rayDirection))
+                    return;
+
+                float minDistance = std::numeric_limits<float>::max();
+                GameObject* currentClosest = nullptr;
+
+                for (const auto& object : ObjectManager::GetInstance()->GetGameObjects())
+                {
+                    std::shared_ptr<Mesh> mesh;
+                    if (auto meshComponent = object->GetComponentOfType<MeshComponent>())
+                    {
+                        mesh = meshComponent->GetMesh();
+                    }
+                    if (!mesh)
+                        continue;
+                    float distance = 0.0f;
+                    if (Intersection::MeshTriangles(mesh.get(), object->GetWorldMatrix(), rayOrigin, rayDirection, distance))
+                    {
+                        if (distance < minDistance)
+                        {
+                            minDistance = distance;
+                            currentClosest = object.get();
+                        }
+                    }
+                }
+                if (currentClosest == nullptr)
+                {
+                    ImGui::EndDragDropTarget();
+                    ImGui::End();
+                    return;
+                }
+
+                size_t size = payload->DataSize / sizeof(FileItem);
+                FileItem* payload_items = (FileItem*)payload->Data;
+                for (size_t i = 0; i < size; i++)
+                {
+                    FileItem& item = payload_items[i];
+                    if (item.m_type == ResourceType::Material)
+                    {
+                        if (auto meshComponent = currentClosest->GetComponentOfType<MeshComponent>())
+                        {
+                            auto droppedMaterial = ResourceManager::GetInstance()->GetResource<DefaultMaterial>(item.m_filename);
+
+                            if (droppedMaterial)
+                            {
+                                meshComponent->SetMaterial(droppedMaterial);
+
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (item.m_type == ResourceType::Model)
+                    {
+                        auto gameObject = ObjectManager::GetInstance()->CreateObject(item.m_filename);
+                        AddUndoAction(std::make_shared<UndoCreateGameObject>(gameObject));
+                        gameObject->SetPosition(rayOrigin + rayDirection * minDistance);
+                        m_objectSelector.SetSelectedGameObject(gameObject);
+                        auto meshComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Mesh);
+                        std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(ResourceManager::GetInstance()->GetResource<Mesh>(item.m_filename));
+
+                        gameObject->AddComponent(meshComponent);
+                        continue;
+                    }
+                }
+            }
+            ImGui::EndDragDropTarget();
+        }
+        if (enableObjectSelection && m_objectSelector.SelectedGameObject())
+        {
+            m_objectSelector.HandleSelectedGameObject(this);
+        }
+        ImGui::End();
     }
 }
 

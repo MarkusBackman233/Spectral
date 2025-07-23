@@ -7,13 +7,14 @@
 
 #include "LoadableResource.h"
 
-class Material;
+class DefaultMaterial;
 
 class Mesh : public Resource
 {
 public:
 	struct Vertex {
 		Math::Vector3 position;
+		uint32_t color;
 		Math::Vector2 uv;
 		Math::Vector3 normal;
 		Math::Vector3 tangent;

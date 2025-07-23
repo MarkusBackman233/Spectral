@@ -14,7 +14,8 @@
 #include "InstanceManager.h"
 #include "GuiManager.h"
 #include "CloudGenerator.h"
-
+#include "GrassRenderer.h"
+#include "Vector2.h"
 class RenderManager
 {
 public:
@@ -23,7 +24,8 @@ public:
 		return &instance;
 	}
 	RenderManager();
-	void OnWindowResize();
+	void OnWindowResize(Math::Vector2 newSize);
+	void OnViewportResize(Math::Vector2 topLeft, Math::Vector2 newSize);
     void Render();
     void Present();
 
@@ -35,6 +37,9 @@ public:
 	GuiManager*			GetGuiManager()			{ return &m_guiManager; }
 	PbrRender*			GetPbrRenderer()		{ return &m_pbrRender; }
 	PerspectiveCamera*	GetCamera()				{ return m_camera.get(); }
+
+	Math::Vector2	    GetViewportSize() const     { return m_currentViewportSize; }
+	Math::Vector2	    GetViewportPos() const     { return m_currentViewportPos; }
 
 private:
 	WindowsManager m_windowsManager;
@@ -48,7 +53,12 @@ private:
 	GuizmoRenderer m_guizmoRenderer;
 	GuiManager m_guiManager;
 	CloudGenerator m_cloudGenerator;
+	GrassRenderer m_grassRenderer;
     FXAA m_FXAA;
     SSAO m_SSAO;
 	std::unique_ptr<PerspectiveCamera> m_camera;
+
+	Math::Vector2 m_currentViewportSize;
+	Math::Vector2 m_currentViewportPos;
+
 };

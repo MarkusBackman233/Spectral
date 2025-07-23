@@ -29,14 +29,14 @@ void EditorCameraController::HandleTranslation(float deltaTime)
     const float speed = Input::GetKeyHeld(InputId::Shift) ? 30.0f : 15.0f;
 
     const Vector3 up(0.0f, 1.0f, 0.0f);
-    const Vector3 right = m_matrix.GetRight();
-    const Vector3 front = up.Cross(right);
+    const Vector3 left = m_matrix.GetLeft();
+    const Vector3 front = up.Cross(left);
 
     Vector3 moveDirection(0.0f);
     if (Input::GetKeyHeld(InputId::W)) moveDirection += front;
     if (Input::GetKeyHeld(InputId::S)) moveDirection -= front;
-    if (Input::GetKeyHeld(InputId::D)) moveDirection += right;
-    if (Input::GetKeyHeld(InputId::A)) moveDirection -= right;
+    if (Input::GetKeyHeld(InputId::A)) moveDirection += left;
+    if (Input::GetKeyHeld(InputId::D)) moveDirection -= left;
     if (Input::GetKeyHeld(InputId::Space) || Input::GetKeyHeld(InputId::Q)) moveDirection += up;
     if (Input::GetKeyHeld(InputId::Control) || Input::GetKeyHeld(InputId::Z)) moveDirection -= up;
 
@@ -58,8 +58,8 @@ void EditorCameraController::HandleRotation()
     const auto mouseMovement = Input::GetMouseMovement() * m_mouseSensitivity;
     if (Input::GetKeyHeld(InputId::Mouse2))
     {
-        m_pitch = std::clamp(m_pitch - mouseMovement.y, -halfPi, halfPi);
-        m_yaw += mouseMovement.x;
+        m_pitch = std::clamp(m_pitch + mouseMovement.y, -halfPi, halfPi);
+        m_yaw -= mouseMovement.x;
     }
 }
 

@@ -44,15 +44,15 @@ namespace Math
 		Vector3 operator * (const Vector3& A) const;
 
 
-		 Vector3 GetRight() const;
+		 Vector3 GetLeft() const;
 		 Vector3 GetUp() const;
 		 Vector3 GetFront() const;				 
-		 float RightLength() const;
+		 float LeftLength() const;
 		 float UpLength() const;
 		 float FrontLength() const;
 
 		 void SetPosition(const Vector3& pos);
-		 void SetRight(const Vector3& direction);
+		 void SetLeft(const Vector3& direction);
 		 void SetUp(const Vector3& direction);
 		 void SetFront(const Vector3& direction);
 

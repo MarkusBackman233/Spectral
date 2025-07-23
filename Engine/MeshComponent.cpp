@@ -5,14 +5,14 @@
 #include "Editor.h"
 #include "PropertyWindowFactory.h"
 #include "Texture.h"
-#include "Material.h"
+#include "DefaultMaterial.h"
 #include "ResourceManager.h"
 
 MeshComponent::MeshComponent(GameObject* owner)
     : Component(owner)
     , m_mesh(nullptr)
 {
-    m_material = ResourceManager::GetInstance()->GetResource<Material>("Default.material");
+    m_material = ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material");
 }
 
 MeshComponent::MeshComponent(GameObject* owner, MeshComponent* meshComponent)
@@ -25,7 +25,7 @@ MeshComponent::MeshComponent(GameObject* owner, MeshComponent* meshComponent)
 MeshComponent::MeshComponent(GameObject* owner, std::shared_ptr<Mesh> mesh)
     : Component(owner)
 {
-    m_material = ResourceManager::GetInstance()->GetResource<Material>("Default.material");
+    m_material = ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material");
 	SetMesh(mesh);
 }
 
@@ -69,7 +69,7 @@ void MeshComponent::LoadComponent(const rapidjson::Value& object)
     if (meshName != "NoName")
     {
         m_mesh = ResourceManager::GetInstance()->GetResource<Mesh>(meshName);
-        m_material = ResourceManager::GetInstance()->GetResource<Material>(object["Material"].GetString());
+        m_material = ResourceManager::GetInstance()->GetResource<DefaultMaterial>(object["Material"].GetString());
     }
 }
 
@@ -110,15 +110,33 @@ void MeshComponent::ComponentEditor()
         AmbientOcclusion
     };
 
-    static std::vector<std::pair<std::string, TextureType>> textures{
+    static std::vector<std::pair<std::string, TextureType>> texturesNonCombined{
         {"Albedo", TextureType::Albedo},
         {"Normal", TextureType::Normal},
         {"Roughness", TextureType::Roughness},
         {"Metallic", TextureType::Metallic},
         {"Ao", TextureType::AmbientOcclusion},
     };
+    static std::vector<std::pair<std::string, TextureType>> texturesCombined{
+        {"Albedo", TextureType::Albedo},
+        {"Normal", TextureType::Normal},
+        {"MRO", TextureType::Roughness},
+    };
+    std::vector<std::pair<std::string, TextureType>>* textures = nullptr;
+
+
+    if (m_material->GetMaterialSettings().CombinedMaterialTexture)
+    {
+        textures = &texturesCombined;
+    }
+    else
+    {
+        textures = &texturesNonCombined;
+    }
     
-    for (const auto& [textureName, textureId] : textures)
+    ImGui::Checkbox("Combined Material Texture", &GetMaterial()->GetMaterialSettings().CombinedMaterialTexture);
+
+    for (const auto& [textureName, textureId] : *textures)
     {
         if (GetMaterial()->GetTexture(textureId) && GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
         {
@@ -141,6 +159,35 @@ void MeshComponent::ComponentEditor()
                 PropertyWindowFactory::SelectTexture(material, textureId);
             }
         }
+
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
+            {
+                size_t size = payload->DataSize / sizeof(FileItem);
+                FileItem* payload_items = (FileItem*)payload->Data;
+                for (size_t i = 0; i < size; i++)
+                {
+                    FileItem& item = payload_items[i];
+                    if (item.m_type != ResourceType::Texture)
+                    {
+                        continue;
+                    }
+                    auto droppedTexture = ResourceManager::GetInstance()->GetResource<Texture>(item.m_filename);
+
+                    if (droppedTexture)
+                    {
+                        GetMaterial()->SetTexture(textureId, droppedTexture);
+                    }
+                }
+
+
+
+
+            }
+            ImGui::EndDragDropTarget();
+        }
+
         ImGui::Separator();
     }
 
@@ -183,7 +230,7 @@ void MeshComponent::SetMesh(std::shared_ptr<Mesh> mesh)
 	m_mesh = mesh;
 }
 
-void MeshComponent::SetMaterial(std::shared_ptr<Material> material)
+void MeshComponent::SetMaterial(std::shared_ptr<DefaultMaterial> material)
 {
     m_material = material;
 }

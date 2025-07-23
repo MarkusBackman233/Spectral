@@ -6,7 +6,7 @@
 #include "src/IMGUI/ImGuizmo.h"
 #include "iRender.h"
 #include "Vector2.h"
-
+#include "Editor.h"
 
 void EditorUtils::DuplicateGameObject(GameObject* duplicate, GameObject* source, bool createViaObjectManager /*= true*/, bool duplicateId /*= false*/)
 {
@@ -52,7 +52,10 @@ bool EditorUtils::CursorToWorldDirection(Math::Vector3& origin, Math::Vector3& d
     auto viewProj = Render::GetViewMatrix() * Render::GetProjectionMatrix();
 
     auto mousePos = ImGui::GetMousePos();
-    auto windowSize = Render::GetWindowSize();
+    mousePos.x -= Render::GetViewportPosition().x;
+    mousePos.y -= Render::GetViewportPosition().y;
+
+    auto windowSize = Render::GetViewportSizef();
 
     if (mousePos.x > 0 && mousePos.x < windowSize.x && mousePos.y > 0 && mousePos.y < windowSize.y)
     {
@@ -80,6 +83,7 @@ bool EditorUtils::CursorToWorldDirection(Math::Vector3& origin, Math::Vector3& d
 
 bool EditorUtils::IsCursorInViewport()
 {
-    return !ImGuizmo::IsOver() && !ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) && !ImGui::IsAnyItemHovered();
+    
+    return !ImGuizmo::IsOver() && Editor::GetInstance()->IsViewportHovered();
 }
 

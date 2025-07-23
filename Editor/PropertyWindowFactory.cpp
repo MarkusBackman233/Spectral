@@ -9,7 +9,7 @@
 #include "ScriptPropertyWindow.h"
 #include "AudioSourcePropertyWindow.h"
 #include "Texture.h"
-#include "Material.h"
+#include "DefaultMaterial.h"
 #include "ComponentFactory.h"
 #include "GameObject.h"
 #include "ScriptComponent.h"
@@ -26,7 +26,7 @@ void PropertyWindowFactory::SelectMesh(std::shared_ptr<Mesh>& selectMesh)
     ));
 }
 
-void PropertyWindowFactory::SelectTexture(std::shared_ptr<Material>& selectMaterial, int selectTextureId, const std::string& currentSelectedTextureName /* = "" */)
+void PropertyWindowFactory::SelectTexture(std::shared_ptr<DefaultMaterial>& selectMaterial, int selectTextureId, const std::string& currentSelectedTextureName /* = "" */)
 {
     Editor::GetInstance()->SetPropertyWindow(
         std::make_shared<TexturePropertyWindow>(
@@ -38,11 +38,11 @@ void PropertyWindowFactory::SelectTexture(std::shared_ptr<Material>& selectMater
     ));
 }
 
-void PropertyWindowFactory::SelectMaterial(std::shared_ptr<Material>& material)
+void PropertyWindowFactory::SelectMaterial(std::shared_ptr<DefaultMaterial>& material)
 {
     Editor::GetInstance()->SetPropertyWindow(
         std::make_shared<MaterialPropertyWindow>(
-            [&material](std::shared_ptr<Material> selectedMaterial)
+            [&material](std::shared_ptr<DefaultMaterial> selectedMaterial)
     {
         material = selectedMaterial;
     }

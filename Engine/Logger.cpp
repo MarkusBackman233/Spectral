@@ -1,22 +1,17 @@
 #include "Logger.h"
-#include <mutex>
+
+std::mutex Logger::m_mutex;
+
 
 void Logger::Info(const std::string& message)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::cout << "[Info] " << message << std::endl;
-#ifdef EDITOR
-    //static std::mutex mutex;
-    //mutex.lock();
-    //std::cout << message << "\n";
-    //GetInstance()->GetLog().push_back(message);
-    //while (GetInstance()->GetLog().size() > 250)
-    //    GetInstance()->GetLog().pop_front();
-    //mutex.unlock();
-#endif // EDITOR
 }
 
 void Logger::Error(const std::string& message)
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
     std::cout << "\033[31m[Error] "<< message << "\033[0m" << std::endl;
 }
 

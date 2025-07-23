@@ -2,11 +2,14 @@
 #include "PropertyWindow.h"
 #include "src/IMGUI/imgui.h"
 #include "Editor.h"
+#include "EditorGUI.h"
 
 PropertyWindow::PropertyWindow()
     : m_windowOpen(true)
 {
 }
+
+
 
 void PropertyWindow::Update()
 {

@@ -1,4 +1,7 @@
 #include "RenderManager.h"
+#include "DefaultMaterial.h"
+#include "TerrainMaterial.h"
+
 RenderManager::RenderManager()
 {
 #if defined(_DEBUG)
@@ -24,6 +27,12 @@ RenderManager::RenderManager()
     m_lineRenderer.CreateResources(device);
     m_FXAA.CreateResources(device);
     m_guizmoRenderer.CreateResources(device);
+    m_grassRenderer.CreateResources(device);
+
+    DefaultMaterial::CreateResources(device);
+    TerrainMaterial::CreateResources(device);
+
+
     ID3D11SamplerState* samplers[5] = {
         m_deviceResources.GetDefaultSamplerState(),
         m_shadowManager.GetShadowCompareSamplerState(),
@@ -33,22 +42,33 @@ RenderManager::RenderManager()
     };
     context->PSSetSamplers(0, 5, samplers);
     m_camera = std::make_unique<PerspectiveCamera>(75.0f, 0.1f, 1000.0f, windowSize);
+    OnViewportResize(Math::Vector2(0.0f, 0.0f), windowSize);
 }
 
-void RenderManager::OnWindowResize()
+void RenderManager::OnWindowResize(Math::Vector2 newSize)
 {
     m_deviceResources.ReleaseBackBuffer();
+    m_deviceResources.ResizeSwapchain();
+    m_deviceResources.ConfigureBackBuffer(newSize);
+}
+
+void RenderManager::OnViewportResize(Math::Vector2 topLeft, Math::Vector2 newSize)
+{
+    m_deviceResources.ReleaseViewport();
     m_deferredPipeline.ReleaseResources();
     m_SSAO.ReleaseResources();
-    m_deviceResources.ResizeSwapchain();
+    
 
-    Math::Vector2 windowSize = Render::GetWindowSizef();
     ID3D11Device* device = m_deviceResources.GetDevice();
+    m_deviceResources.ConfigureViewport(newSize);
+    m_deferredPipeline.CreateResources(device, newSize);
+    m_SSAO.CreateResources(device, newSize);
+    m_camera->UpdateAspectRatio(newSize);
 
-    m_deferredPipeline.CreateResources(device, windowSize);
-    m_SSAO.CreateResources(device, windowSize);
-    m_deviceResources.ConfigureBackBuffer(windowSize);
-    m_camera->UpdateAspectRatio(windowSize);
+    m_currentViewportSize = newSize;
+    m_currentViewportPos = topLeft;
+
+
 }
 
 void RenderManager::Render()
@@ -60,7 +80,15 @@ void RenderManager::Render()
     m_camera->CreateViewAndPerspective();
     m_instanceManager.Map(context, m_deviceResources.GetDevice());
     m_shadowManager.DrawShadowDepth(context, m_instanceManager);
+
+    D3D11_VIEWPORT viewport{};
+    viewport.Width = m_currentViewportSize.x;
+    viewport.Height = m_currentViewportSize.y;
+    viewport.MaxDepth = 1.0f;
+    context->RSSetViewports(1, &viewport);
+    context->ClearRenderTargetView(m_deviceResources.GetBackBufferTarget(), Math::Vector4(0, 0, 0, 1).Data());
     m_deferredPipeline.RenderGBuffer(context, m_deviceResources, m_instanceManager, m_shadowManager);
+    m_grassRenderer.Render(context, m_deviceResources);
     m_SSAO.Process(context, m_deviceResources, m_deferredPipeline);
     m_skyboxManager.RenderSkybox(context, m_deviceResources.GetRenderTarget());
     m_cloudGenerator.Render(context, m_deviceResources, m_skyboxManager);
@@ -69,6 +97,11 @@ void RenderManager::Render()
     m_lineRenderer.Render(context, m_deviceResources);
     m_guizmoRenderer.Render(context, m_deviceResources);
 
+#ifdef EDITOR
+    ID3D11RenderTargetView* renderTarget[] = { m_deviceResources.GetBackBufferTarget() };
+    context->OMSetRenderTargets(1, renderTarget, nullptr);
+
+#endif
 }
 
 void RenderManager::Present()

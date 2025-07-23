@@ -3,7 +3,7 @@
 #include "Component.h"
 
 class Mesh;
-class Material;
+class DefaultMaterial;
 struct aiMesh;
 
 class MeshComponent : public Component, public std::enable_shared_from_this<MeshComponent>
@@ -27,12 +27,12 @@ public:
 	std::shared_ptr<Mesh> GetMesh() { return m_mesh; }
 	void SetMesh(std::shared_ptr<Mesh> mesh);
 
-	void SetMaterial(std::shared_ptr<Material> material);
-	std::shared_ptr<Material> GetMaterial() { return m_material; }
+	void SetMaterial(std::shared_ptr<DefaultMaterial> material);
+	std::shared_ptr<DefaultMaterial> GetMaterial() { return m_material; }
 
 private:
 
 	std::shared_ptr<Mesh> m_mesh;
-	std::shared_ptr<Material> m_material;
+	std::shared_ptr<DefaultMaterial> m_material;
 };
 

@@ -1,8 +1,23 @@
 #pragma once
 #include "Component.h"
 #include "pch.h"
+#include <wrl/client.h>
+#include <d3d11.h>
+#include "Vector3.h"
+
+struct GrassPatch
+{
+
+	Math::Vector3 BoundingMin; // Local to the terrain
+	Math::Vector3 BoundingMax; 
+
+	static constexpr float PatchSize = 10;
+	unsigned int NumGrassPositions;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> GrassPositionBufferData;
+};
+
 class Mesh;
-class Material;
+class TerrainMaterial;
 
 class TerrainComponent : public Component
 {
@@ -16,18 +31,22 @@ public:
 	void LoadComponent(const rapidjson::Value& object) override;
 
 	std::shared_ptr<Mesh> GetMesh();
-	std::shared_ptr<Material> GetMaterial();
+
 
 #ifdef EDITOR
 	 void ComponentEditor() override;
 	 void DisplayComponentIcon() override;
 #endif // EDITOR
 
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_splatTexture;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_splatSRV;
 private:
-	float m_brushSize;
 	void CreatePlaneMesh();
 	std::shared_ptr<Mesh> m_mesh;
-	std::shared_ptr<Material> m_material;
+	std::shared_ptr<TerrainMaterial> m_material;
+
+	std::vector<GrassPatch> m_grassPatches;
+
 
 };
 

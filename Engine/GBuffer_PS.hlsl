@@ -1,3 +1,5 @@
+#include "common.hlsli"
+
 Texture2D albedoMap : register(t0);
 Texture2D normalMap : register(t1);
 Texture2D roughnessMap : register(t2);
@@ -13,6 +15,7 @@ SamplerState pointSampler : register(s4);
 struct PSInput
 {
     float4 position : SV_POSITION;
+    float4 color : COLOR;
     float3 worldPos : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 tangent : TEXCOORD2;
@@ -37,6 +40,7 @@ cbuffer PixelConstantBuffer : register(b1)
 PSOutput main(PSInput input)
 {
     PSOutput output;
+
     
     output.albedo = data2.x > -1.0 ? float4(1, 1, 1, 1) : albedoMap.Sample(samplerState, input.texcoord);
     output.albedo *= materialColor;
@@ -56,9 +60,29 @@ PSOutput main(PSInput input)
     }
     output.worldPos = float4(input.worldPos, 1.0);
     
-
-    output.albedo.w = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, input.texcoord).r; // AO
-    output.normal.w = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, input.texcoord).r); // Metallic
-    output.worldPos.w = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, input.texcoord).r; // roughness
+    if (data2.w > 0)
+    {
+        if (data.x > -1.0)
+        {
+            float4 materialProperties = roughnessMap.Sample(samplerState, input.texcoord);
+            
+            output.normal.w = 1.0f - materialProperties.r; // Metallic
+            output.worldPos.w = materialProperties.g; // roughness
+            output.albedo.w = materialProperties.b; // AO
+        }
+        else
+        {
+            output.normal.w = data.x; // Metallic
+            output.albedo.w = data.y; // AO
+            output.worldPos.w = data.z; // roughness
+            
+        }
+    }
+    else
+    {
+        output.albedo.w = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, input.texcoord).r; // AO
+        output.normal.w = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, input.texcoord).r); // Metallic
+        output.worldPos.w = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, input.texcoord).r; // roughness
+    }
     return output;
 }

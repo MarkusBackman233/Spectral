@@ -8,7 +8,7 @@
 #include "iRender.h"
 
 #include "ResourceManager.h"
-#include "Material.h"
+#include "DefaultMaterial.h"
 #include "../Application/resource.h"
 
 void DefaultAssets::Load()
@@ -28,11 +28,11 @@ void DefaultAssets::Load()
     LoadPlaneMesh();
     LoadSphereMesh();
 
-    auto defaultMaterial = std::make_shared<Material>();
+    auto defaultMaterial = std::make_shared<DefaultMaterial>();
     defaultMaterial->SetTexture(0, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_albedo.bmp"));
     defaultMaterial->SetTexture(1, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_normal.bmp"));
     defaultMaterial->m_filename = "Default.material";
-    ResourceManager::GetInstance()->AddResource<Material>(defaultMaterial);
+    ResourceManager::GetInstance()->AddResource<DefaultMaterial>(defaultMaterial);
 }
 
 void DefaultAssets::LoadBitMap(const std::string& filename, int resourceId)

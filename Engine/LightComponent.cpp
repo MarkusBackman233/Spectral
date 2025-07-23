@@ -120,7 +120,7 @@ void LightComponent::DisplayComponentIcon()
 	if (m_light->Type != Light::LightType::Directional)
 	{
 		auto color = GetLight()->Color.GetNormalizedColor();
-		ImGui::Image(ResourceManager::GetInstance()->GetResource<Texture>("Sun.png")->GetResourceView().Get(), ImVec2(15, 15), ImVec2(0, 0), ImVec2(1, 1), ImVec4(color.x, color.y, color.z, 1.0f));
+		ImGui::ImageWithBg(ResourceManager::GetInstance()->GetResource<Texture>("Sun.png")->GetResourceView().Get(), ImVec2(15, 15), ImVec2(0, 0), ImVec2(1, 1), ImVec4(color.x, color.y, color.z, 1.0f));
 	}
 	else
 	{

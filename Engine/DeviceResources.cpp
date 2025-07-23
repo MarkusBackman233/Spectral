@@ -98,6 +98,7 @@ void DeviceResources::CreateDeviceResources()
         ZeroMemory(&rasterizerDesc, sizeof(rasterizerDesc));
         rasterizerDesc.FillMode = D3D11_FILL_SOLID;
         rasterizerDesc.CullMode = D3D11_CULL_BACK;
+        rasterizerDesc.FrontCounterClockwise = true;
         device->CreateRasterizerState(&rasterizerDesc, m_backfaceCullingRasterizer.GetAddressOf());    
         rasterizerDesc.CullMode = D3D11_CULL_NONE;
         device->CreateRasterizerState(&rasterizerDesc, m_noCullingRasterizer.GetAddressOf());
@@ -155,9 +156,24 @@ void DeviceResources::CreateWindowResources(HWND hWnd, const Math::Vector2& wind
 
 void DeviceResources::ConfigureBackBuffer(const Math::Vector2& windowSize)
 {
-    ThrowIfFailed(m_pDXGISwapChain->GetBuffer(0,__uuidof(ID3D11Texture2D),(void**)&m_pBackBuffer));
-    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pBackBuffer.Get(),nullptr, m_pBackbufferRenderTarget.GetAddressOf()));
+    ThrowIfFailed(m_pDXGISwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&m_pBackBuffer));
+    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pBackBuffer.Get(), nullptr, m_pBackbufferRenderTarget.GetAddressOf()));
+    m_pBackBuffer.Reset();
 
+    
+
+    D3D11_VIEWPORT viewport{};
+    viewport.Width = static_cast<FLOAT>(windowSize.x);
+    viewport.Height = static_cast<FLOAT>(windowSize.y);
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+    viewport.TopLeftX = 0;
+    viewport.TopLeftY = 0;
+    m_pd3dDeviceContext->RSSetViewports(1, &viewport);
+}
+
+void DeviceResources::ConfigureViewport(const Math::Vector2& windowSize)
+{
     D3D11_TEXTURE2D_DESC textureDesc;
     ZeroMemory(&textureDesc, sizeof(textureDesc));
     textureDesc.Width = static_cast<UINT>(windowSize.x);
@@ -170,26 +186,28 @@ void DeviceResources::ConfigureBackBuffer(const Math::Vector2& windowSize)
     textureDesc.BindFlags = 0;
     textureDesc.CPUAccessFlags = 0;
     textureDesc.MiscFlags = 0;
-    textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET;
-    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&textureDesc, NULL, m_pPostProcessingRenderTexture.GetAddressOf()));
-
     textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&textureDesc, NULL, m_pRenderTexture.GetAddressOf()));
-    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pPostProcessingRenderTexture.Get(), nullptr, m_pPostRenderTarget.GetAddressOf()));
     ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pRenderTexture.Get(), nullptr, m_pRenderTarget.GetAddressOf()));
-    
-    
+
+    textureDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&textureDesc, NULL, m_pPostProcessingRenderTexture.GetAddressOf()));
+    ThrowIfFailed(m_pd3dDevice->CreateRenderTargetView(m_pPostProcessingRenderTexture.Get(), nullptr, m_pPostRenderTarget.GetAddressOf()));
+
+
     D3D11_SHADER_RESOURCE_VIEW_DESC shaderResourceViewDesc{};
-    shaderResourceViewDesc.Format = textureDesc.Format;
     shaderResourceViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
     shaderResourceViewDesc.Texture2D.MipLevels = 1;
+    shaderResourceViewDesc.Format = DXGI_FORMAT_R11G11B10_FLOAT;
     ThrowIfFailed(m_pd3dDevice->CreateShaderResourceView(m_pRenderTexture.Get(), &shaderResourceViewDesc, m_pRenderTargetSRV.GetAddressOf()));
 
-    m_pBackBuffer.Reset();
+    shaderResourceViewDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+    ThrowIfFailed(m_pd3dDevice->CreateShaderResourceView(m_pPostProcessingRenderTexture.Get(), &shaderResourceViewDesc, m_pPostSRV.GetAddressOf()));
+
     m_pRenderTexture.Reset();
     m_pPostProcessingRenderTexture.Reset();
-    
+
 
     D3D11_TEXTURE2D_DESC depthStencilDesc{};
     depthStencilDesc.Width = static_cast<UINT>(windowSize.x);
@@ -214,32 +232,29 @@ void DeviceResources::ConfigureBackBuffer(const Math::Vector2& windowSize)
     depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
     depthSRVDesc.Texture2D.MipLevels = 1;
     depthSRVDesc.Texture2D.MostDetailedMip = 0;
-    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&depthStencilDesc,nullptr, &m_pDepthStencil));
-    ThrowIfFailed(m_pd3dDevice->CreateDepthStencilView(m_pDepthStencil.Get(),&depthStencilViewDesc, &m_pDepthStencilView));
+    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&depthStencilDesc, nullptr, &m_pDepthStencil));
+    ThrowIfFailed(m_pd3dDevice->CreateDepthStencilView(m_pDepthStencil.Get(), &depthStencilViewDesc, &m_pDepthStencilView));
     ThrowIfFailed(m_pd3dDevice->CreateShaderResourceView(m_pDepthStencil.Get(), &depthSRVDesc, &m_pDepthSRV));
-
-    D3D11_VIEWPORT viewport{};
-    viewport.Width = static_cast<FLOAT>(windowSize.x);
-    viewport.Height = static_cast<FLOAT>(windowSize.y);
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    viewport.TopLeftX = 0;
-    viewport.TopLeftY = 0;
-    m_pd3dDeviceContext->RSSetViewports(1, &viewport);
 }
 
 void DeviceResources::ReleaseBackBuffer()
 {
     m_pBackBuffer.Reset();
-    m_pRenderTarget.Reset();
     m_pBackbufferRenderTarget.Reset();
+
+    m_pd3dDeviceContext->Flush();
+}
+
+void DeviceResources::ReleaseViewport()
+{
+    m_pRenderTarget.Reset();
     m_pPostRenderTarget.Reset();
     m_pRenderTexture.Reset();
     m_pPostProcessingRenderTexture.Reset();
+    m_pPostSRV.Reset();
     m_pRenderTargetSRV.Reset();
     m_pDepthStencilView.Reset();
     m_pDepthStencil.Reset();
-    m_pd3dDeviceContext->Flush();
 }
 
 void DeviceResources::ResizeSwapchain()

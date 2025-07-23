@@ -28,7 +28,7 @@ void CloudGenerator::CreateResources(ID3D11Device* device)
 	float heightScale = 10.0f;
 
 	Math::Vector3 viewer(static_cast<float>(height) * 0.5f,0.0f, static_cast<float>(height) * 0.5f);
-
+	/*
 	for (int y = 1; y < height - 1; ++y) {
 		for (int x = 1; x < width - 1; ++x) {
 
@@ -60,7 +60,7 @@ void CloudGenerator::CreateResources(ID3D11Device* device)
 			data.z = directionToViewer.z;
 		}
 	}
-
+	*/
 	D3D11_TEXTURE2D_DESC texDesc{};
 	texDesc.Width = width;
 	texDesc.Height = height;

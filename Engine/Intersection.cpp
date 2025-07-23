@@ -62,3 +62,23 @@ bool Intersection::MeshTriangles(Mesh* mesh, const Math::Matrix& matrix, const M
 
     return hasHitTriangle;
 }
+
+bool Spectral::Intersection::MeshTrianglesLocal(Mesh* mesh, const Math::Vector3& origin, const Math::Vector3& direction, float& distance)
+{
+    distance = FLT_MAX;
+    bool hasHitTriangle = false;
+    for (size_t i = 0; i < mesh->indices32.size(); i += 3)
+    {
+        Math::Vector3 p1 = mesh->vertexes[mesh->indices32[i]].position;
+        Math::Vector3 p2 = mesh->vertexes[mesh->indices32[i + 1]].position;
+        Math::Vector3 p3 = mesh->vertexes[mesh->indices32[i + 2]].position;
+        float d = 0.0f;
+        if (Intersection::LocalTriangle(origin, direction, p1, p2, p3, d))
+        {
+            distance = std::min(d, distance);
+            hasHitTriangle = true;
+        }
+    }
+
+    return hasHitTriangle;
+}

@@ -1,5 +1,7 @@
 #pragma once
 #include "pch.h"
+#include <mutex>
+
 class Logger
 {
 public:
@@ -13,4 +15,5 @@ private:
 		return &instance;
 	}
 	std::deque<std::string> m_logBuffer;
+	static std::mutex m_mutex;
 };
