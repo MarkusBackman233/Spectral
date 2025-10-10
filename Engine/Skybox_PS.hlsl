@@ -42,6 +42,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 {
     float3 fragmentDirection = normalize(input.localPos.xyz);
     float fragmentHeight = max(dot(fragmentDirection, float3(0, 1, 0)), 0.0);
+    fragmentHeight = saturate(fragmentHeight);
     
     if (sun.w == 1.0f)
     {
@@ -56,6 +57,9 @@ float4 main(PS_INPUT input) : SV_TARGET
             int s = sign(sunHeight);
             sunHeight *= s;
             sunHeight = saturate(sunHeight);
+            
+            sunHeight = smoothstep(0, 1, sunHeight);
+            
             sunColor = lerp(float3(1.00000, 0.31765, 0.00392), float3(1.0, 1.0, 1.0), pow(sunHeight,1.5));
         }
 
@@ -63,10 +67,9 @@ float4 main(PS_INPUT input) : SV_TARGET
         float3 lightColor = float3(0.898, 0.902, 0.922);
 
         
-        float3 color;
+        float3 color = float3(0,0,0);
         { // atmosphere
 
-            fragmentHeight = saturate(fragmentHeight);
             
             float sunRotation = dot(normalize(input.localPos.xz), -normalize(sun.xz));
             
@@ -75,7 +78,6 @@ float4 main(PS_INPUT input) : SV_TARGET
         }
         
         { // sun
-            //float factor = max(dot(fragmentDirection, -sunDir), 0.0);
             float factor = (dot(fragmentDirection, -sunDir) + 1.0f) / 2;
             color += sunColor * factor * 0.3;
             int s = sign(factor);
@@ -102,6 +104,5 @@ float4 main(PS_INPUT input) : SV_TARGET
         
         return float4(color, 1.0);
     }
-    fragmentDirection.z = -fragmentDirection.z;
     return float4(skyboxMap.SampleLevel(samplerState, fragmentDirection, 0).rgb, 1.0f);
 }

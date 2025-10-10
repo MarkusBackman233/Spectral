@@ -78,7 +78,7 @@ namespace Math
 		}
 		inline float Length() const
 		{
-			return x * x + y * y;
+			return sqrt(x * x + y * y);
 		}
 
 		float x, y;

@@ -35,7 +35,7 @@ void FXAA::Process(ID3D11DeviceContext* context, const DeviceResources& deviceRe
 #endif
     context->OMSetRenderTargets(1, renderTarget, nullptr);
 
-    SetVertexBuffer(context);
+    PostProcessing::SetVertexBuffer(context);
     Render::SetShaders(m_pixelShader, m_vertexShader, m_inputLayout, context);
     ID3D11ShaderResourceView* srv = deviceResources.RenderTargetSRV();
     context->PSSetShaderResources(20, 1, &srv);

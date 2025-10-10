@@ -608,7 +608,8 @@ void Editor::GameObjectComponentWindow()
         }
         else
         {
-            if (m_objectSelector.SelectedGameObject()->IsPartOfPrefabHierarchy())
+            if (m_objectSelector.SelectedGameObject()->IsPartOfPrefabHierarchy() || 
+                m_objectSelector.SelectedGameObject()->GetComponentOfType<TerrainComponent>() != nullptr)
             {
                 ImGui::BeginDisabled();
             }
@@ -630,6 +631,15 @@ void Editor::GameObjectComponentWindow()
                 if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
                 {
                     ImGui::SetTooltip("This gameobject is part of a prefab hierarchy.");
+                }
+                ImGui::EndDisabled();
+
+            }
+            if (m_objectSelector.SelectedGameObject()->GetComponentOfType<TerrainComponent>() != nullptr)
+            {
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                {
+                    ImGui::SetTooltip("Terrain cannot be part of a prefab.");
                 }
                 ImGui::EndDisabled();
 

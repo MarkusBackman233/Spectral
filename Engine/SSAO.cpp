@@ -70,13 +70,16 @@ void SSAO::Process(ID3D11DeviceContext* context, const DeviceResources& deviceRe
     Render::SetShaders(m_pixelShader, m_vertexShader, m_inputLayout, context);
 
     std::vector<ID3D11ShaderResourceView*> resources = {
-        deferredPipeline.GetSRV(DeferredPipeline::GBufferTexture::Normal),
-        deferredPipeline.GetSRV(DeferredPipeline::GBufferTexture::WorldPosition),
+        deferredPipeline.GetSRV(),
+        nullptr, // was worldpos
         deviceResources.GetDepthSRV(),
     };
     context->PSSetShaderResources(0, 3, resources.data());
 
     m_pixelConstantBuffer.viewProjectionMatrix = Render::GetViewProjectionMatrix();
+
+
+
     const auto& ssaoSettings = SceneManager::GetInstance()->GetCurrentScene().GetLightingSettings();
     m_pixelConstantBuffer.settings.x = ssaoSettings.SSAOBias;
     m_pixelConstantBuffer.settings.y = ssaoSettings.SSAOIntensity;

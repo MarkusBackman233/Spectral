@@ -16,6 +16,7 @@ struct ID3D11Buffer;
 class DeviceResources;
 class SkyboxManager;
 
+
 class GrassRenderer
 {
 public:
@@ -25,6 +26,7 @@ public:
 	static void AddGrassPatch(const GrassPatch& patch);
 
 	void Render(ID3D11DeviceContext* context, const DeviceResources& deviceResources);
+
 private:
 	struct PixelConstantBuffer
 	{

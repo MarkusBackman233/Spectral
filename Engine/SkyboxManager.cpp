@@ -145,7 +145,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
         if (auto* sun = scene.GetSun())
         {
     
-            if (m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.y != sun->Direction.y || m_pixelConstantBuffer.skyboxColor.z != -sun->Direction.z)
+            if (m_pixelConstantBuffer.skyboxColor.x != sun->Direction.x || m_pixelConstantBuffer.skyboxColor.y != sun->Direction.y || m_pixelConstantBuffer.skyboxColor.z != sun->Direction.z)
             {
                 sunHasChanged = true;
                 m_pixelConstantBuffer.data.z = 0.0f;
@@ -153,7 +153,7 @@ void SkyboxManager::RenderCubeMap(ID3D11DeviceContext* context, ID3D11Device* de
     
             m_pixelConstantBuffer.skyboxColor.x = sun->Direction.x;
             m_pixelConstantBuffer.skyboxColor.y = sun->Direction.y;
-            m_pixelConstantBuffer.skyboxColor.z = -sun->Direction.z;
+            m_pixelConstantBuffer.skyboxColor.z = sun->Direction.z;
     
         }
     

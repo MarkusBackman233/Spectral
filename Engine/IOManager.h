@@ -22,6 +22,7 @@ class WriteObject
 {
 public:
 	WriteObject(const std::filesystem::path& filePath)
+		: m_path(filePath)
 	{
 		try
 		{
@@ -29,10 +30,22 @@ public:
 		}
 		catch (std::exception& e)
 		{
-			std::cout << e.what() << std::endl;
+			Logger::Error(e.what());
 		}
 	}
-	~WriteObject() { m_file.close(); }
+	~WriteObject() 
+	{ 
+		try
+		{
+			std::filesystem::create_directories(m_path);
+		}
+		catch (const std::exception& e)
+		{
+			Logger::Error(e.what());
+			return;
+		}
+		m_file.close(); 
+	}
 
 
 	template<typename T>
@@ -61,6 +74,7 @@ public:
 
 private:
 	std::ofstream m_file;
+	std::filesystem::path m_path;
 };
 
 

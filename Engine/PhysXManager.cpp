@@ -137,7 +137,6 @@ void PhysXManager::onContact(const PxContactPairHeader& pairHeader, const PxCont
 
 			GameObject* object0 = static_cast<GameObject*>(actor0->userData);
 			GameObject* object1 = static_cast<GameObject*>(actor1->userData);
-			//cp.extractContacts
 
 			for (auto& comp : object0->GetComponents())
 			{

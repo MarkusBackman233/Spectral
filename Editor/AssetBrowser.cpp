@@ -69,7 +69,7 @@ void AssetBrowser::Update()
 
 void AssetBrowser::FileExplorer()
 {
-    FileExplorer::ShowSubFolders("C:\\Users\\Markus\\Desktop\\Village\\", std::bind(&AssetBrowser::OpenFolder, this, std::placeholders::_1));
+    FileExplorer::ShowSubFolders(IOManager::ProjectDirectory, std::bind(&AssetBrowser::OpenFolder, this, std::placeholders::_1));
 }
 
 void FileExplorer::ShowSubFolders(const std::filesystem::path& path, const std::function<void(const std::filesystem::path&)>& onOpenFolder)
@@ -422,15 +422,11 @@ FileItem::FileItem(const std::filesystem::path& filename) :
 
     if (m_type == ResourceType::Material)
     {
-        m_thumbnail = std::make_unique<Thumbnail>(
-            ResourceManager::GetInstance()->GetResource<Mesh>("Default Sphere").get(), 
-            ResourceManager::GetInstance()->GetResource<DefaultMaterial>(filename).get()
-        );
+        m_thumbnail = ThumbnailManager::GetThumbnail(ResourceManager::GetInstance()->GetResource<DefaultMaterial>(filename).get());
     }
     else if (m_type == ResourceType::Model)
     {
-        m_thumbnail = std::make_unique<Thumbnail>(
-            ResourceManager::GetInstance()->GetResource<Mesh>(filename).get(),
+        m_thumbnail = ThumbnailManager::GetThumbnail(
             ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material").get()
         );
     }

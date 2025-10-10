@@ -27,8 +27,8 @@ void GuizmoRenderer::CreateResources(ID3D11Device* device)
     std::vector<GuizmoRenderer::Vertex> vertices =
     { 
         { Math::Vector3(-0.5f, -0.5f, 0.0f), Math::Vector2(0.0f, 1.0f) },
-        { Math::Vector3(0.5f, -0.5f, 0.0f), Math::Vector2(1.0f, 1.0f) },
-        { Math::Vector3(0.5f,  0.5f, 0.0f), Math::Vector2(1.0f, 0.0f) },
+        { Math::Vector3(0.5f,  -0.5f, 0.0f), Math::Vector2(1.0f, 1.0f) },
+        { Math::Vector3(0.5f,   0.5f, 0.0f), Math::Vector2(1.0f, 0.0f) },
         { Math::Vector3(-0.5f,  0.5f, 0.0f), Math::Vector2(0.0f, 0.0f) } 
     };
 
@@ -54,7 +54,7 @@ void GuizmoRenderer::Render(ID3D11DeviceContext* context, const DeviceResources&
             UINT offset = 0;
 
             auto camMat = Render::GetCamera()->GetWorldMatrix();
-            camMat.SetPosition(Math::Vector3(0.0f, 0.0f, 0.0f));
+            camMat.SetPosition(Math::Vector3(0.0f));
 
             Math::Vector3 corner1 = position + Math::Vector3(-0.5f, -0.5f, 0.0f).Transform(camMat);
             Math::Vector3 corner2 = position + Math::Vector3(0.5f, -0.5f, 0.0f).Transform(camMat);

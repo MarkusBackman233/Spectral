@@ -17,7 +17,7 @@ struct VS_INPUT
 struct VS_OUTPUT
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
+    half4 color : COLOR;
     float3 worldPos : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 tangent : TEXCOORD2;
@@ -33,11 +33,13 @@ VS_OUTPUT main(VS_INPUT input)
     
     output.position = mul(output.position, ViewProjection);
     
-    output.normal = mul(input.normal, (float3x3) input.transform);
+    float3x3 normalMatrix = (float3x3) input.transform;
+    
+    output.normal = mul(input.normal, normalMatrix);
     output.normal = normalize(output.normal);
-    output.tangent = mul(input.tangent, (float3x3) input.transform);
+    output.tangent = mul(input.tangent, normalMatrix);
     output.tangent = normalize(output.tangent);
-    output.binormal = mul(cross(output.normal, output.tangent), (float3x3) input.transform);
+    output.binormal = mul(cross(output.normal, output.tangent), normalMatrix);
     output.binormal = normalize(output.binormal);
     
     

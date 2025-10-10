@@ -3,7 +3,6 @@
 #include "DeviceResources.h"
 #include "PerspectiveCamera.h"
 #include "FXAA.h"
-#include "SSAO.h"
 #include "DeferredPipeline.h"
 #include "PbrRender.h"
 #include "SkyboxManager.h"
@@ -55,7 +54,6 @@ private:
 	CloudGenerator m_cloudGenerator;
 	GrassRenderer m_grassRenderer;
     FXAA m_FXAA;
-    SSAO m_SSAO;
 	std::unique_ptr<PerspectiveCamera> m_camera;
 
 	Math::Vector2 m_currentViewportSize;

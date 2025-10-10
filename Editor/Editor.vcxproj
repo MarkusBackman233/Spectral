@@ -160,6 +160,7 @@
     <ClInclude Include="EditorGUI.h" />
     <ClInclude Include="EditorUtils.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="MaterialEditor.h" />
     <ClInclude Include="MaterialPropertyWindow.h" />
     <ClInclude Include="MeshPropertyWindow.h" />
     <ClInclude Include="ObjectSelector.h" />
@@ -185,6 +186,7 @@
     <ClCompile Include="EditorCameraController.cpp" />
     <ClCompile Include="EditorGUI.cpp" />
     <ClCompile Include="EditorUtils.cpp" />
+    <ClCompile Include="MaterialEditor.cpp" />
     <ClCompile Include="MaterialPropertyWindow.cpp" />
     <ClCompile Include="MeshPropertyWindow.cpp" />
     <ClCompile Include="ObjectSelector.cpp" />

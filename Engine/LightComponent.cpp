@@ -48,7 +48,7 @@ void LightComponent::Render()
 			if (m_light->Type == Light::LightType::Directional)
 			{
 				Render::DrawGuizmo(m_owner->GetWorldMatrix().GetPosition(), lightTexture, m_light->Color.GetNormalizedColor());
-				Render::DrawLine(m_owner->GetWorldMatrix().GetPosition(), m_owner->GetWorldMatrix().GetPosition() + m_owner->GetWorldMatrix().GetFront()*2);
+				Render::DrawLine(m_owner->GetWorldMatrix().GetPosition(), m_owner->GetWorldMatrix().GetPosition() + m_owner->GetWorldMatrix().GetFront() * 2);
 			}
 			else
 			{
@@ -99,7 +99,7 @@ void LightComponent::ComponentEditor()
 		GetLight()->Type = static_cast<Light::LightType>(selectedLightType);
 	}
 
-	if (m_light->Type == Light::LightType::Point)
+	//if (m_light->Type == Light::LightType::Point)
 	{
 		float colorRGBA[4]{ (float)GetLight()->Color.r / 255,(float)GetLight()->Color.g / 255 ,(float)GetLight()->Color.b / 255,(float)GetLight()->Color.a / 255 };
 		if (ImGui::ColorPicker4("Light Color", colorRGBA, Editor::ColorPickerMask))

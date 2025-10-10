@@ -14,17 +14,21 @@ struct PS_INPUT
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
-    const float uvScale = 1.0f / 100;
+    const float uvScale = 1.0f / 3;
     
-    float4 cloudData = cloudMap.SampleLevel(samplerState, ((input.localPos.xz * 0.5 * uvScale) + 0.5), 0);
-    float normDepth = cloudData.a /= 5.0f;
-    //clip(depth);
+    float2 uv = (input.localPos.xz * 0.5 * uvScale) + 0.5;
+    
+    float4 cloudData = cloudMap.SampleLevel(samplerState, uv, 0);
     
     float3 cloudNormal = cloudData.xyz;
     
     
-    float3 color = skyboxMap.SampleLevel(samplerState, cloudNormal, normDepth * 12).xyz;
-     //color += skyboxMap.SampleLevel(samplerState, cloudNormal, 2).xyz;
     
-    return float4(color, normDepth);
+    float3 viewDir = normalize(float3(input.localPos.x, 0.01, input.localPos.z));
+    float3 reflection = normalize(reflect(-viewDir, -cloudNormal));
+    
+    float3 color = skyboxMap.SampleLevel(samplerState, viewDir, cloudData.a * 0.06 * 12).xyz;
+    //color *= 1 - cloudData.a * 0.06;
+    
+    return float4(color, clamp(cloudData.a*0.02,0,1));
 }

@@ -103,6 +103,7 @@ namespace Math
 		float Dot(const Vector3& other) const;
 		float Length() const;
 		float LengthSquared() const;
+		float HorizontalLength(const Vector3& other) const;
 
 		float* Data() const;
 
@@ -117,5 +118,7 @@ namespace Math
 		Vector3 Cross(const Math::Vector3& in) const;
 
 		bool IsFinite() const;
+
+
 	};
 }

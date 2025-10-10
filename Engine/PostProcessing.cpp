@@ -29,29 +29,6 @@ void PostProcessing::CreatePostProcessingResources(ID3D11Device* device)
     Render::CreateVertexShader(device,"Fullscreen_VS.cso", &m_vertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_inputLayout);
 }
 
-void PostProcessing::CopyPostProcessingToRenderTarget(ID3D11DeviceContext* context, const DeviceResources& deviceResources)
-{
-    ID3D11Resource* pSrcResource = nullptr;
-    ID3D11Resource* pDstResource = nullptr;
-
-    deviceResources.GetPostRenderTarget()->GetResource(&pSrcResource);
-    deviceResources.GetRenderTarget()->GetResource(&pDstResource);
-
-    ID3D11RenderTargetView* renderTarget = deviceResources.GetRenderTarget();
-    ID3D11DepthStencilView* depthStencil = deviceResources.GetDepthStencil();
-
-    context->OMSetRenderTargets(1, &renderTarget, depthStencil);
-    context->CopyResource(pDstResource, pSrcResource);
-
-    pSrcResource->Release();
-    pDstResource->Release();
-}
-
-void PostProcessing::SetPostProcessingRenderTarget(ID3D11DeviceContext* context, const DeviceResources& deviceResources)
-{
-    ID3D11RenderTargetView* postPorcessingRenderTarget[] = { deviceResources.GetPostRenderTarget() };
-    context->OMSetRenderTargets(1, postPorcessingRenderTarget, nullptr);
-}
 
 void PostProcessing::SetVertexBuffer(ID3D11DeviceContext* context)
 {

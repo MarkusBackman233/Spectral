@@ -1,3 +1,5 @@
+#include "common.hlsli"
+
 Texture2D normalMap : register(t0);
 Texture2D positionMap : register(t1);
 Texture2D depthMap : register(t2);
@@ -18,16 +20,7 @@ cbuffer PixelConstantBuffer : register(b0)
     float4 samples[64];
 };
 
-float ComputeViewDepth(float zbuffer)
-{
-    float zNear = 0.1;
-    float zFar = 1000.0;
 
-    // Perspective depth reconstruction from zbuffer
-    float viewDepth = zNear * zFar / (zFar - zbuffer * (zFar - zNear));
-
-    return viewDepth;
-}
 
 
 float Hash(float2 p)
@@ -40,24 +33,6 @@ float Hash(float2 p)
 
 }
 
-float Rand3dTo1d(float3 value, float3 dotDir = float3(12.9898, 78.233, 37.719))
-{
-    //make value smaller to avoid artefacts
-    float3 smallValue = sin(value);
-    //get scalar value from 3d vector
-    float random = dot(smallValue, dotDir);
-    //make value more random by making it bigger and then taking teh factional part
-    random = frac(sin(random) * 143758.5453);
-    return random;
-}
-
-float2 Rand3dTo2d(float3 value)
-{
-    return float2(
-        Rand3dTo1d(value, float3(12.989, 78.233, 37.719)),
-        Rand3dTo1d(value, float3(39.346, 11.135, 83.155))
-    );
-}
 
 
 float3 RandomNormalizedXY(float2 seed)

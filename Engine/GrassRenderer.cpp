@@ -13,7 +13,9 @@ void GrassRenderer::CreateResources(ID3D11Device* device)
 {
     D3D11_INPUT_ELEMENT_DESC vertexLayout[] = {
         { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0,  0,  D3D11_INPUT_PER_VERTEX_DATA,   0 },
+        { "TEXCOORD",  0, DXGI_FORMAT_R32G32_FLOAT,        0, 12,  D3D11_INPUT_PER_VERTEX_DATA,   0 },
     };
+
     Render::CreateVertexShader(device, "Grass_VS.cso", &m_materialGlobals.m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_materialGlobals.m_pInputLayout);
     Render::CreatePixelShader(device, "Grass_GBuffer_PS.cso", &m_materialGlobals.m_pPixelShader);
 
@@ -28,19 +30,14 @@ void GrassRenderer::CreateResources(ID3D11Device* device)
 
 void GrassRenderer::AddGrassPatch(const GrassPatch& patch)
 {
-    m_grassRenderQueue.push_back(patch);
+    if (patch.NumGrassPositions)
+    {
+        m_grassRenderQueue.push_back(patch);
+    }
 }
 
 void GrassRenderer::Render(ID3D11DeviceContext* context, const DeviceResources& deviceResources)
 {
-    
-
-    //ID3D11RenderTargetView* renderTarget[] = { deviceResources.GetRenderTarget() };
-    //ID3D11DepthStencilView* depthStencil = deviceResources.GetDepthStencil();
-    //
-    //context->OMSetRenderTargets(1, renderTarget, depthStencil);
-
-
     Render::SetShaders(m_materialGlobals.m_pPixelShader, m_materialGlobals.m_pVertexShader, m_materialGlobals.m_pInputLayout, context);
     context->GSSetShader(m_materialGlobals.m_pGeometryShader.Get(), nullptr, 0);
 
@@ -51,7 +48,7 @@ void GrassRenderer::Render(ID3D11DeviceContext* context, const DeviceResources& 
     context->UpdateSubresource(m_materialGlobals.m_pGeometryConstantBufferData.Get(), 0, nullptr, &m_materialGlobals.m_geometryConstantBuffer, 0, 0);
     context->GSSetConstantBuffers(0, 1, m_materialGlobals.m_pGeometryConstantBufferData.GetAddressOf());
 
-    UINT stride = sizeof(Math::Vector3);
+    UINT stride = sizeof(GrassVertexV1);
     UINT offset = 0;
     context->OMSetBlendState(deviceResources.GetDefaultBlendState(), Math::Vector4(0.0f, 0.0f, 0.0f, 0.0f).Data(), 0xffffffff);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);

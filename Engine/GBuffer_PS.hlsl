@@ -15,7 +15,7 @@ SamplerState pointSampler : register(s4);
 struct PSInput
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
+    half4 color : COLOR;
     float3 worldPos : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 tangent : TEXCOORD2;
@@ -23,12 +23,7 @@ struct PSInput
     float2 texcoord : TEXCOORD4;
 };
 
-struct PSOutput
-{
-    float4 albedo : SV_Target0;
-    float4 normal : SV_Target1;
-    float4 worldPos : SV_Target2;
-};
+
 
 cbuffer PixelConstantBuffer : register(b1)
 {
@@ -37,28 +32,39 @@ cbuffer PixelConstantBuffer : register(b1)
     float4 materialColor;
 };
 
-PSOutput main(PSInput input)
-{
-    PSOutput output;
 
+uint4 main(PSInput input) : SV_Target
+{
     
-    output.albedo = data2.x > -1.0 ? float4(1, 1, 1, 1) : albedoMap.Sample(samplerState, input.texcoord);
-    output.albedo *= materialColor;
+    float4 albedo;
+
+    albedo = data2.x > -1.0 ? float4(1, 1, 1, 1) : albedoMap.Sample(samplerState, input.texcoord);
+    albedo *= materialColor;
     
-    if (output.albedo.a < 0.1)
+    if (albedo.a < 0.1)
         discard;
     
-    output.normal.xyz = normalize(input.normal);
+     
+    
+    float3 normal = normalize(input.normal);
     float3 tangent = normalize(input.tangent);
-    float3 binormal = normalize(cross(output.normal.xyz, tangent));
-    float3x3 tangentSpaceMatrix = float3x3(tangent, binormal, output.normal.xyz);
+    float3 binormal = normalize(cross(normal.xyz, tangent));
+    float3x3 tangentSpaceMatrix = float3x3(tangent, binormal, normal.xyz);
 
     if (data2.y < 0.0)
     {
         float3 normalSample = normalize((normalMap.Sample(samplerState, input.texcoord)).xyz * 2.0f - 1.0f);
-        output.normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
+        normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
     }
-    output.worldPos = float4(input.worldPos, 1.0);
+    
+    float roughness = 0.0;
+    float metallic = 0.0;
+    float ao = 0.0;
+    
+    
+    
+    
+    //output.worldPos = float4(input.worldPos, 1.0);
     
     if (data2.w > 0)
     {
@@ -66,23 +72,25 @@ PSOutput main(PSInput input)
         {
             float4 materialProperties = roughnessMap.Sample(samplerState, input.texcoord);
             
-            output.normal.w = 1.0f - materialProperties.r; // Metallic
-            output.worldPos.w = materialProperties.g; // roughness
-            output.albedo.w = materialProperties.b; // AO
+            metallic = 1.0f - materialProperties.r; // Metallic
+            roughness = materialProperties.g; // roughness
+            ao = materialProperties.b; // AO
         }
         else
         {
-            output.normal.w = data.x; // Metallic
-            output.albedo.w = data.y; // AO
-            output.worldPos.w = data.z; // roughness
+            metallic = data.x; // Metallic
+            ao = data.y; // AO
+            roughness = data.z; // roughness
             
         }
     }
     else
     {
-        output.albedo.w = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, input.texcoord).r; // AO
-        output.normal.w = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, input.texcoord).r); // Metallic
-        output.worldPos.w = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, input.texcoord).r; // roughness
+        ao = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, input.texcoord).r; // AO
+        metallic = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, input.texcoord).r); // Metallic
+        roughness = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, input.texcoord).r; // roughness
     }
-    return output;
+
+
+    return CreateGBuffer(normal, albedo.xyz, roughness, metallic, ao, 0);
 }

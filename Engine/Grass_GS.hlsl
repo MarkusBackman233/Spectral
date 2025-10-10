@@ -11,12 +11,12 @@ cbuffer ViewConstantBuffer : register(b0)
 struct GSInput
 {
     float4 pos : SV_POSITION;
+    float2 dir : TEXCOORD0;
 };
 
 struct GSOutput
 {
     float4 pos : SV_POSITION;
-    float4 worldPosition : POSITION;
     float4 color : COLOR;
     float3 normal : NORMAL;
 };
@@ -47,8 +47,6 @@ GSOutput GenerateVertex(float width, float3 pos, float3 right, float4 color, flo
     output.pos = float4(pos, 1);
     
     output.pos.xyz += right * width;
-    
-    output.worldPosition = output.pos;
     output.pos = mul(output.pos, ViewProjection);
     output.color = color;
     output.normal = normal;
@@ -56,13 +54,6 @@ GSOutput GenerateVertex(float width, float3 pos, float3 right, float4 color, flo
     return output;
 }
 
-/*
-float3 BezierQuadratic(float3 p0, float3 p1, float3 p2, float t)
-{
-    float u = 1.0 - t;
-    return u * u * p0 + 2.0 * u * t * p1 + t * t * p2;
-}
-*/ 
 
 float3 BezierQuadratic(float3 p0, float3 p1, float3 p2, float t)
 {
@@ -78,14 +69,10 @@ float3 BezierQuadraticTangent(float3 p0, float3 p1, float3 p2, float t)
 
 float3 RandomUnitVectorXZ(float3 seed)
 {
-    float2 rand2 = Rand3dTo2d(seed);
-    
-    float angle = rand2.x * 6.2831853; // 2 * PI
-    
-    float3 dir = float3(cos(angle), 0.0, sin(angle));
-    
-    return dir;
+    float angle = Rand3dTo1d(seed) * 6.2831853;
+    return float3(cos(angle), 0.0, sin(angle));
 }
+
 
 [maxvertexcount(12)]
 void main(point GSInput input[1], inout TriangleStream<GSOutput> TriStream)
@@ -98,10 +85,9 @@ void main(point GSInput input[1], inout TriangleStream<GSOutput> TriStream)
     
     float2 rand = Rand3dTo2d(center.xyz);
     float s = rand.x + 0.4;
-    //float3 right = normalize(float3(rand.x-0.5, 0, rand.y-0.5)*2);
-    float3 right = RandomUnitVectorXZ(center.xyz);
     
-    float3 front = cross(right, float3(0, 1, 0));
+    float3 front = float3(input[0].dir.x, 0, input[0].dir.y);
+    float3 right = cross(float3(0, 1, 0),front);
     
     
     float width = 0.03f * s;
@@ -111,8 +97,6 @@ void main(point GSInput input[1], inout TriangleStream<GSOutput> TriStream)
     float3 wind = float3(0.4 * cos(CB_elapsedTime + rand.y), 0.3, -0.1) * sin(CB_elapsedTime + rand.x) * 1;
     
     float3 p0 = center;
-    //float3 p1 = center.xyz + float3(0, height * 0.8, 0) + front * 0.1;
-    //float3 p2 = center.xyz + front * 3 + float3(0, height * 0.3, 0) + wind;
     float3 p1 = p0 + float3(0, height, 0) + wind * s * 0.5;
     float3 p2 = p1 + front * 1.2 * s + wind * s;
     
@@ -122,10 +106,10 @@ void main(point GSInput input[1], inout TriangleStream<GSOutput> TriStream)
 
 
     
-     float4 lightGreenColor = float4(0.32, 0.61, 0.0144, 0.3f);
-     float4 darkestGreenColor = float4(0.117, 0.300, 0.0144, 1.0f);
+    float4 lightGreenColor = float4(0.32, 0.61, 0.0144, 0.8f);
+    float4 darkestGreenColor = float4(0.117, 0.300, 0.0144, 1.0f);
     
-    float d = length(CameraPosition - center);
+    float d = length(CameraPosition.xz - center.xz);
     float c_d = min(d, 10) * 0.1 + 1.0f;
     
     
@@ -154,9 +138,13 @@ void main(point GSInput input[1], inout TriangleStream<GSOutput> TriStream)
     
         float w = width * smoothstep(1, 0.2, fraction);
         float3 normal = cross(right, normalize(tangent));
+        //normal.xyz = lerp(normal.xyz, float3(0, 1, 0), 0.8);
     
-    
-        TriStream.Append(GenerateVertex(w, p, right * c_d, color, normal));
-        TriStream.Append(GenerateVertex(w, p, -right * c_d, color, normal));
+        
+        GSOutput v1 = GenerateVertex(w, p, right * c_d, color, normal);
+        GSOutput v2 = GenerateVertex(w, p, -right * c_d, color, normal);
+
+        TriStream.Append(v1);
+        TriStream.Append(v2);
     }
 }

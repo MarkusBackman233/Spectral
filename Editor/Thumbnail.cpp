@@ -4,26 +4,12 @@
 #include <DefaultMaterial.h>
 #include <Texture.h>
 #include <Mesh.h>
+#include <ResourceManager.h>
 
-Thumbnail::Thumbnail(Mesh* mesh, DefaultMaterial* material)
+Thumbnail::GlobalThumbnailResources Thumbnail::m_resources;
+
+void Thumbnail::CreateResources(ID3D11Device* device)
 {
-    D3D11_TEXTURE2D_DESC textureDesc = {};
-    textureDesc.Width = 128;
-    textureDesc.Height = 128;
-    textureDesc.MipLevels = 1;
-    textureDesc.ArraySize = 1;
-    textureDesc.SampleDesc.Count = 1;
-    textureDesc.Usage = D3D11_USAGE_DEFAULT;
-    textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    textureDesc.CPUAccessFlags = 0;
-    textureDesc.MiscFlags = 0;
-    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-    auto device = Render::GetDevice();
-    device->CreateTexture2D(&textureDesc, nullptr, m_texture.GetAddressOf());
-    device->CreateRenderTargetView(m_texture.Get(), nullptr, m_RTV.GetAddressOf());
-    device->CreateShaderResourceView(m_texture.Get(), nullptr, m_SRV.GetAddressOf());
-
     D3D11_INPUT_ELEMENT_DESC vertexLayout[] = {
         { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT,     0,  0,  D3D11_INPUT_PER_VERTEX_DATA,   0 },
         { "COLOR",     0, DXGI_FORMAT_R8G8B8A8_UNORM,      0, 12,  D3D11_INPUT_PER_VERTEX_DATA,   0 },
@@ -32,15 +18,28 @@ Thumbnail::Thumbnail(Mesh* mesh, DefaultMaterial* material)
         { "TANGENT",   0, DXGI_FORMAT_R32G32B32_FLOAT,     0, 36,  D3D11_INPUT_PER_VERTEX_DATA,   0 },
     };
 
-    Render::CreateVertexShader(device, "Forward_VS.cso", &m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_pInputLayout);
-    Render::CreatePixelShader(device, "PbrThumbnail_PS.cso", &m_pPixelShader);
+    Render::CreateVertexShader(device, "Forward_VS.cso", &m_resources.m_pVertexShader, vertexLayout, ARRAYSIZE(vertexLayout), &m_resources.m_pInputLayout);
+    Render::CreatePixelShader(device, "PbrThumbnail_PS.cso", &m_resources.m_pPixelShader);
 
-    Render::CreateConstantBuffer(device, sizeof(VertexConstantBuffer), m_pVertexConstantBufferData);
-    Render::CreateConstantBuffer(device, sizeof(PixelConstantBuffer), m_pPixelConstantBufferData);
+    Render::CreateConstantBuffer(device, sizeof(GlobalThumbnailResources::VertexConstantBuffer), m_resources.m_pVertexConstantBufferData);
+    Render::CreateConstantBuffer(device, sizeof(GlobalThumbnailResources::PixelConstantBuffer), m_resources.m_pPixelConstantBufferData);
 
+}
+
+void Thumbnail::DestroyResources()
+{
+
+    m_resources.m_pInputLayout.Reset();
+    m_resources.m_pVertexShader.Reset();
+    m_resources.m_pPixelShader.Reset();
+    m_resources.m_pVertexConstantBufferData.Reset();
+    m_resources.m_pPixelConstantBufferData.Reset();
+}
+
+void Thumbnail::Render(Mesh* mesh, DefaultMaterial* material)
+{
     auto lockedContext = Render::GetContext();
     auto context = lockedContext.GetContext();
-
 
     D3D11_VIEWPORT viewport{};
     viewport.Width = static_cast<float>(128);
@@ -62,33 +61,24 @@ Thumbnail::Thumbnail(Mesh* mesh, DefaultMaterial* material)
     ID3D11RenderTargetView* renderTargets[1]{ m_RTV.Get() };
     context->OMSetRenderTargets(1, renderTargets, nullptr);
 
+    Render::SetShaders(m_resources.m_pPixelShader, m_resources.m_pVertexShader, m_resources.m_pInputLayout, context);
+    
+    float size = mesh->GetBoundingBoxMax().Length() * 2.0f + 0.1f;
 
-
-    Render::SetShaders(m_pPixelShader, m_pVertexShader, m_pInputLayout, context);
-
-
-    float size = mesh->GetBoundingBoxMax().Length()*2.0f+0.1f;
-
-    OrthographicCamera camera(Math::Vector2(size, size),0.3f,100.0f);
+    OrthographicCamera camera(Math::Vector2(size, size), 0.3f, 100.0f);
     camera.GetWorldMatrix().SetPosition({ 0.0f, 0.0f, 5.0f });
     camera.CreateViewAndPerspective();
 
-    m_vertexConstantBuffer.viewProjection = camera.GetViewProjectionMatrix();
-    m_vertexConstantBuffer.cameraPos = Math::Vector4(camera.GetWorldMatrix().GetPosition(), 1.0f);
-    Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_pVertexConstantBufferData, &m_vertexConstantBuffer, context);
+    m_resources.m_vertexConstantBuffer.viewProjection = camera.GetViewProjectionMatrix();
+    m_resources.m_vertexConstantBuffer.cameraPos = Math::Vector4(camera.GetWorldMatrix().GetPosition(), 1.0f);
+    Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 0, m_resources.m_pVertexConstantBufferData, &m_resources.m_vertexConstantBuffer, context);
 
-    context->RSSetState(deviceResources->GetNoCullingRasterizer());
-
-    ID3D11SamplerState* samplers[1] = { deviceResources->GetDefaultSamplerState() };
-    context->PSSetSamplers(0, 1, samplers);
+    //context->RSSetState(deviceResources->GetNoCullingRasterizer());
+    //
+    //ID3D11SamplerState* samplers[1] = { deviceResources->GetDefaultSamplerState() };
+    //context->PSSetSamplers(0, 1, samplers);
     UINT stride = sizeof(Mesh::Vertex);
     UINT offset = 0;
-
-
-
-
-
-
 
     auto SetShaderResource = [&](DefaultMaterial::TextureType textureType, float& data, float fallbackValue = 1.0f)
     {
@@ -103,18 +93,39 @@ Thumbnail::Thumbnail(Mesh* mesh, DefaultMaterial* material)
         }
     };
 
-    SetShaderResource(DefaultMaterial::BaseColor, m_pixelConstantBuffer.data2.x);
-    SetShaderResource(DefaultMaterial::Normal, m_pixelConstantBuffer.data2.y);
-    SetShaderResource(DefaultMaterial::Roughness, m_pixelConstantBuffer.data.y, material->GetMaterialSettings().Roughness);
-    SetShaderResource(DefaultMaterial::Metallic, m_pixelConstantBuffer.data.z, material->GetMaterialSettings().Metallic);
-    SetShaderResource(DefaultMaterial::AmbientOcclusion, m_pixelConstantBuffer.data.x);
+    SetShaderResource(DefaultMaterial::BaseColor, m_resources.m_pixelConstantBuffer.data2.x);
+    SetShaderResource(DefaultMaterial::Normal, m_resources.m_pixelConstantBuffer.data2.y);
+    SetShaderResource(DefaultMaterial::Roughness, m_resources.m_pixelConstantBuffer.data.y, material->GetMaterialSettings().Roughness);
+    SetShaderResource(DefaultMaterial::Metallic, m_resources.m_pixelConstantBuffer.data.z, material->GetMaterialSettings().Metallic);
+    SetShaderResource(DefaultMaterial::AmbientOcclusion, m_resources.m_pixelConstantBuffer.data.x);
 
 
-    Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 1, m_pPixelConstantBufferData, &m_pixelConstantBuffer, context);
+    Render::UpdateConstantBuffer(Render::SHADER_TYPE_PIXEL, 1, m_resources.m_pPixelConstantBufferData, &m_resources.m_pixelConstantBuffer, context);
 
     context->IASetVertexBuffers(0, 1, mesh->m_pVertexBuffer.GetAddressOf(), &stride, &offset);
     context->IASetIndexBuffer(mesh->m_pIndexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
     context->DrawIndexed(static_cast<UINT>(mesh->indices32.size()), 0, 0);
+}
+
+Thumbnail::Thumbnail(Mesh* mesh, DefaultMaterial* material)
+{
+    D3D11_TEXTURE2D_DESC textureDesc = {};
+    textureDesc.Width = 128;
+    textureDesc.Height = 128;
+    textureDesc.MipLevels = 1;
+    textureDesc.ArraySize = 1;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.Usage = D3D11_USAGE_DEFAULT;
+    textureDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    textureDesc.CPUAccessFlags = 0;
+    textureDesc.MiscFlags = 0;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    auto device = Render::GetDevice();
+    device->CreateTexture2D(&textureDesc, nullptr, m_texture.GetAddressOf());
+    device->CreateRenderTargetView(m_texture.Get(), nullptr, m_RTV.GetAddressOf());
+    device->CreateShaderResourceView(m_texture.Get(), nullptr, m_SRV.GetAddressOf());
+    Thumbnail::Render(mesh, material);
 }
 
 Thumbnail::~Thumbnail()
@@ -122,9 +133,31 @@ Thumbnail::~Thumbnail()
     m_texture.Reset();
     m_RTV.Reset();
     m_SRV.Reset();
-    m_pInputLayout.Reset();
-    m_pVertexShader.Reset();
-    m_pPixelShader.Reset();
-    m_pVertexConstantBufferData.Reset();
-    m_pPixelConstantBufferData.Reset();
+}
+
+std::unordered_map<std::string, std::shared_ptr<Thumbnail>> ThumbnailManager::m_thumbnails;
+
+std::shared_ptr<Thumbnail> ThumbnailManager::GetThumbnail(DefaultMaterial* material)
+{
+    auto it = m_thumbnails.find(material->m_filename);
+
+    if (it != m_thumbnails.end())
+    {
+        return it->second;
+    }
+    static auto sphereMesh = ResourceManager::GetInstance()->GetResource<Mesh>("Default Sphere").get();
+    auto thumbnail = std::make_shared<Thumbnail>(sphereMesh, material);
+    m_thumbnails.emplace(material->m_filename, thumbnail);
+    return thumbnail;
+}
+
+void ThumbnailManager::RegenerateThumbnail(DefaultMaterial* material)
+{
+    auto it = m_thumbnails.find(material->m_filename);
+
+    if (it != m_thumbnails.end())
+    {
+        static auto sphereMesh = ResourceManager::GetInstance()->GetResource<Mesh>("Default Sphere").get();
+        it->second->Render(sphereMesh, material);
+    }
 }

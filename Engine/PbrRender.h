@@ -23,8 +23,7 @@ public:
 		const DeviceResources& deviceResources, 
 		const DeferredPipeline& deferredPipeline, 
 		const SkyboxManager& skyboxManager, 
-		const ShadowManager& shadowManager, 
-		const SSAO& ssao
+		const ShadowManager& shadowManager
 	);
 
 	void RenderLight(const Light* light);
@@ -42,17 +41,26 @@ private:
 	{
 		Math::Matrix viewProjection;
 		Math::Matrix lightMatrix;
-
-		Math::Matrix invView;
-		Math::Matrix invProj;
+		Math::Matrix Projection;
+		Math::Matrix viewProjectionInverse;
+		Math::Matrix ProjectionInverse;
 
 		Math::Vector4 ambientLighting;
 		Math::Vector4 fogColor;
-		Math::Vector4 cameraPosition;
+		Math::Vector3 cameraPosition;
+		uint32_t numLights;
 		Math::Vector4 gamma;
 
 		LightShaderData lights[50];
 	};
+
+	struct SSAOPixelConstantBuffer
+	{
+		Math::Vector4 settings;
+		Math::Vector4 kernelPosition[64];
+	} m_SSAOpixelConstantBuffer;
+
+	Microsoft::WRL::ComPtr<ID3D11Buffer>            m_pSSAOPixelConstantBufferData;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>            m_pPixelConstantBufferData;
 	PixelConstantBuffer m_pixelConstantBuffer;
 

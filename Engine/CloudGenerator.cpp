@@ -20,18 +20,25 @@ void CloudGenerator::CreateResources(ID3D11Device* device)
 		for (int x = 0; x < width; ++x) {
 			Math::Vector4& data = cloudData[y * width + x];
 
-			data.w = (float)perlin.noise(x * 0.1, y * 0.1);
-			data.w += (float)perlin.noise(x * 0.6, y * 0.6)*0.3f;
+			data.w = 0.0f;
+			data.w = (float)perlin.noise(x * 0.1, y * 0.1) * 0.003f;
+			data.w += (float)perlin.noise(x * 0.3, y * 0.3) * 0.03f;
+
+
+
+			data.w += (float)perlin.noise(x * 0.01, y * 0.01)*10;
+
+
+
 			data.w = std::max(data.w, 0.0f);
 		}
 	}
 	float heightScale = 10.0f;
 
 	Math::Vector3 viewer(static_cast<float>(height) * 0.5f,0.0f, static_cast<float>(height) * 0.5f);
-	/*
+	
 	for (int y = 1; y < height - 1; ++y) {
 		for (int x = 1; x < width - 1; ++x) {
-
 			float up = cloudData[(y + 1) * width + x].w;
 			float down = cloudData[(y - 1) * width + x].w;
 			float left = cloudData[y * width + x - 1].w;
@@ -52,15 +59,18 @@ void CloudGenerator::CreateResources(ID3D11Device* device)
 
 			float distanceWeight = (1.0f + distanceToCloud * 0.1f);
 
+			normal = normal.GetInterpolate(Math::Vector3(0.0f, -1.0f, 0.0f),0.7f);
 
-			normal = (normal + directionToViewer * distanceWeight).GetNormal();
 
-			data.x = directionToViewer.x;
-			data.y = directionToViewer.y;
-			data.z = directionToViewer.z;
+
+			//normal = (normal + directionToViewer * distanceWeight).GetNormal();
+
+			data.x = normal.x;
+			data.y = normal.y;
+			data.z = normal.z;
 		}
 	}
-	*/
+	
 	D3D11_TEXTURE2D_DESC texDesc{};
 	texDesc.Width = width;
 	texDesc.Height = height;

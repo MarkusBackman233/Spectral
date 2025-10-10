@@ -1,3 +1,5 @@
+#include "common.hlsli"
+
 Texture2D albedo0Map : register(t0);
 Texture2D albedo1Map : register(t1);
 Texture2D albedo2Map : register(t2);
@@ -22,19 +24,12 @@ SamplerState pointSampler : register(s4);
 struct PSInput
 {
     float4 position : SV_POSITION;
-    float4 color : COLOR;
+    half4 color : COLOR;
     float3 worldPos : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 tangent : TEXCOORD2;
     float3 binormal : TEXCOORD3;
     float2 texcoord : TEXCOORD4;
-};
-
-struct PSOutput
-{
-    float4 albedo : SV_Target0;
-    float4 normal : SV_Target1;
-    float4 worldPos : SV_Target2;
 };
 
 cbuffer PixelConstantBuffer : register(b1)
@@ -90,7 +85,7 @@ float4 GetTexture4(Texture2D textureMap, float2 texcoord, int bit)
 {
     if (CB_materialData & (1 << bit))
     {
-        return textureMap.Sample(samplerState, texcoord * 0.3);
+        return textureMap.Sample(samplerState, texcoord);
     }
     
     return float4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -100,7 +95,7 @@ float3 GetTexture3(Texture2D textureMap, float2 texcoord, int bit)
 {
     if (CB_materialData & (1 << bit))
     {
-        return textureMap.Sample(samplerState, texcoord * 0.3).rgb;
+        return textureMap.Sample(samplerState, texcoord).rgb;
     }
     
     return float3(0.0f, 0.0f, 0.0f);
@@ -110,16 +105,15 @@ float GetTexture1(Texture2D textureMap, float2 texcoord, int bit)
 {
     if (CB_materialData & (1 << bit))
     {
-        return textureMap.Sample(samplerState, texcoord*0.3).r;
+        return textureMap.Sample(samplerState, texcoord).r;
     }
     
     return 0.0f;
 }
 
 
-PSOutput main(PSInput input)
+uint4 main(PSInput input) : SV_Target
 {
-    PSOutput output;
     
     
     //float4 splat = splatMap.Sample(samplerState, input.texcoord);
@@ -130,7 +124,7 @@ PSOutput main(PSInput input)
     float weightSum = splat.r + splat.g + splat.b + splat.a;
     splat /= max(weightSum, 0.0001);
     
-    
+    input.texcoord *= 0.3;
     
 
     float4 blendedAlbedo = BlendTextures4(
@@ -196,41 +190,41 @@ PSOutput main(PSInput input)
         ao3 = multimaterialProperties.b;
     }
 
-    output.normal.w = BlendTextures1(metallic0, metallic1, metallic2, metallic3, splat); // Metallic
-    output.albedo.w = BlendTextures1(ao0, ao1, ao2, ao3, splat); // AO
-    output.worldPos.w = BlendTextures1(roughness0, roughness1, roughness2, roughness3, splat); // roughness
+    float metallic = 1.0 - BlendTextures1(metallic0, metallic1, metallic2, metallic3, splat); // Metallic
+    float ao = BlendTextures1(ao0, ao1, ao2, ao3, splat); // AO
+    float roughness = BlendTextures1(roughness0, roughness1, roughness2, roughness3, splat); // roughness
     
     
-    output.albedo = float4(blendedAlbedo.rgb, 1.0f);
+    float4 albedo = float4(blendedAlbedo.rgb, 1.0f);
 
+    
+
+
+    //output.albedo.rgb = input.color.rgb;
+    float3 normal = normalize(input.normal);
+    float3 tangent = normalize(input.tangent);
+    float3 binormal = normalize(cross(normal.xyz, tangent));
+    float3x3 tangentSpaceMatrix = float3x3(tangent, binormal, normal.xyz);
+
+    uint normalMask = (1 << Normal0) | (1 << Normal1) | (1 << Normal2) | (1 << Normal3);
+    if (CB_materialData & normalMask)
+    {
+        float3 normalSample = normalize(blendedNormal.xyz * 2.0f - 1.0f);
+        normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
+    }
+    
     
     float d = length(input.worldPos.xz - CB_mouseRaycastHit.xz);
     
     const float lineThickness = 0.4;
     if (d > CB_brushSize && d < CB_brushSize + lineThickness)
     {
-        output.albedo = float4(0, 0, 1, 1.0f);
-        output.normal.w = 0.0; // Metallic
-        output.worldPos.w = 0.05; 
-    }
+        albedo = float4(0, 0, 1, 1.0f);
+        metallic = 0.0; // Metallic
+        roughness = 0.05;
+        normal = normalize(input.normal);
 
-    //output.albedo.rgb = input.color.rgb;
-    output.normal.xyz = normalize(input.normal);
-    float3 tangent = normalize(input.tangent);
-    float3 binormal = normalize(cross(output.normal.xyz, tangent));
-    float3x3 tangentSpaceMatrix = float3x3(tangent, binormal, output.normal.xyz);
-
-    uint normalMask = (1 << Normal0) | (1 << Normal1) | (1 << Normal2) | (1 << Normal3);
-    if (CB_materialData & normalMask)
-    {
-        float3 normalSample = normalize(blendedNormal.xyz * 2.0f - 1.0f);
-        output.normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
     }
     
-
-    output.worldPos = float4(input.worldPos, 1.0);
-    
-
-    
-    return output;
+    return CreateGBuffer(normal, albedo.xyz, roughness, metallic, ao, 0);
 }

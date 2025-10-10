@@ -12,8 +12,6 @@ struct ID3D11Device;
 class DefaultMaterial : public IMaterial
 {
 public:
-
-
 	enum TextureType
 	{
 		BaseColor,
@@ -45,7 +43,6 @@ public:
 	void SetTexture(int index, std::shared_ptr<Texture> texture);
 	std::shared_ptr<Texture> GetTexture(int index) { return m_textures[index]; };
 
-
 	MaterialSettings& GetMaterialSettings() { return m_settings; }
 
 private:
@@ -56,7 +53,6 @@ private:
 		Math::Vector4 data2; // x = hasBaseColor, y = hasNormal, z = linearFiltering, w = combined materials texture
 		Math::Vector4 materialColor;
 	};
-
 
 	static struct MaterialGlobals
 	{
@@ -69,7 +65,6 @@ private:
 
 		PixelConstantBuffer m_pixelConstantBuffer;
 	} m_materialGlobals;
-
 
 	std::array<std::shared_ptr<Texture>, TextureType::NumTextures> m_textures{};
 

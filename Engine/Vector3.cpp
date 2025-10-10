@@ -69,6 +69,14 @@ float Vector3::LengthSquared() const
 	return x * x + y * y + z * z;
 }
 
+float Math::Vector3::HorizontalLength(const Vector3& other) const
+{
+	float dx = x - other.x;
+	float dz = z - other.z;
+
+	return sqrt(dx * dx + dz * dz);
+}
+
 float* Vector3::Data() const
 {
 	return const_cast<float*>(&x);
@@ -131,6 +139,9 @@ Vector3& Math::Vector3::Normalize()
 	x /= length;
 	y /= length;
 	z /= length;
+
+	Assert(IsFinite(), "A value in Vector3 is no longer finite after normalization. Probably tried to normalize a zero vector");
+
 	return *this;
 }
 

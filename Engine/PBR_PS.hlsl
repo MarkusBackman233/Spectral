@@ -1,5 +1,7 @@
-Texture2D albedoMap : register(t0);
-Texture2D normalMap : register(t1);
+#include "common.hlsli"
+
+Texture2D<uint4> gbufferMap: register(t0);
+Texture2D depthMap : register(t1);
 Texture2D positionMap : register(t2);
 Texture2D shadowDepthMap : register(t3);
 TextureCube iradianceMap : register(t4);
@@ -50,17 +52,24 @@ cbuffer GlobalPixelConstantBuffer : register(b0)
     matrix ViewProjection;
     matrix LightProjection;
     
-    matrix InvView;
-    matrix InvProjection;
+    matrix Projection;
+    
+    matrix ViewProjectionInverse;
+    matrix ProjectionInverse;
     
     float4 ambientLighting;
     float4 fogColor;
-    float4 cameraPosition;
+    float3 cameraPosition;
+    unsigned int numLights;
     float4 gamma;
     
     Light lights[50];
 };
-
+cbuffer SSAOConstantBuffer : register(b5)
+{
+    float4 ssaoSettings;
+    float4 samples[64];
+};
 
 #define PI 3.14159265
 
@@ -82,7 +91,7 @@ float DistributionGGX(float3 N, float3 H, float roughness)
 
 float GeometrySchlickGGX(float ndotV, float roughness)
 {
-    float r = (roughness + 1.0);
+    float r = roughness + 1.0;
     float k = (r * r) / 8.0;
 
     float nom = ndotV;
@@ -106,7 +115,7 @@ float3 FresnelSchlick(float cosTheta, float3 F0)
 
 float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
 {
-    return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+    return F0 + (max(float3(roughness, roughness, roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
 float3 computeReflectance(float3 N, float3 V, float3 F0, float3 albedo, float3 L, float3 H, float3 light_col, float intensity, float metallic, float roughness)
@@ -149,7 +158,6 @@ float ShadowCalculation(float4 lpos)
     const float texelSize = 0.000244140625;
     
     float shadowLevel = 0.0;
-    int shadowSamples = 0;
     
     float halfSampleDistance = 1.5;
     
@@ -158,26 +166,59 @@ float ShadowCalculation(float4 lpos)
         for (float x = -halfSampleDistance; x < halfSampleDistance; x += 1.0)
         {
             shadowLevel += shadowDepthMap.SampleCmpLevelZero(cmpSampler, lpos.xy + float2(x, y) * texelSize, lpos.z );
-            shadowSamples++;
 
         }
     }
-    return shadowLevel / shadowSamples;
+    return shadowLevel * 0.1111111111111111; // 1 / 9
 }
 
-float3 ReinhardTonemap(in float3 color)
-{
-    return color / (color + 1.0f);
-}
 
-float3 ACESFilmicCurve(float3 x)
+float CalculateSSAO(float3 normal, float3 worldPos, float depth, float2 texcoord)
 {
-    float a = 2.51f;
-    float b = 0.03f;
-    float c = 2.43f;
-    float d = 0.59f;
-    float e = 0.14f;
-    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0f, 1.0f);
+    float radius = ssaoSettings.z;
+    int validSamples = 0;
+    float occlusion = 0;
+    for (int i = 0; i < 16; ++i)
+    {
+        float3 samplePos = samples[i].xyz * radius + worldPos;
+        
+        
+        if (dot(samplePos - worldPos, normal) > 0)
+        {
+            validSamples++;
+        }
+        else
+        {
+            continue;
+        }
+        
+        float4 clipPos = mul(float4(samplePos, 1), ViewProjection);
+        float3 ndcPos = clipPos.xyz / clipPos.w;
+        if (ndcPos.x < -1 || ndcPos.x > 1 || ndcPos.y < -1 || ndcPos.y > 1)
+        {
+            continue;
+        }
+        ndcPos.xyz = ndcPos.xyz * 0.5 + 0.5;
+        ndcPos.y *= -1;
+
+        float offsetPositionDepth = clipPos.z;
+        float sampleDepth = ComputeViewDepth(depthMap.SampleLevel(samplerState, ndcPos.xy, 0).r);
+        
+        bool notOccluded = sampleDepth < (offsetPositionDepth - ssaoSettings.x);
+
+        if (notOccluded)
+        {
+            float rangeCheck = smoothstep(0.0, 1.0, radius / abs(offsetPositionDepth - sampleDepth));
+            occlusion += 1.0f * rangeCheck;
+        }
+    }
+    
+    if (validSamples)
+        occlusion /= validSamples;
+    else
+        occlusion = 1.0;
+    
+    return pow(1.0 - occlusion, ssaoSettings.y);
 }
 
 struct VVSOutput
@@ -185,123 +226,56 @@ struct VVSOutput
     float4 Pos : SV_Position;
     float2 texcoord : TEXCOORD0;
 };
-/*
-bool IsOccluded(float3 lightPos, float3 fragPos, Texture2D positionMap)
-{
-    float3 rayDir = normalize(fragPos - lightPos);
-    float totalDist = length(fragPos - lightPos);
-    const int steps = 10;
-    float stepSize = totalDist / steps;
-
-    for (int j = 1; j < steps; ++j)
-    {
-        float t = stepSize * j;
-        float3 samplePoint = lightPos + rayDir * t;
-
-        // Project sample point to screen space
-        float4 clip = mul(float4(samplePoint, 1.0), ViewProjection);
-        clip /= clip.w;
-        clip.y = -clip.y;
-        float2 uv = clip.xy * 0.5 + 0.5;
-
-        // Skip samples outside screen
-        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-            continue;
-
-        float4 scenePos = positionMap.SampleLevel(samplerState, uv, 0);
-
-        // Compare world-space distance between ray point and scene geometry
-        if (length(fragPos.xyz - samplePoint) < 0.15f) // small epsilon
-            return false;
-        if (length(scenePos.xyz - samplePoint) < 0.05f) // small epsilon
-            return true; // Occluded
-    }
-
-    return false; // No blocker found
-}
-*/
-bool IsOccluded(float3 lightPos, float3 fragPos, Texture2D positionMap, float distanceToLight)
-{
-    const int steps = 20;
-    float3 rayDir = normalize(fragPos - lightPos);
-    float totalDist = length(fragPos - lightPos);
-    float stepSize = totalDist / steps;
-
-    for (int j = 1; j < steps; ++j)
-    {
-        float3 samplePoint = lightPos + rayDir * (j * stepSize);
-
-        float4 clip = mul(float4(samplePoint, 1.0), ViewProjection);
-        clip /= clip.w;
-        clip.y = -clip.y;
-        float2 uv = clip.xy * 0.5 + 0.5;
-
-        if (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1)
-            continue;
-
-        float sceneDepth = positionMap.SampleLevel(samplerState, uv, 0).r;
-        float lightDepth = clip.z;
-
-        if (sceneDepth < lightDepth - 0.01f)  // small bias to avoid z-fighting
-        {
-            return true; // Occluded
-        }
-    }
-
-    return false; // No occlusion found
-}
 
 float3 ReconstructWorldPosition(float2 uv, float depth)
 {
-    uv.y = 1.0 - uv.y; // Flip Y
+    float4 ndc = float4(uv * 2.0f - 1.0f, depth, 1.0f);
+    ndc.y *= -1.0f;
 
-    float ndcZ = depth * 2.0f - 1.0f;
+    float4 viewPos = mul(ViewProjectionInverse, ndc);
+    viewPos.xyz /= viewPos.w;
 
-    float4 clipPos;
-    clipPos.xy = uv * 2.0f - 1.0f;
-    clipPos.z = ndcZ;
-    clipPos.w = 1.0f;
-
-    float4 viewPos = mul(clipPos, InvProjection);
-    viewPos /= viewPos.w;
-
-    float4 worldPos = mul(viewPos, InvView);
-    return worldPos.xyz;
+    return viewPos.xyz;
 }
 
 float4 main(VVSOutput input) : SV_TARGET
 {
-    float4 normal = normalMap.SampleLevel(samplerState, input.texcoord, 0);
-    normal.xyz = normalize(normal.xyz);
-    float metallic = normal.w;
-    clip(-metallic + 1.0);
-    
-    float ssao = SSAOMap.SampleLevel(clampSampler, input.texcoord, 0);
-    float4 albedo = albedoMap.SampleLevel(samplerState, input.texcoord, 0);
-    albedo.rgb = pow(albedo.rgb, 2.2);
-    float ao = saturate(albedo.w + ssao);
-    
-    float4 worldPosition = positionMap.SampleLevel(samplerState, input.texcoord, 0);
-    
-    float depth = length(worldPosition.xyz - cameraPosition.xyz);
-    
-    float roughness = worldPosition.w;
+    uint4 gbuffer = gbufferMap.Load(int3(input.Pos.xy, 0));
+    clip(((float) gbuffer.w) - 0.1);
 
-    float3 viewDir = normalize(cameraPosition.xyz - worldPosition.xyz);
+    float encodedX = float(gbuffer.x & 0x0FFFFFF) / 16777215.0;
+    float encodedY = float(gbuffer.y & 0x0FFFFFF) / 16777215.0;
+    float2 encoded = float2(encodedX, encodedY);
     
-    float3 F0 = float3(0.04, 0.04, 0.04);
+    float3 normal = Decode(encoded);
     
-    metallic = 1.0 - metallic;
+    float3 albedo;
+    albedo.x = (float) (gbuffer.z & 0x000000FF) / 255.0f;
+    albedo.y = (float) ((gbuffer.z >> 8) & 0x000000FF) / 255.0f;
+    albedo.z = (float) ((gbuffer.z >> 16) & 0x000000FF) / 255.0f;
+    albedo = pow(albedo, 2.2);
+    float roughness =   (float) ((gbuffer.x >> 24) & 0x000000FF) / 255.0f;
+    float metallic = 1.0 - (float) ((gbuffer.y >> 24) & 0x000000FF) / 255.0f;
+    float ao =          (float) ((gbuffer.z >> 24) & 0x000000FF) / 255.0f;
     
-    F0 = lerp(F0, albedo.rgb, metallic);
-
+    float depth = depthMap.Load(int3(input.Pos.xy, 0)).r;
+    
+    bool foliage = (bool) ((gbuffer.w >> 1) & 0x00000001);
+    
+    
+    
+    
+    float3 worldPosition = ReconstructWorldPosition(input.texcoord, depth);
+    //float ssao = CalculateSSAO(normal, worldPosition, depth, input.texcoord);
+    float ssao = 1.0;
+    float3 viewDir = normalize(cameraPosition - worldPosition);
+    float3 F0 = lerp(float3(0.03, 0.03, 0.03), albedo, metallic);
+    float shadow = ShadowCalculation(mul(float4(worldPosition.xyz, 1.0), LightProjection));
+    //shadow = max(shadow, 0.3);
     
     float3 brdfRec = float3(0.0, 0.0, 0.0);
-    float Shadow = ShadowCalculation(mul(float4(worldPosition.xyz, 1.0), LightProjection));
     
-    float3 sunDirection = float3(0, -1, 0);
-    float3 fogLightTerm =float3(0, 0, 0);
-    for (float i = 0.0; i < cameraPosition.w; i++)
+    for (uint i = 0; i < numLights; i++)
     {
         if (lights[i].lightType == PointLight)
         {
@@ -314,70 +288,65 @@ float4 main(VVSOutput input) : SV_TARGET
             
             float3 H = normalize(viewDir + lightDirection);
             brdfRec += computeReflectance(normal.xyz, viewDir, F0, albedo.rgb, lightDirection, H, lights[i].color.xyz, intensity, metallic, roughness);
-            
-            //float4 lightClipPos = mul(float4(lights[i].position.xyz, 1.0), ViewProjection);
-            //lightClipPos /= lightClipPos.w;
-            //lightClipPos.y = -lightClipPos.y; 
-            //
-            //float2 lightScreenPos = lightClipPos.xy * 0.5 + 0.5;
-            //
-            //float2 delta = input.texcoord - lightScreenPos;
-            //float screenDistance = length(delta);
-            //
-            //float distanceToLight = length(lights[i].position.xyz - cameraPosition.xyz);
-            //
-            //float screenRadius = 6 / distanceToLight;
-            //
-            //float flare = saturate(1.0 - (screenDistance / screenRadius));
-            //
-            //flare = pow(flare, 5.0);
-            //
-            //
-            //
-            ////if (!IsOccluded(lights[i].position.xyz, worldPosition.xyz, positionMap))
-            //if (!IsOccluded(lights[i].position.xyz, worldPosition.xyz, positionMap, distanceToLight))
-            //{
-            //    fogLightTerm += lights[i].color.rgb * flare;
-            //    
-            //}
 
         }
         else if (lights[i].lightType == DirectionalLight)
         {
-            sunDirection = normalize(-lights[i].direction.xyz);
-        //    float intensity = lights[i].lightAttenuation * 0.01;
-        //    float3 lightDirection = normalize(-lights[i].direction.xyz);
-        //    float3 H = normalize(viewDir + lightDirection);
-        //    brdfRec += computeReflectance(normal.xyz, viewDir, F0, albedo.rgb, -lights[i].direction.xyz, H, lights[i].color.xyz, intensity, metallic, roughness) * Shadow;
+            float3 lightDirection = normalize(-lights[i].direction.xyz);
+            float intensity = lights[i].lightAttenuation;
+
+            float3 H = normalize(viewDir + lightDirection);
+
+            brdfRec += computeReflectance(
+                normal.xyz,
+                viewDir,
+                F0,
+                albedo.rgb,
+                lightDirection,
+                H,
+                lights[i].color.xyz,
+                intensity,
+                metallic,
+                roughness
+            ) * shadow * 0.025;
         }
     }
     
     
     
-    float NdotV = max(dot(viewDir, normal.xyz), 0.0);
-    float3 reflection = normalize(reflect(-viewDir, normal.xyz));
-    float3 F = FresnelSchlickRoughness(NdotV, F0, roughness);
+    float NdotV = max(dot(viewDir, normal), 0.0);
+    //float NdotV = abs(dot(viewDir, normal));
+    float3 reflectionUnNormalized = reflect(-viewDir, normal);
+    float3 F = FresnelSchlickRoughness(NdotV, F0, 1-roughness);
     
-    float3 specularSample = specularMap.SampleLevel(samplerState, -reflection, roughness * 8).rgb;
+    float3 specularSample = specularMap.SampleLevel(samplerState, -reflectionUnNormalized,roughness * 7.0).
+    rgb;
     
 
-    float4 brdfTerm = specularIntegrationMap.SampleLevel(clampSampler, float2(NdotV, 1.0 - roughness), 0);
-    float3 specular = specularSample * (F * brdfTerm.x + brdfTerm.y) * ao;
-    float3 iradiance = iradianceMap.SampleLevel(samplerState, normal.xyz, 0).rgb / PI;
+    float4 brdfTerm = specularIntegrationMap.SampleLevel(clampSampler, float2(NdotV, 1-roughness), 0);
+    float3 specular = specularSample * (F * brdfTerm.x + brdfTerm.y);
+    float3 iradiance = iradianceMap.SampleLevel(samplerState, normal, 0).rgb / PI;
+    if (foliage) iradiance += iradianceMap.SampleLevel(samplerState, -normal, 0).rgb / PI * 0.8;
+    
     float3 kS = F;
-    float3 kD = 1.0 - kS;
-    kD *= 1.0 - metallic;
-    iradiance = lerp(iradiance * 0.3f, iradiance, ao);
+    float3 kD = (1.0 - kS) * (1.0 - metallic);
+
+    iradiance *= max(ao, 0.3);
     float3 albedoByDiffuse = kD * albedo.rgb * iradiance.rgb;
     
 
-    float3 fog = min(pow(depth * 0.01, 1.0 + fogColor.a), 1.0) * fogColor.xyz ;
-    float3 color = (albedoByDiffuse + specular + brdfRec * ao) * ssao * max(Shadow, 0.3) + 
-    iradianceMap.SampleLevel(samplerState, -viewDir, 0).rgb * fog * clamp(smoothstep(0.0, 1.0, (50.0f - worldPosition.y) * 0.02),
-    0.0f, 1.0f);
-    +fogLightTerm;
-    const float luminance = dot(color, float3(0.2126, 0.7152, 0.0722));
     
     
-    return float4(color, luminance);
+    float fogHeightMultiplier = clamp(smoothstep(0.0, 1.0, (50.0f - worldPosition.y) * 0.02), 0.0f, 1.0f);
+    float fogFactor = (1.0 - exp(-pow(fogColor.a * ComputeViewDepth(depth), 2.0)));
+    float3 fog = iradianceMap.SampleLevel(samplerState, -viewDir, 0).rgb * fogFactor * fogHeightMultiplier * fogColor.xyz;
+    
+    
+
+    
+    float3 color = albedoByDiffuse + specular + brdfRec;
+    float3 finalColor = color /** shadow */ * ssao + fog;
+    
+    const float luminance = dot(finalColor, float3(0.2126, 0.7152, 0.0722));
+    return float4(finalColor, luminance);
 }

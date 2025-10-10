@@ -4,10 +4,11 @@
 #include "GameObject.h"
 #include "Editor.h"
 #include "PropertyWindowFactory.h"
-#include "Texture.h"
 #include "DefaultMaterial.h"
 #include "ResourceManager.h"
-
+#ifdef EDITOR
+#include <MaterialEditor.h>
+#endif // EDITOR
 MeshComponent::MeshComponent(GameObject* owner)
     : Component(owner)
     , m_mesh(nullptr)
@@ -93,114 +94,7 @@ void MeshComponent::ComponentEditor()
     {
         PropertyWindowFactory::SelectMaterial(m_material);
     }
-
-    bool isDisabled = GetMaterial()->GetFilename() == "Default.material";
-
-    if (isDisabled)
-    {
-        ImGui::BeginDisabled();
-    }
-
-    enum TextureType
-    {
-        Albedo,
-        Normal,
-        Roughness,
-        Metallic,
-        AmbientOcclusion
-    };
-
-    static std::vector<std::pair<std::string, TextureType>> texturesNonCombined{
-        {"Albedo", TextureType::Albedo},
-        {"Normal", TextureType::Normal},
-        {"Roughness", TextureType::Roughness},
-        {"Metallic", TextureType::Metallic},
-        {"Ao", TextureType::AmbientOcclusion},
-    };
-    static std::vector<std::pair<std::string, TextureType>> texturesCombined{
-        {"Albedo", TextureType::Albedo},
-        {"Normal", TextureType::Normal},
-        {"MRO", TextureType::Roughness},
-    };
-    std::vector<std::pair<std::string, TextureType>>* textures = nullptr;
-
-
-    if (m_material->GetMaterialSettings().CombinedMaterialTexture)
-    {
-        textures = &texturesCombined;
-    }
-    else
-    {
-        textures = &texturesNonCombined;
-    }
-    
-    ImGui::Checkbox("Combined Material Texture", &GetMaterial()->GetMaterialSettings().CombinedMaterialTexture);
-
-    for (const auto& [textureName, textureId] : *textures)
-    {
-        if (GetMaterial()->GetTexture(textureId) && GetMaterial()->GetTexture(textureId)->GetResourceView().Get())
-        {
-            auto selectedTextureName = GetMaterial()->GetTexture(textureId)->GetFilename();
-            ImGui::Text(std::string(textureName + ": " + selectedTextureName).c_str());
-            auto resource = GetMaterial()->GetTexture(textureId)->GetResourceView().Get();
-            if (ImGui::ImageButton(textureName.c_str(),resource, Editor::GetInstance()->GetDefaultTextureSize()))
-            {
-                auto material = GetMaterial();
-                PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
-            }
-        }
-        else
-        {
-            ImGui::Text(std::string(textureName + ": Not selected").c_str());
-    
-            if (ImGui::Button(std::string("##"+ textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
-            {
-                auto material = GetMaterial();
-                PropertyWindowFactory::SelectTexture(material, textureId);
-            }
-        }
-
-        if (ImGui::BeginDragDropTarget())
-        {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
-            {
-                size_t size = payload->DataSize / sizeof(FileItem);
-                FileItem* payload_items = (FileItem*)payload->Data;
-                for (size_t i = 0; i < size; i++)
-                {
-                    FileItem& item = payload_items[i];
-                    if (item.m_type != ResourceType::Texture)
-                    {
-                        continue;
-                    }
-                    auto droppedTexture = ResourceManager::GetInstance()->GetResource<Texture>(item.m_filename);
-
-                    if (droppedTexture)
-                    {
-                        GetMaterial()->SetTexture(textureId, droppedTexture);
-                    }
-                }
-
-
-
-
-            }
-            ImGui::EndDragDropTarget();
-        }
-
-        ImGui::Separator();
-    }
-
-    ImGui::DragFloat("Roughness", &GetMaterial()->GetMaterialSettings().Roughness, 0.05f,0.0f,1.0f);
-    ImGui::DragFloat("Metallic", &GetMaterial()->GetMaterialSettings().Metallic, 0.05f,0.0f,1.0f);
-    ImGui::Checkbox("Backface Culling", &GetMaterial()->GetMaterialSettings().BackfaceCulling);
-    ImGui::Checkbox("Linear Filtering", &GetMaterial()->GetMaterialSettings().LinearFiltering);
-    ImGui::ColorPicker4("Color", &GetMaterial()->GetMaterialSettings().Color.x, Editor::GetInstance()->ColorPickerMask);
-
-    if (isDisabled)
-    {
-        ImGui::EndDisabled();
-    }
+    MaterialEditor::RenderGUI(m_material);
     ImGui::Separator();
     if (ImGui::Button("Print Vertex Data"))
     {
