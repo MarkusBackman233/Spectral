@@ -24,9 +24,12 @@
 * [LuaJIT](https://github.com/LuaJIT/LuaJIT)
 * [Steam-Audio](https://valvesoftware.github.io/steam-audio/downloads.html)
 
-![Spectral Showcase](https://github.com/user-attachments/assets/cb6338bd-417c-4063-ae65-905d2bbc4648)
-  
- ![Spectral_3OhvMBQeil-ezgif com-resize (1)](https://github.com/user-attachments/assets/9bebceb8-05be-4451-85d4-91a39e31bee9)
- 
- ![Spectral_QfRlrDPh9v-ezgif com-optimize](https://github.com/user-attachments/assets/11a5efae-7e86-4087-9bf5-91eb3550ca0e)
+<img width="1920" height="1042" alt="ofNGgXZV3u" src="https://github.com/user-attachments/assets/c5226f47-c57b-4147-a2cb-1ac2963632fe" />
+
+
+https://github.com/user-attachments/assets/d5a9533a-3da8-4ab3-a7e2-f453ddfa7aaf
+
+
+
+https://github.com/user-attachments/assets/d4c24ce3-d9a5-4673-b4e9-1e51e772be72
 
