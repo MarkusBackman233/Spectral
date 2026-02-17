@@ -426,8 +426,10 @@ FileItem::FileItem(const std::filesystem::path& filename) :
     }
     else if (m_type == ResourceType::Model)
     {
+        
         m_thumbnail = ThumbnailManager::GetThumbnail(
-            ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material").get()
+            ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material").get(), 
+            ResourceManager::GetInstance()->GetResource<Mesh>(filename).get()
         );
     }
 }

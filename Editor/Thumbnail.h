@@ -63,6 +63,8 @@ private:
 class ThumbnailManager
 {
 public:
+	static std::shared_ptr<Thumbnail> GetThumbnail(DefaultMaterial* material, Mesh* mesh);
+
 	static std::shared_ptr<Thumbnail> GetThumbnail(DefaultMaterial* material);
 	static void RegenerateThumbnail(DefaultMaterial* material);
 

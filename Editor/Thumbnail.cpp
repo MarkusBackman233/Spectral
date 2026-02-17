@@ -137,6 +137,19 @@ Thumbnail::~Thumbnail()
 
 std::unordered_map<std::string, std::shared_ptr<Thumbnail>> ThumbnailManager::m_thumbnails;
 
+std::shared_ptr<Thumbnail> ThumbnailManager::GetThumbnail(DefaultMaterial* material, Mesh* mesh)
+{
+    auto it = m_thumbnails.find(mesh->m_filename);
+
+    if (it != m_thumbnails.end())
+    {
+        return it->second;
+    }
+    auto thumbnail = std::make_shared<Thumbnail>(mesh, material);
+    m_thumbnails.emplace(mesh->m_filename, thumbnail);
+    return thumbnail;
+}
+
 std::shared_ptr<Thumbnail> ThumbnailManager::GetThumbnail(DefaultMaterial* material)
 {
     auto it = m_thumbnails.find(material->m_filename);

@@ -54,6 +54,10 @@ float4 main(PSInput input) : SV_TARGET
     {
         return 1.0f;
     }
+    
+    
+    return 1.0f;
+    
     float3 worldPos = positionMap.Sample(samplerState, input.tex).xyz;
     float3 normal = normalMap.Sample(samplerState, input.tex).xyz;
     float3 randomVector = normalize(float3(Rand3dTo2d(worldPos), 1.0));

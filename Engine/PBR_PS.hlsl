@@ -175,10 +175,12 @@ float ShadowCalculation(float4 lpos)
 
 float CalculateSSAO(float3 normal, float3 worldPos, float depth, float2 texcoord)
 {
+    return 1;
+    
     float radius = ssaoSettings.z;
     int validSamples = 0;
     float occlusion = 0;
-    for (int i = 0; i < 16; ++i)
+    for (int i = 0; i < 32; ++i)
     {
         float3 samplePos = samples[i].xyz * radius + worldPos;
         
@@ -266,8 +268,7 @@ float4 main(VVSOutput input) : SV_TARGET
     
     
     float3 worldPosition = ReconstructWorldPosition(input.texcoord, depth);
-    //float ssao = CalculateSSAO(normal, worldPosition, depth, input.texcoord);
-    float ssao = 1.0;
+    float ssao = CalculateSSAO(normal, worldPosition, depth, input.texcoord);
     float3 viewDir = normalize(cameraPosition - worldPosition);
     float3 F0 = lerp(float3(0.03, 0.03, 0.03), albedo, metallic);
     float shadow = ShadowCalculation(mul(float4(worldPosition.xyz, 1.0), LightProjection));
@@ -348,5 +349,6 @@ float4 main(VVSOutput input) : SV_TARGET
     float3 finalColor = color /** shadow */ * ssao + fog;
     
     const float luminance = dot(finalColor, float3(0.2126, 0.7152, 0.0722));
+    
     return float4(finalColor, luminance);
 }

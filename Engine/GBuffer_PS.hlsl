@@ -33,9 +33,15 @@ cbuffer PixelConstantBuffer : register(b1)
 };
 
 
+float3 rnmBlendUnpacked(float3 n1, float3 n2)
+{
+    n1 += float3(0, 0, 1);
+    n2 *= float3(-1, -1, 1);
+    return n1 * dot(n1, n2) / n1.z - n2;
+}
+
 uint4 main(PSInput input) : SV_Target
 {
-    
     float4 albedo;
 
     albedo = data2.x > -1.0 ? float4(1, 1, 1, 1) : albedoMap.Sample(samplerState, input.texcoord);
@@ -54,7 +60,9 @@ uint4 main(PSInput input) : SV_Target
     if (data2.y < 0.0)
     {
         float3 normalSample = normalize((normalMap.Sample(samplerState, input.texcoord)).xyz * 2.0f - 1.0f);
+        
         normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
+        
     }
     
     float roughness = 0.0;

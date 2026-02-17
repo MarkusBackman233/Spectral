@@ -26,7 +26,6 @@ float3 Decode(float2 f)
 uint4 CreateGBuffer(in const float3 normal, in const float3 albedo, in const float roughness, in const float metallic, in const float ao, in const uint foliage)
 {
     uint4 output = 0;
-    
     float2 encodedNormal = Encode(normal) * 16777215;
     output.x |= (uint) encodedNormal.x;
     output.y |= (uint) encodedNormal.y;

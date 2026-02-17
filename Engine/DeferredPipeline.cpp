@@ -30,7 +30,6 @@ void DeferredPipeline::CreateResources(ID3D11Device* device, const Math::Vector2
     textureDesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
 
     device->CreateTexture2D(&textureDesc, nullptr, m_gBufferTexture.GetAddressOf());
-
     device->CreateRenderTargetView(m_gBufferTexture.Get(), nullptr, m_gBufferRTV.GetAddressOf());
     device->CreateShaderResourceView(m_gBufferTexture.Get(), nullptr, m_gBufferSRV.GetAddressOf());
 }
