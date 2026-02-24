@@ -13,6 +13,7 @@
 * Material creator
 * Scriptable gui system
 * Custom math library
+* Fast multi-threaded asset loading
   
 ## Supported filetypes
 * Models. ".fbx" ,".blend", ".obj", ".gltf", ".glb"
