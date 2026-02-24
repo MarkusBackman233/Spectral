@@ -12,7 +12,8 @@
 * Project browser
 * Material creator
 * Scriptable gui system
-
+* Custom math library
+  
 ## Supported filetypes
 * Models. ".fbx" ,".blend", ".obj", ".gltf", ".glb"
 * Textures. ".dds" ,".png" ,".jpg", ".jpeg", ".tga"
