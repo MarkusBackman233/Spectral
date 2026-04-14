@@ -9,7 +9,7 @@
 #include "RigidbodyComponent.h"
 #include "iRender.h"
 #include <random>
-
+#include "Model.h"
 void NavigationManager::Update(float deltaTime)
 {
 	if (m_navMesh)

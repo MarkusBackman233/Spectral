@@ -5,11 +5,10 @@
 #include <d3d11.h>
 #include <wrl/client.h>
 
-#include "LoadableResource.h"
 
 class DefaultMaterial;
 
-class Mesh : public Resource
+class Mesh
 {
 public:
 	struct Vertex {
@@ -20,9 +19,9 @@ public:
 		Math::Vector3 tangent;
 	};
 
-	Mesh();
+	Mesh(const std::string& name);
 
-	bool Load(const std::filesystem::path& file) override;
+	const std::string& GetFilename();
 
 	void CalculateBoundingBox();
 	Math::Vector3 GetBoundingBoxMin() const { return m_minBounds; }
@@ -37,6 +36,8 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> m_pIndexBuffer;
 
 private:
+
+	std::string m_name;
 
 	Math::Vector3 m_maxBounds;
 	Math::Vector3 m_minBounds;

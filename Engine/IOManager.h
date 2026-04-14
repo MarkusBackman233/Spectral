@@ -4,6 +4,7 @@
 #include <rapidjson/document.h>
 #include <filesystem>
 #include "Json.h"
+#include "Model.h"
 
 struct aiScene;
 struct aiMesh;
@@ -12,6 +13,8 @@ struct aiNode;
 class Mesh;
 class GameObject;
 class DefaultMaterial;
+class Model;
+struct SubMesh;
 
 namespace Math
 {
@@ -37,7 +40,7 @@ public:
 	{ 
 		try
 		{
-			std::filesystem::create_directories(m_path);
+			std::filesystem::create_directories(m_path.parent_path());
 		}
 		catch (const std::exception& e)
 		{
@@ -129,18 +132,7 @@ public:
 private:
 	std::ifstream m_file;
 };
-enum class ResourceType
-{
-	Model,
-	Texture,
-	Audio,
-	Scene,
-	Script,
-	Material,
-	Prefab,
 
-	Num
-};
 
 class IOManager
 {
@@ -174,14 +166,11 @@ public:
 
 	static bool LoadDroppedResource(const std::filesystem::path& file);
 
-	static void SaveSpectralModel(std::shared_ptr<Mesh> mesh);
 
 	static void SaveSpectralScene(const std::string& sceneName);
 	static bool LoadSpectralScene(const std::string& filename);
 
 	static bool CreateDefaultScene();
-
-	static void SaveSpectralMaterial(std::shared_ptr<DefaultMaterial> material);
 
 	static void CollectProjectFiles();
 
@@ -189,9 +178,7 @@ public:
 	static void LoadGameObject(const rapidjson::Value& object, GameObject* parent);
 private: 
 
-	static void ProcessMesh(const std::string& filename, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, GameObject* gameObject, unsigned int subMeshId);
-	static void ProcessNode(const std::string& filename, const std::filesystem::path& path, aiNode* node, const aiScene* scene, GameObject* parent, const Math::Matrix& accTransform);
-
-	static std::filesystem::path GetPath(const std::string& filename, const std::string& Extension);
+	static void ProcessMesh(Model* model, const std::filesystem::path& path, aiMesh* mesh, const aiScene* scene, SubMesh& subMesh);
+	static void ProcessNode(Model* model, const std::filesystem::path& path, aiNode* node, const aiScene* scene, SubMesh& subMesh, const Math::Matrix& accTransform);
 
 };

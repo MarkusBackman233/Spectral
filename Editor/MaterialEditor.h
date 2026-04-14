@@ -6,7 +6,7 @@ class MaterialEditor
 {
 public:
 
-	static void RenderGUI(std::shared_ptr<DefaultMaterial> material);
+	static bool RenderGUI(std::shared_ptr<DefaultMaterial> material);
 
 };
 

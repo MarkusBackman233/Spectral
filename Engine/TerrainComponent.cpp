@@ -31,8 +31,7 @@ TerrainComponent::TerrainComponent(GameObject* owner)
     , m_terrainSize(500.0f)
 {
 
-    m_mesh = std::make_shared<Mesh>();
-    m_mesh->m_filename = "Terrain";
+    m_mesh = std::make_shared<Mesh>("Terrain");
     m_material = std::make_shared<TerrainMaterial>();
 
     //CreatePlaneMesh();
@@ -150,31 +149,10 @@ void TerrainComponent::ComponentEditor()
             {
             }
         }
-
-        if (ImGui::BeginDragDropTarget())
+        if (Editor::GetInstance()->GetDropResource(m_material->m_materials[materialId]))
         {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
-            {
-                size_t size = payload->DataSize / sizeof(FileItem);
-                FileItem* payload_items = (FileItem*)payload->Data;
-                for (size_t i = 0; i < size; i++)
-                {
-                    FileItem& item = payload_items[i];
-                    if (item.m_type != ResourceType::Material)
-                    {
-                        continue;
-                    }
-                    auto droppedTexture = ResourceManager::GetInstance()->GetResource<DefaultMaterial>(item.m_filename);
-
-                    if (droppedTexture)
-                    {
-                        m_material->m_materials[materialId] = droppedTexture;
-                        break;
-                    }
-                }
-            }
-            ImGui::EndDragDropTarget();
         }
+
         if (m_material->m_materials[materialId] != nullptr)
         {
 
@@ -199,7 +177,6 @@ Json::Object TerrainComponent::SaveComponent()
 {
     Json::Object object;
 
-    m_mesh->m_filename = "UserTerrain.model";
     object.emplace("Terrain Name", m_mesh->GetFilename());
 
     object.emplace("Material0", m_material->m_materials[0] ? m_material->m_materials[0]->GetFilename() : "null");

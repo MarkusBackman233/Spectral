@@ -1,6 +1,7 @@
 cbuffer VertexConstantBuffer : register(b0)
 {
     matrix ViewProjection;
+    matrix ModelPose;
     float4 CameraPosition;
 };
 
@@ -26,7 +27,7 @@ struct VS_OUTPUT
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
-    output.position = float4(input.position, 1.0);
+    output.position = mul(ModelPose, float4(input.position, 1.0));
     output.worldPos = output.position;
     
     output.position = mul(output.position, ViewProjection);

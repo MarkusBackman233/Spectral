@@ -8,6 +8,9 @@
 #include <StringUtils.h>
 #include <ResourceManager.h>
 #include <Texture.h>
+#include <Model.h>
+#include "iInput.h"
+#include "Editor.h"
 namespace fs = std::filesystem;
 
 void AssetBrowser::UpdateLayoutSizes(float avail_width)
@@ -42,27 +45,47 @@ AssetBrowser::AssetBrowser()
 
 void AssetBrowser::Update()
 {
-
-
-    if (!ImGui::Begin("Asset Browser", nullptr, ImGuiWindowFlags_MenuBar))
+    if (ImGui::Begin("Asset Browser", nullptr, ImGuiWindowFlags_MenuBar))
     {
+        if (ImGui::BeginTable("My2ColTable", 2, ImGuiTableFlags_Resizable )) 
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            FileExplorer();
+            ImGui::TableSetColumnIndex(1);
+            Assets();
+
+
+            ImGui::EndTable();
+        }
+
         ImGui::End();
-        return;
+    }
+}
+
+void AssetBrowser::RefreshFolder()
+{
+    OpenFolder(m_currentOpenFolder);
+}
+
+std::vector<FileItem*> AssetBrowser::GetSelectedItems()
+{
+    std::vector<FileItem*> result;
+
+    void* it = nullptr;
+    ImGuiID id = 0;
+
+    while (Selection.GetNextSelectedItem(&it, &id))
+    {
+        auto itIndex = ImGuiIdToIndex.find(id);
+        if (itIndex != ImGuiIdToIndex.end())
+        {
+            result.push_back(&Items[itIndex->second]);
+        }
     }
 
-    if (ImGui::BeginTable("My2ColTable", 2, ImGuiTableFlags_Resizable )) {
-        ImGui::TableNextRow();
-
-        ImGui::TableSetColumnIndex(0);
-        FileExplorer();
-        ImGui::TableSetColumnIndex(1);
-        Assets();
-
-
-        ImGui::EndTable();
-    }
-
-    ImGui::End();
+    return result;
 }
 
 
@@ -71,18 +94,30 @@ void AssetBrowser::FileExplorer()
 {
     FileExplorer::ShowSubFolders(IOManager::ProjectDirectory, std::bind(&AssetBrowser::OpenFolder, this, std::placeholders::_1));
 }
-
+bool HasSubdirectory(const fs::path& path)
+{
+    for (auto it = fs::directory_iterator(path, fs::directory_options::skip_permission_denied);
+        it != fs::directory_iterator();
+        ++it)
+    {
+        if (it->is_directory())
+            return true;
+    }
+    return false;
+}
 void FileExplorer::ShowSubFolders(const std::filesystem::path& path, const std::function<void(const std::filesystem::path&)>& onOpenFolder)
 {
-
     static fs::path selectedFolder;
-
 
     for (const auto& entry : fs::directory_iterator(path))
     {
         if (entry.is_directory())
         {
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+            if (!HasSubdirectory(entry))
+            {
+                flags |= ImGuiTreeNodeFlags_Leaf;
+            }
 
             fs::path entryPath = entry.path();
 
@@ -91,14 +126,80 @@ void FileExplorer::ShowSubFolders(const std::filesystem::path& path, const std::
                 flags |= ImGuiTreeNodeFlags_Selected;
             }
 
-            bool open = ImGui::TreeNodeEx(entryPath.filename().string().c_str(), flags);
 
-            if (ImGui::IsItemClicked()) 
+
+
+            bool open = ImGui::TreeNodeEx(entryPath.filename().string().c_str(), flags);
+            if (ImGui::BeginDragDropTarget())
+            {
+                if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
+                {
+                    size_t size = payload->DataSize / sizeof(FileItem);
+                    FileItem* payload_items = (FileItem*)payload->Data;
+                    for (size_t i = 0; i < size; i++)
+                    {
+                        FileItem& item = payload_items[i];
+                        try
+                        {
+                            auto newPath = std::filesystem::path(entry) / item.m_filename;
+                            fs::rename(item.m_path, newPath);
+                            item.m_resource->SetPath(newPath);
+                        }
+                        catch (fs::filesystem_error& e)
+                        {
+                        }
+                    }
+                    Editor::GetInstance()->GetAssetBrowser()->GetSelectedItems().clear();
+                    Editor::GetInstance()->GetAssetBrowser()->RefreshFolder();
+
+                }
+                ImGui::EndDragDropTarget();
+            }
+            if (ImGui::IsItemClicked() || ImGui::IsItemClicked(ImGuiMouseButton_Right))
             {
                 selectedFolder = entryPath;
                 onOpenFolder(entryPath);
             }
+            if (ImGui::BeginPopupContextWindow())
+            {
+                if (ImGui::MenuItem("New Folder"))
+                {
+                    std::filesystem::create_directories(selectedFolder / "New Folder");
 
+                }
+                if (ImGui::MenuItem("Delete", "Del", false))
+                {
+                    int msgBoxResult = MessageBoxA(
+                        NULL,
+                        "Are you sure you want to delete this folder?",
+                        "Delete Confirmation",
+                        MB_ICONWARNING | MB_YESNO
+                    );
+                    if (msgBoxResult == IDYES)
+                    {
+                        try
+                        {
+                            if (std::filesystem::exists(selectedFolder))
+                            {
+                                std::filesystem::remove_all(selectedFolder);
+                                selectedFolder = selectedFolder.parent_path();
+                                Editor::GetInstance()->DeselectSelectedResource();
+                                Editor::GetInstance()->GetAssetBrowser()->RefreshFolder();
+                                continue;
+                            }
+                        }
+                        catch (const std::exception& e)
+                        {
+                            Logger::Error("Failed to delete file: {} Error: {}", selectedFolder.string(), e.what());
+                        }
+                    }
+                    else
+                    {
+                        
+                    }
+                }
+                ImGui::EndPopup();
+            }
             if (open) 
             {
                 FileExplorer::ShowSubFolders(entryPath, onOpenFolder);
@@ -110,10 +211,15 @@ void FileExplorer::ShowSubFolders(const std::filesystem::path& path, const std::
 
 void AssetBrowser::OpenFolder(const std::filesystem::path& folder)
 {
+    m_currentOpenFolder = folder;
+    SelectedItems.clear();
     Items.clear();
     ImGuiIdToIndex.clear();
-    for (const auto& entry : fs::directory_iterator(folder)) {
-        if (entry.is_regular_file()) {
+    RenameItem = nullptr;
+    for (const auto& entry : fs::directory_iterator(folder)) 
+    {
+        if (entry.is_regular_file()) 
+        {
             auto fileItem = FileItem(entry.path());
 
             ImGuiIdToIndex.emplace(fileItem.m_ID, static_cast<unsigned int>(Items.size()));
@@ -198,7 +304,27 @@ void AssetBrowser::Assets()
         Selection.AdapterIndexToStorageId = [](ImGuiSelectionBasicStorage* self_, int idx) { AssetBrowser* self = (AssetBrowser*)self_->UserData; return self->Items[idx].m_ID; };
         Selection.ApplyRequests(ms_io);
 
-        const bool want_delete = (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat) && (Selection.Size > 0)) || RequestDelete;
+
+        bool want_delete = (Input::GetKeyPressed(InputId::Delete) && (Selection.Size > 0)) || RequestDelete;
+        if (want_delete)
+        {
+            int msgBoxResult = MessageBoxA(
+                NULL,
+                "Are you sure you want to delete this file?",
+                "Delete Confirmation",
+                MB_ICONWARNING | MB_YESNO
+            );
+            if (msgBoxResult != IDYES) 
+            {
+                want_delete = false;
+            }
+            else
+            {
+                Editor::GetInstance()->DeselectSelectedResource();
+            }
+        }
+
+
         const int item_curr_idx_to_focus = want_delete ? Selection.ApplyDeletionPreLoop(ms_io, Items.size()) : -1;
         RequestDelete = false;
 
@@ -240,13 +366,23 @@ void AssetBrowser::Assets()
 
                     ImGui::SetNextItemSelectionUserData(item_idx);
                     bool item_is_selected = Selection.Contains((ImGuiID)item_data->m_ID);
+
                     bool item_is_visible = ImGui::IsRectVisible(LayoutItemSize);
                     ImGui::Selectable("", item_is_selected, ImGuiSelectableFlags_None, LayoutItemSize);
+
+                    //if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+                    //{
+                    //    RenameItem = item_data;
+                    //    Selection.Clear();
+                    //}
+
 
                     // Update our selection state immediately (without waiting for EndMultiSelect() requests)
                     // because we use this to alter the color of our text/icon.
                     if (ImGui::IsItemToggledSelection())
+                    {
                         item_is_selected = !item_is_selected;
+                    }
 
                     // Focus (for after deletion)
                     if (item_curr_idx_to_focus == item_idx)
@@ -273,14 +409,12 @@ void AssetBrowser::Assets()
                                 SelectedItems.push_back(Items[ImGuiIdToIndex[payload_items[i]]]); // im sorry for this :)))))))))))
                             }
 
-                            ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", SelectedItems.data(), sizeof(FileItem) * SelectedItems.size());
-
+                            ImGui::SetDragDropPayload("ASSETS_BROWSER_ITEMS", SelectedItems.data(), sizeof(FileItem)* SelectedItems.size());
                         }
 
                         // Display payload content in tooltip, by extracting it from the payload data
                         // (we could read from selection, but it is more correct and reusable to read from payload)
-                        const ImGuiPayload* payload = ImGui::GetDragDropPayload();
-                        const int payload_count = (int)payload->DataSize / (int)sizeof(ImGuiID);
+                        const int payload_count = static_cast<int>(SelectedItems.size());
                         ImGui::Text("%d assets", payload_count);
 
                         ImGui::EndDragDropSource();
@@ -299,9 +433,26 @@ void AssetBrowser::Assets()
                             auto texture = ResourceManager::GetInstance()->GetResource<Texture>(item_data->m_filename);
                             draw_list->AddImage(texture->GetResourceView().Get(), box_min, box_max);
                         }
-                        if (item_data->m_type == ResourceType::Material || item_data->m_type == ResourceType::Model)
+                        else if (item_data->m_type == ResourceType::Material || item_data->m_type == ResourceType::Model)
                         {
                             draw_list->AddImage(item_data->m_thumbnail->GetSRV(), box_min, box_max);
+                        }
+                        else
+                        {
+                            ImFont* font = ImGui::GetFont();   // merged Roboto + FontAwesome
+                            const char* icon = "\xef\x85\x9b";  // your FA icon (UNIFORM CODE WORKS TOO)
+
+                            // Center icon inside the box
+  
+                            // Push scaled font rendering
+                            ImGui::PushFont(font);
+                            ImGui::SetWindowFontScale(1.0f);
+
+                            draw_list->AddText(ImVec2(box_min.x + 64.0f, box_min.y + 64.0f), IM_COL32(255, 255, 255, 255), icon);
+
+                            // Restore scale
+                            ImGui::SetWindowFontScale(1.0f);
+                            ImGui::PopFont();
                         }
 
                         //if (ShowTypeOverlay && item_data->m_type != 0)
@@ -311,18 +462,38 @@ void AssetBrowser::Assets()
                         //}
                         if (display_label)
                         {
-                            
-                            ImU32 label_col = ImGui::GetColorU32(ImGuiCol_Text/*item_is_selected ? ImGuiCol_Text : ImGuiCol_TextDisabled*/);
-                            //draw_list->AddText(ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), label_col, item_data->m_filename.c_str());
-                            draw_list->AddText(
-                                ImGui::GetFont(), 
-                                ImGui::GetFontSize(), 
-                                ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), 
-                                label_col, 
-                                item_data->m_filename.c_str(), 
-                                nullptr,
-                                box_max.x - box_min.x
-                            );
+                            if (RenameItem != item_data)
+                            {
+                                ImU32 label_col = ImGui::GetColorU32(ImGuiCol_Text/*item_is_selected ? ImGuiCol_Text : ImGuiCol_TextDisabled*/);
+                                draw_list->AddText(
+                                    ImGui::GetFont(), 
+                                    ImGui::GetFontSize(), 
+                                    ImVec2(box_min.x, box_max.y - ImGui::GetFontSize()), 
+                                    label_col, 
+                                    item_data->m_filename.c_str(), 
+                                    nullptr,
+                                    box_max.x - box_min.x
+                                );
+                            }
+                            else
+                            {
+                                static char chars[255];
+                                //memcpy(chars, item_data->m_filename.data(), sizeof(char) * item_data->m_filename.size());
+                                ImVec2 text_pos(box_min.x, box_max.y);
+
+                                ImGui::SetCursorScreenPos(text_pos);
+                                ImGui::PushItemWidth(box_max.x - box_min.x);
+                                if (ImGui::InputText("##rename", chars, IM_ARRAYSIZE(chars), ImGuiInputTextFlags_EnterReturnsTrue))
+                                {
+                                    // Commit rename
+                                    item_data->m_filename = chars;
+                                }
+                                if (!ImGui::IsItemActive() && !ImGui::IsItemHovered())
+                                {
+                                    // Cancel rename if focus lost
+                                }
+                                ImGui::PopItemWidth();
+                            }
                         }
                     }
 
@@ -336,17 +507,81 @@ void AssetBrowser::Assets()
         // Context menu
         if (ImGui::BeginPopupContextWindow())
         {
+            if (ImGui::BeginMenu("Create"))
+            {
+                if (ImGui::MenuItem("Material"))
+                {
+                    std::string materialName = "New Material";
+                    materialName.append(IOManager::GetResourceData<ResourceType::Material>().SpectralExtension);
+                    int iteration = 0;
+                    while (ResourceManager::GetInstance()->GetResource<DefaultMaterial>(materialName))
+                    {
+                        materialName = std::string("New Material ") + std::to_string(iteration);
+                        materialName.append(IOManager::GetResourceData<ResourceType::Material>().SpectralExtension);
+                        iteration++;
+                    }
+
+                    auto material = std::make_shared<DefaultMaterial>();
+                    material->m_filename = materialName;
+                    material->SetPath(m_currentOpenFolder / materialName);
+                    material->SetTexture(0, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_albedo.bmp"));
+                    material->SetTexture(1, ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_normal.bmp"));
+                    auto file = IOManager::ProjectDirectory / IOManager::GetResourceData<ResourceType::Material>().Folder / materialName;
+                    ResourceManager::GetInstance()->GetResource<DefaultMaterial>(file);
+                    material->Save();
+                    RefreshFolder();
+                }
+                if (ImGui::MenuItem("Folder"))
+                {
+                    //if (std::filesystem::exists(dir))
+                    //    return true; // Already exists
+
+                    std::filesystem::create_directories(m_currentOpenFolder / "New Folder");
+                }
+                ImGui::EndMenu();
+            }
+            if (RenameItem)
+            {
+                if (ImGui::MenuItem("Rename"))
+                {
+
+                }
+            }
             ImGui::Text("Selection: %d items", Selection.Size);
             ImGui::Separator();
             if (ImGui::MenuItem("Delete", "Del", false, Selection.Size > 0))
                 RequestDelete = true;
+
+
             ImGui::EndPopup();
         }
 
         ms_io = ImGui::EndMultiSelect();
         Selection.ApplyRequests(ms_io);
+
+
+
         if (want_delete)
+        {
+            for (int i = 0; i < Items.size(); i++)
+            {
+                if (Selection.Contains(Selection.GetStorageIdFromIndex(i)))
+                {
+                    try
+                    {
+                        if (std::filesystem::exists(Items[i].m_path))
+                        {
+                            std::filesystem::remove(Items[i].m_path);
+                        }
+                    }
+                    catch (const std::exception& e)
+                    {
+                        Logger::Error("Failed to delete file: {} Error: {}", Items[i].m_path.string(), e.what());
+                    }
+                }
+            }
             Selection.ApplyDeletionPostLoop(ms_io, Items, item_curr_idx_to_focus);
+        }
 
         // Zooming with CTRL+Wheel
         if (ImGui::IsWindowAppearing())
@@ -365,7 +600,7 @@ void AssetBrowser::Assets()
 
                 // Zoom
                 IconSize *= powf(1.1f, (float)(int)ZoomWheelAccum);
-                IconSize = std::clamp(IconSize, 16.0f, 128.0f);
+                IconSize = std::clamp(IconSize, 16.0f, 256.0f);
                 ZoomWheelAccum -= (int)ZoomWheelAccum;
                 UpdateLayoutSizes(avail_width);
 
@@ -381,7 +616,7 @@ void AssetBrowser::Assets()
     }
     ImGui::EndChild();
 
-    ImGui::Text("Selected: %d/%d items", SelectedItems.size(), Items.size());
+    ImGui::Text("Selected: %d/%d items", Selection.Size, Items.size());
 
     ImGui::SameLine();
     ImGui::Text("    Scale");
@@ -389,15 +624,17 @@ void AssetBrowser::Assets()
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0)); // smaller height
     ImGui::PushItemWidth(300.0f);
-    ImGui::SliderFloat("##Scale", &IconSize, 32.0f, 128.0f);
+    ImGui::SliderFloat("##Scale", &IconSize, 32.0f, 256.0f);
     ImGui::PopItemWidth();
     ImGui::PopStyleVar();
 
 }
 
-FileItem::FileItem(const std::filesystem::path& filename) :
-    m_filename(filename.filename().string()),
-    m_ID(ImGui::GetID(filename.filename().string().c_str()))
+FileItem::FileItem(const std::filesystem::path& filename) 
+    : m_filename(filename.filename().string())
+    , m_ID(rand())
+    , m_path(filename)
+
 {
 
     const std::string extension = filename.extension().string();
@@ -422,14 +659,18 @@ FileItem::FileItem(const std::filesystem::path& filename) :
 
     if (m_type == ResourceType::Material)
     {
+        m_resource = ResourceManager::GetInstance()->GetResource<DefaultMaterial>(filename);
+
         m_thumbnail = ThumbnailManager::GetThumbnail(ResourceManager::GetInstance()->GetResource<DefaultMaterial>(filename).get());
     }
     else if (m_type == ResourceType::Model)
     {
-        
-        m_thumbnail = ThumbnailManager::GetThumbnail(
-            ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material").get(), 
-            ResourceManager::GetInstance()->GetResource<Mesh>(filename).get()
-        );
+        m_resource = ResourceManager::GetInstance()->GetResource<Model>(filename);
+
+        m_thumbnail = ThumbnailManager::GetThumbnail(ResourceManager::GetInstance()->GetResource<Model>(filename).get());
+    }
+    else if (m_type == ResourceType::Texture)
+    {
+        m_resource = ResourceManager::GetInstance()->GetResource<Texture>(filename);
     }
 }

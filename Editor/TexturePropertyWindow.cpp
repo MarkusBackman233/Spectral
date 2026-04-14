@@ -38,19 +38,19 @@ void TexturePropertyWindow::PopulateWindow()
 
         for (auto& texture : textures)
         {
-            if (!StringUtils::StringContainsCaseInsensitive(texture->m_filename, searchedString))
+            if (!StringUtils::StringContainsCaseInsensitive(texture->GetFilename(), searchedString))
             {
                 continue;
             }
 
             auto bgColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            if (m_currentSelectedTextureName == StringUtils::StripPathFromFilename(texture->m_filename))
+            if (m_currentSelectedTextureName == StringUtils::StripPathFromFilename(texture->GetFilename()))
             {
                 bgColor = ImVec4(1.0f, 0.3f, 1.0f, 1.0f);
             }
 
             ImGui::TableNextColumn();
-            if (ImGui::ImageButton(texture->m_filename.c_str(), texture->GetResourceView().Get(), imageSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), bgColor))
+            if (ImGui::ImageButton(texture->GetFilename().c_str(), texture->GetResourceView().Get(), imageSize, ImVec2(0, 0), ImVec2(1, 1), ImVec4(0, 0, 0, 0), bgColor))
             {
                 m_onSelectedTexture(texture);
                 CloseThisWindow();
@@ -59,7 +59,7 @@ void TexturePropertyWindow::PopulateWindow()
             }
 
 
-            ImGui::TextWrapped(texture->m_filename.c_str());
+            ImGui::TextWrapped(texture->GetFilename().c_str());
         }
         ImGui::EndTable();
     }

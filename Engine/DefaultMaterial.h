@@ -31,10 +31,14 @@ public:
 		bool BackfaceCulling;
 		bool LinearFiltering;
 		bool CombinedMaterialTexture;
+		float TexelDensity;
 	};
 	DefaultMaterial();
 
+	ResourceType GetResourceType() override { return ResourceType::Material; }
+	static ResourceType StaticType() { return ResourceType::Material; }
 	bool Load(const std::filesystem::path& file) override;
+	void Save() override;
 
 	void Render(ID3D11DeviceContext* context, const DeviceResources& deviceResources, std::shared_ptr<Mesh> mesh, InstanceManager::InstanceData instanceData) override;
 
@@ -52,6 +56,10 @@ private:
 		Math::Vector4 data; // x = Shininess,  w = num lights
 		Math::Vector4 data2; // x = hasBaseColor, y = hasNormal, z = linearFiltering, w = combined materials texture
 		Math::Vector4 materialColor;
+		float texelDensity;
+		float unused1;
+		float unused2;
+		float unused3;
 	};
 
 	static struct MaterialGlobals

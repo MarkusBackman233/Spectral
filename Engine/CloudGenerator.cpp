@@ -97,7 +97,7 @@ void CloudGenerator::CreateResources(ID3D11Device* device)
 
 	float scale = 100.0f;
 
-    m_cloudMesh = std::make_shared<Mesh>();
+    m_cloudMesh = std::make_shared<Mesh>("Cloud");
     m_cloudMesh->vertexes = {
         { Math::Vector3(scale,  0.5f,  scale) },
         { Math::Vector3(scale,  0.5f, -scale) },

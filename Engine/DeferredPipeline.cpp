@@ -64,7 +64,10 @@ void DeferredPipeline::RenderGBuffer(
     const auto& instances = instanceManager.GetInstances();
     for (const auto& [instance, matrixes] : instances)
     {
-        instance.Material->Render(context, deviceResources, instance.Mesh, matrixes);
+        if (instance.Material)
+        {
+            instance.Material->Render(context, deviceResources, instance.Mesh, matrixes);
+        }
     }
 }
 

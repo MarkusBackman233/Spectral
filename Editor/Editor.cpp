@@ -35,6 +35,7 @@
 #include "UndoCreateGameObject.h"
 #include "UndoSetParent.h"
 #include "TerrainEditor.h"
+#include "MaterialEditor.h"
 
 using namespace Spectral;
 
@@ -56,6 +57,8 @@ Editor::Editor()
 {
     ImGuizmo::AllowAxisFlip(false);
     m_defaultWindowFlags = ImGuiWindowFlags_None;
+
+
     Logger::Info("Welcome!");
 }
 
@@ -80,6 +83,8 @@ void Editor::Render()
 }
 void Editor::Update(float deltaTime)
 {
+
+
 
     m_mainViewport = ImGui::GetMainViewport(); 
     PreRender();
@@ -139,9 +144,11 @@ void Editor::Update(float deltaTime)
             }
             
         }
+            
         m_assetBrowser.Update();
         PropertiesWindow();
         GameObjectsWindow();
+        AssetSelectionEdit();
         Viewport();
 
     }
@@ -178,15 +185,33 @@ void Editor::Update(float deltaTime)
     }
 }
 
-void Editor::HandleDropFile(const std::filesystem::path& filename)
+void Editor::HandleDropFile(const std::vector<std::filesystem::path>& filenames)
 {
-    Logger::Info("Loading drop file: " + filename.filename().string());
-    Concurrency::create_task(
-        [filename]()
-        {
-            IOManager::LoadDroppedResource(filename);
-        }
-    );
+    for (auto& filename : filenames)
+    {
+        IOManager::LoadDroppedResource(filename);
+    }
+    GetAssetBrowser()->RefreshFolder();
+    //std::vector<Concurrency::task<void>> tasks;
+    //
+    //for (const auto& filename : filenames)
+    //{
+    //    Logger::Info("Loading drop file: " + filename.filename().string());
+    //
+    //    tasks.push_back(
+    //        Concurrency::create_task(
+    //            [filename]()
+    //    {
+    //        IOManager::LoadDroppedResource(filename);
+    //    }
+    //        )
+    //    );
+    //}
+    //
+    //Concurrency::when_all(tasks.begin(), tasks.end()).then([this]()
+    //{
+    //    GetAssetBrowser()->RefreshFolder();
+    //});
 }
 
 void Editor::GameObjectListItem(GameObject* gameObject, const ImGuiTextFilter& filter)
@@ -288,6 +313,13 @@ void Editor::OpenTerrainEditor(TerrainComponent* terrainComponent)
     m_terrainEditor = std::make_shared<TerrainEditor>(terrainComponent);
 }
 
+void Editor::DeselectSelectedResource()
+{
+    m_selectedResource = nullptr;
+}
+
+
+
 void Editor::PropertiesWindow()
 {
 
@@ -338,6 +370,29 @@ void Editor::PropertiesWindow()
     ImGui::End();
 }
 
+void Editor::AssetSelectionEdit()
+{
+    if (ImGui::Begin("Edit Asset"))
+    {
+        for (auto file : GetAssetBrowser()->GetSelectedItems())
+        {
+            if (auto material = std::dynamic_pointer_cast<DefaultMaterial>(file->m_resource))
+            {
+                m_selectedResource = material;
+                break;
+            }
+        }
+        if (m_selectedResource)
+        {
+            if (auto material = std::dynamic_pointer_cast<DefaultMaterial>(m_selectedResource))
+            {
+                MaterialEditor::RenderGUI(material);
+            }
+        }
+    }
+    ImGui::End();
+}
+
 void Editor::TopMenu()
 {
 
@@ -356,6 +411,8 @@ void Editor::TopMenu()
             if (ImGui::MenuItem("Save"))
             {
                 IOManager::SaveSpectralScene("asd");
+                ResourceManager::GetInstance()->SaveResources();
+
             }
             if (ImGui::MenuItem("Load"))
             {
@@ -374,7 +431,7 @@ void Editor::TopMenu()
                 gameObject->SetPosition(GetPositionInFontOfCamera(10.0f));
                 m_objectSelector.SetSelectedGameObject(gameObject);
                 auto meshComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Mesh);
-                std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(ResourceManager::GetInstance()->GetResource<Mesh>(meshName));
+                std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(ResourceManager::GetInstance()->GetResource<Model>(meshName));
 
                 gameObject->AddComponent(meshComponent);
             };
@@ -504,13 +561,13 @@ void Editor::TopMenu()
 
         if (!m_started)
         {
-            if (ImGui::ArrowButton("PlayId", ImGuiDir_Right))
+            if (ImGui::Button("\xef\x81\x8b")) // play
             {
                 m_started = true;
                 RenderManager::GetInstance()->OnViewportResize(Math::Vector2(0.0f,0.0f), Render::GetWindowSizef());
             }
         }
-        else if (ImGui::Button("X"))
+        else if (ImGui::Button("X") || Input::GetKeyPressed(InputId::Escape)) // cross
         {
             m_started = false;
             m_objectSelector.SetSelectedGameObject(nullptr);
@@ -853,7 +910,7 @@ void Editor::Viewport(bool enableObjectSelection)
                     std::shared_ptr<Mesh> mesh;
                     if (auto meshComponent = object->GetComponentOfType<MeshComponent>())
                     {
-                        mesh = meshComponent->GetMesh();
+                        mesh = meshComponent->GetMesh()->m_root.m_mesh; //backm
                     }
                     if (!mesh)
                         continue;
@@ -884,11 +941,10 @@ void Editor::Viewport(bool enableObjectSelection)
                         if (auto meshComponent = currentClosest->GetComponentOfType<MeshComponent>())
                         {
                             auto droppedMaterial = ResourceManager::GetInstance()->GetResource<DefaultMaterial>(item.m_filename);
-
+                    
                             if (droppedMaterial)
                             {
-                                meshComponent->SetMaterial(droppedMaterial);
-
+                                meshComponent->GetMesh()->GetMaterials()[0] = droppedMaterial;
                             }
                         }
                         continue;
@@ -901,7 +957,7 @@ void Editor::Viewport(bool enableObjectSelection)
                         gameObject->SetPosition(rayOrigin + rayDirection * minDistance);
                         m_objectSelector.SetSelectedGameObject(gameObject);
                         auto meshComponent = ComponentFactory::CreateComponent(gameObject, Component::Type::Mesh);
-                        std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(ResourceManager::GetInstance()->GetResource<Mesh>(item.m_filename));
+                        std::static_pointer_cast<MeshComponent>(meshComponent)->SetMesh(ResourceManager::GetInstance()->GetResource<Model>(item.m_filename));
 
                         gameObject->AddComponent(meshComponent);
                         continue;
@@ -927,7 +983,7 @@ Math::Vector3 Editor::GetPositionInFontOfCamera(float distance)
         std::shared_ptr<Mesh> mesh;
         if (auto meshComponent = object->GetComponentOfType<MeshComponent>())
         {
-            mesh = meshComponent->GetMesh();
+            mesh = meshComponent->GetMesh()->m_root.m_mesh; // backm
         }
         else if (auto terrainComponent = object->GetComponentOfType<TerrainComponent>())
         {

@@ -11,6 +11,9 @@ public:
 	Texture() {};
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetResourceView() { return m_textureSRV; }
 
+	ResourceType GetResourceType() override { return ResourceType::Texture; }
+	static ResourceType StaticType() { return ResourceType::Texture; }
+
 	bool LoadTexture(unsigned char* bytes, const Math::Vector2i& size);
 	bool Load(const std::filesystem::path& file) override;
 	bool LoadFromResource(unsigned char* bytes, size_t size);

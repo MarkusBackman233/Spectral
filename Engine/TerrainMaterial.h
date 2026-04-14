@@ -16,6 +16,8 @@ class TerrainMaterial : public IMaterial
 public:
 
 	TerrainMaterial();
+	ResourceType GetResourceType() override { return ResourceType::Material; }
+	static ResourceType StaticType() { return ResourceType::Material; }
 
 	bool Load(const std::filesystem::path& file) override;
 

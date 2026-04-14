@@ -35,7 +35,7 @@ void SkyboxManager::CreateResources(ID3D11DeviceContext* context, ID3D11Device* 
     ThrowIfFailed(device->CreateSamplerState(&sampDesc, &samplerState));
     samplerState.As(&m_cubeSamplerState);
 
-    m_skyboxMesh = std::make_shared<Mesh>();
+    m_skyboxMesh = std::make_shared<Mesh>("Skybox");
     m_skyboxMesh->vertexes = {
         { Math::Vector3(1.0f,  1.0f,  1.0f) },
         { Math::Vector3(1.0f,  1.0f, -1.0f) },

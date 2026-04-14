@@ -6,6 +6,9 @@
 class AudioSource : public Resource
 {
 public:
+	ResourceType GetResourceType() override { return ResourceType::Audio; }
+
+	static ResourceType StaticType() { return ResourceType::Audio; }
 
 	struct Settings
 	{

@@ -24,5 +24,5 @@ uint4 main(PS_INPUT input) : SV_TARGET
         input.normal.xyz = -input.normal.xyz;
     }
     
-    return CreateGBuffer(input.normal.xyz, input.color.rgb, 0.6, 1.0, input.color.a, 1);
+    return CreateGBuffer(input.normal.xyz, input.color.rgb, 0.3, 1.0, input.color.a, 1);
 }

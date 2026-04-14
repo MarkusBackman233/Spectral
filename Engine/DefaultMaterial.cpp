@@ -8,6 +8,7 @@
 #include "InstanceManager.h"
 #include "DeviceResources.h"
 
+#include <rapidjson/prettywriter.h>
 DefaultMaterial::MaterialGlobals DefaultMaterial::m_materialGlobals;
 
 DefaultMaterial::DefaultMaterial() : m_textures{}
@@ -18,6 +19,7 @@ DefaultMaterial::DefaultMaterial() : m_textures{}
     m_settings.Roughness = 0.8f;
     m_settings.Metallic = 0.0f;
     m_settings.Color = Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+    m_settings.TexelDensity = 1.0f;
 }
 
 
@@ -59,6 +61,7 @@ void DefaultMaterial::Render(ID3D11DeviceContext* context, const DeviceResources
 
     m_materialGlobals.m_pixelConstantBuffer.materialColor = m_settings.Color;
     m_materialGlobals.m_pixelConstantBuffer.data2.w = m_settings.CombinedMaterialTexture ? 1.0f : 0.0f;
+    m_materialGlobals.m_pixelConstantBuffer.texelDensity = m_settings.TexelDensity;
     if (!m_settings.LinearFiltering)
     {
         ID3D11SamplerState* samplers[1] = {
@@ -109,6 +112,7 @@ void DefaultMaterial::CreateResources(ID3D11Device* device)
 
 bool DefaultMaterial::Load(const std::filesystem::path& file)
 {
+    m_path = file;
     auto json = Json::ParseFile(file);
     if (json.HasError())
     {
@@ -152,6 +156,10 @@ bool DefaultMaterial::Load(const std::filesystem::path& file)
     {
         m_settings.LinearFiltering = json["LinearFiltering"].AsBool();
     }
+    if (json.Has("TexelDensity"))
+    {
+        m_settings.TexelDensity = json["TexelDensity"].AsFloat();
+    }
     if (json.Has("CombinedMaterialTexture"))
     {
         m_settings.CombinedMaterialTexture = json["CombinedMaterialTexture"].AsBool();
@@ -166,6 +174,59 @@ bool DefaultMaterial::Load(const std::filesystem::path& file)
         color.w = colorObject[3].AsFloat();
     }
     return true;
+}
+
+void DefaultMaterial::Save()
+{
+    rapidjson::Document document;
+    document.SetObject();
+
+    rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
+
+    auto SaveTextureFilename = [&](const std::shared_ptr<Texture>& texture) -> std::string
+    {
+        if (texture.get())
+        {
+            return texture->GetFilename().c_str();
+        }
+        return "None";
+    };
+
+
+    document.AddMember("Name", rapidjson::Value(GetFilename().c_str(), allocator), allocator);
+    document.AddMember("Albedo", rapidjson::Value(SaveTextureFilename(GetTexture(DefaultMaterial::BaseColor)).c_str(), allocator), allocator);
+    document.AddMember("Normal", rapidjson::Value(SaveTextureFilename(GetTexture(DefaultMaterial::Normal)).c_str(), allocator), allocator);
+    document.AddMember("Roughness", rapidjson::Value(SaveTextureFilename(GetTexture(DefaultMaterial::Roughness)).c_str(), allocator), allocator);
+    document.AddMember("Metallic", rapidjson::Value(SaveTextureFilename(GetTexture(DefaultMaterial::Metallic)).c_str(), allocator), allocator);
+    document.AddMember("AmbientOcclusion", rapidjson::Value(SaveTextureFilename(GetTexture(DefaultMaterial::AmbientOcclusion)).c_str(), allocator), allocator);
+    document.AddMember("RougnessFloat", GetMaterialSettings().Roughness, allocator);
+    document.AddMember("MetallicFloat", GetMaterialSettings().Metallic, allocator);
+    document.AddMember("TexelDensity", GetMaterialSettings().TexelDensity, allocator);
+    document.AddMember("BackfaceCulling", GetMaterialSettings().BackfaceCulling, allocator);
+    document.AddMember("LinearFiltering", GetMaterialSettings().LinearFiltering, allocator);
+    document.AddMember("CombinedMaterialTexture", GetMaterialSettings().CombinedMaterialTexture, allocator);
+    {
+        auto color = GetMaterialSettings().Color;
+        rapidjson::Value colorArray(rapidjson::kArrayType);
+        colorArray.PushBack(color.x, allocator);
+        colorArray.PushBack(color.y, allocator);
+        colorArray.PushBack(color.z, allocator);
+        colorArray.PushBack(color.w, allocator);
+        document.AddMember("Color", colorArray, allocator);
+    }
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+    document.Accept(writer);
+
+    std::ofstream ofs(m_path);
+    if (ofs.is_open()) {
+        ofs << buffer.GetString();
+        ofs.close();
+    }
+    else {
+        Logger::Error("Could not open file for writing.");
+    }
 }
 
 

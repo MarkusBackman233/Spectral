@@ -2,28 +2,15 @@
 #include "iRender.h"
 #include "IOManager.h"
 
-Mesh::Mesh()
+Mesh::Mesh(const std::string& name)
+	: m_name(name)
 {
 }
 
-bool Mesh::Load(const std::filesystem::path& file)
+const std::string& Mesh::GetFilename()
 {
-	Logger::Info(std::string("Loading Model: ") + file.filename().string());
-	ReadObject readObject(file);
-	if (!readObject.GetFile().is_open())
-	{
-		return false;
-	}
-	readObject.Read(m_filename);
-	readObject.Read(vertexes);
-	readObject.Read(indices32);
-
-	CalculateBoundingBox();
-	CreateVertexAndIndexBuffer(Render::GetDevice());
-	return true;
+	return m_name;
 }
-
-
 
 void Mesh::CreateVertexAndIndexBuffer(ID3D11Device* device)
 {

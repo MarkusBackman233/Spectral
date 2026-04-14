@@ -45,6 +45,5 @@ float4 main(PS_INPUT input) : SV_TARGET
     }
     
     float d = (dot(normal, normalize(float3(0.5f, 1.0f, 0.0f))) + 1.0f) * 0.5f;
-    
-    return albedo * d;
+    return albedo * d * materialColor;
 }

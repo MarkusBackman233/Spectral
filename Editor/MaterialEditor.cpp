@@ -5,8 +5,35 @@
 #include "Editor.h"
 #include "PropertyWindowFactory.h"
 #include "Thumbnail.h"
-void MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
+bool MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
 {
+
+    ImGui::SetWindowFontScale(1.4f);
+    ImGui::SeparatorText(material->GetFilename().c_str());
+
+    static char chars[255]{};
+
+    if (ImGui::InputText("Name: ", chars, 255, ImGuiInputTextFlags_EnterReturnsTrue))
+    {
+        material->m_filename = std::string(chars);
+        try
+        {
+            auto newPath = material->GetPath().parent_path() / material->m_filename;
+            newPath.replace_extension(material->GetPath().extension());
+            std::filesystem::rename(material->GetPath(), newPath);
+            material->SetPath(newPath);
+        }
+        catch (const std::exception&)
+        {
+            Logger::Error("Failed to rename file!");
+        }
+
+
+        Editor::GetInstance()->GetAssetBrowser()->RefreshFolder();
+    }
+
+    ImGui::SetWindowFontScale(1.0f);
+
     ImGui::PushID(material.get());
     bool isDisabled = material->GetFilename() == "Default.material";
 
@@ -14,6 +41,8 @@ void MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
     {
         ImGui::BeginDisabled();
     }
+
+    bool changed = false;
 
     enum TextureType
     {
@@ -48,7 +77,7 @@ void MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
         textures = &texturesNonCombined;
     }
 
-    ImGui::Checkbox("Combined Material Texture", &material->GetMaterialSettings().CombinedMaterialTexture);
+    changed |= ImGui::Checkbox("Combined Material Texture", &material->GetMaterialSettings().CombinedMaterialTexture);
 
     for (const auto& [textureName, textureId] : *textures)
     {
@@ -60,7 +89,8 @@ void MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
             if (ImGui::ImageButton(textureName.c_str(), resource, Editor::GetInstance()->GetDefaultTextureSize()))
             {
                 PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
-                ThumbnailManager::RegenerateThumbnail(material.get());
+                changed |= true;
+
             }
         }
         else
@@ -69,50 +99,42 @@ void MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
 
             if (ImGui::Button(std::string("##" + textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                PropertyWindowFactory::SelectTexture(material, textureId);
+                PropertyWindowFactory::SelectTexture(material, textureId); 
+                changed |= true;
             }
         }
 
-        if (ImGui::BeginDragDropTarget())
+        
+
+        std::shared_ptr<Texture> droppedTexture;
+        if (Editor::GetInstance()->GetDropResource(droppedTexture))
         {
-            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
-            {
-                size_t size = payload->DataSize / sizeof(FileItem);
-                FileItem* payload_items = (FileItem*)payload->Data;
-                for (size_t i = 0; i < size; i++)
-                {
-                    FileItem& item = payload_items[i];
-                    if (item.m_type != ResourceType::Texture)
-                    {
-                        continue;
-                    }
-                    auto droppedTexture = ResourceManager::GetInstance()->GetResource<Texture>(item.m_filename);
-
-                    if (droppedTexture)
-                    {
-                        material->SetTexture(textureId, droppedTexture);
-                    }
-                }
-
-
-
-
-            }
-            ImGui::EndDragDropTarget();
+            material->SetTexture(textureId, droppedTexture);
+            changed |= true;
         }
 
         ImGui::Separator();
     }
 
-    ImGui::DragFloat("Roughness", &material->GetMaterialSettings().Roughness, 0.05f, 0.0f, 1.0f);
-    ImGui::DragFloat("Metallic", &material->GetMaterialSettings().Metallic, 0.05f, 0.0f, 1.0f);
-    ImGui::Checkbox("Backface Culling", &material->GetMaterialSettings().BackfaceCulling);
-    ImGui::Checkbox("Linear Filtering", &material->GetMaterialSettings().LinearFiltering);
-    ImGui::ColorPicker4("Color", &material->GetMaterialSettings().Color.x, Editor::ColorPickerMask);
+    changed |= ImGui::DragFloat("Roughness", &material->GetMaterialSettings().Roughness, 0.05f, 0.0f, 1.0f);
+    changed |= ImGui::DragFloat("Metallic", &material->GetMaterialSettings().Metallic, 0.05f, 0.0f, 1.0f);
+    changed |= ImGui::DragFloat("TexelDensity", &material->GetMaterialSettings().TexelDensity, 0.05f, 0.0f, 100.0f);
+    changed |= ImGui::Checkbox("Backface Culling", &material->GetMaterialSettings().BackfaceCulling);
+    changed |= ImGui::Checkbox("Linear Filtering", &material->GetMaterialSettings().LinearFiltering);
+    changed |= ImGui::ColorPicker4("Color", &material->GetMaterialSettings().Color.x, Editor::ColorPickerMask);
 
     if (isDisabled)
     {
         ImGui::EndDisabled();
     }
+
+    if (changed)
+    {
+        ThumbnailManager::RegenerateThumbnail(material.get());
+        material->SetUnsaved();
+    }
+
     ImGui::PopID();
+
+    return changed;
 }

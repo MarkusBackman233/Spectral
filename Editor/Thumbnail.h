@@ -10,18 +10,22 @@ struct ID3D11Device;
 
 class Mesh;
 class DefaultMaterial;
+class Model;
+struct SubMesh;
 
 
 class Thumbnail
 {
 public:
-	Thumbnail(Mesh* mesh, DefaultMaterial* material);
+	Thumbnail(Model* mesh);
+	Thumbnail(DefaultMaterial* material);
 	~Thumbnail();
 
 	static void CreateResources(ID3D11Device* device);
 	static void DestroyResources();
 
-	void Render(Mesh* mesh, DefaultMaterial* material);
+	void Render(Model* mesh, DefaultMaterial* material);
+	void RenderSubMesh(Model* model, const SubMesh& subMesh, DefaultMaterial* material, ID3D11DeviceContext* context);
 
 	ID3D11ShaderResourceView* GetSRV() { return m_SRV.Get(); }
 
@@ -29,6 +33,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> m_RTV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_SRV;
+
 
 	static struct GlobalThumbnailResources
 	{
@@ -48,7 +53,9 @@ private:
 		struct VertexConstantBuffer
 		{
 			Math::Matrix viewProjection;
+			Math::Matrix modelPose;
 			Math::Vector4 cameraPos;
+
 		};
 
 		static_assert((sizeof(VertexConstantBuffer) % 16) == 0, "Constant Buffer size must be 16-byte aligned");
@@ -63,7 +70,8 @@ private:
 class ThumbnailManager
 {
 public:
-	static std::shared_ptr<Thumbnail> GetThumbnail(DefaultMaterial* material, Mesh* mesh);
+	static std::shared_ptr<Thumbnail> GetThumbnail(Model* mesh);
+	static void RegenerateThumbnail(Model* mesh);
 
 	static std::shared_ptr<Thumbnail> GetThumbnail(DefaultMaterial* material);
 	static void RegenerateThumbnail(DefaultMaterial* material);

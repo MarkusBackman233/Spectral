@@ -267,15 +267,13 @@ LRESULT CALLBACK WindowsManager::StaticWindowProc(HWND hWnd, UINT uMsg, WPARAM w
     {
         HDROP hDrop = (HDROP)wParam;
         UINT fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
-
+        std::vector<std::filesystem::path> paths;
         for (UINT i = 0; i < fileCount; ++i) {
             TCHAR filePath[MAX_PATH];
             DragQueryFile(hDrop, i, filePath, MAX_PATH);
-            int bufferSize = WideCharToMultiByte(CP_UTF8, 0, filePath, -1, NULL, 0, NULL, NULL);
-            std::string filename(bufferSize, '\0');
-            WideCharToMultiByte(CP_UTF8, 0, filePath, -1, filename.data(), bufferSize, NULL, NULL);
-            Editor::GetInstance()->HandleDropFile(filename);
+            paths.push_back(filePath);
         }
+        Editor::GetInstance()->HandleDropFile(paths);
 
         DragFinish(hDrop);
         break;

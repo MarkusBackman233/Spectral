@@ -52,12 +52,21 @@ struct ExampleSelectionWithDeletion : ImGuiSelectionBasicStorage
         // Rewrite item list (delete items) + convert old selection index (before deletion) to new selection index (after selection).
         // If NavId was not part of selection, we will stay on same item.
         std::vector<ITEM_TYPE> new_items;
+        if (static_cast<int>(items.size()) - Size < 0)
+        {
+            return;
+        }
+
         new_items.reserve(items.size() - Size);
         int item_next_idx_to_select = -1;
         for (int idx = 0; idx < items.size(); idx++)
         {
             if (!Contains(GetStorageIdFromIndex(idx)))
+            {
                 new_items.push_back(items[idx]);
+
+
+            }
             if (item_curr_idx_to_select == idx)
                 item_next_idx_to_select = new_items.size() - 1;
         }
@@ -78,9 +87,11 @@ public:
     FileItem(const std::filesystem::path& filename);
 
     std::string m_filename;
+    std::filesystem::path m_path;
     unsigned int m_ID;
     ResourceType m_type;
 
+    std::shared_ptr<Resource> m_resource = nullptr;
     std::shared_ptr<Thumbnail> m_thumbnail = nullptr;
 
 };
@@ -100,14 +111,20 @@ class AssetBrowser
 public:
     AssetBrowser();
 	void Update();
+
+    void RefreshFolder();
+
+    std::vector<FileItem*> GetSelectedItems();
+    std::filesystem::path m_currentOpenFolder;
+
 private:        // Options
     void AddItems(int count);
     void ClearItems();
     void UpdateLayoutSizes(float avail_width);
     void FileExplorer();
     void Assets();
-
     void OpenFolder(const std::filesystem::path& folder);
+
 
 
     bool            ShowTypeOverlay = true;
@@ -118,11 +135,14 @@ private:        // Options
     int             IconSpacing = 10;
     int             IconHitSpacing = 4;         // Increase hit-spacing if you want to make it possible to clear or box-select from gaps. Some spacing is required to able to amend with Shift+box-select. Value is small in Explorer.
     bool            StretchSpacing = true;
-    ExampleSelectionWithDeletion Selection;     // Our selection (ImGuiSelectionBasicStorage + helper funcs to handle deletion)
+
+    FileItem* RenameItem = nullptr;
+
 
     // State
     std::vector<FileItem> Items;               // Our items
     std::vector<FileItem> SelectedItems;               // Our items
+    ExampleSelectionWithDeletion Selection;     // Our selection (ImGuiSelectionBasicStorage + helper funcs to handle deletion)
     std::unordered_map<unsigned int, unsigned int> ImGuiIdToIndex;               // Our items
     ImGuiID         NextItemId = 0;             // Unique identifier when creating new items
     bool            RequestDelete = false;      // Deferred deletion request

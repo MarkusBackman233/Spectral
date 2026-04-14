@@ -2,7 +2,6 @@
 #include "pch.h"
 
 #define SOL_LUAJIT 1
-#define SOL_PRINT_ERRORS 0
 //#define SOL_ALL_SAFETIES_ON 1
 //#define SOL_EXCEPTIONS_SAFE_PROPAGATION  1
 #include "src/External/Sol2/sol.hpp"
@@ -16,7 +15,8 @@ class Script : public Resource
 public:
 	Script();
 	~Script() {}
-
+	ResourceType GetResourceType() override { return ResourceType::Script; }
+	static ResourceType StaticType() { return ResourceType::Script; }
 	bool Load(const std::filesystem::path& file) override;
 
 	void Start(GameObject* GameObject);

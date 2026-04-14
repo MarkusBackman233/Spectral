@@ -13,7 +13,7 @@
 #include "UndoTransform.h"
 #include "AudioSourceComponent.h"
 #include "UndoDeleteGameObject.h"
-
+#include "Model.h"
 using namespace Spectral;
 
 void ObjectSelector::SetSelectedGameObject(GameObject* gameObject)
@@ -185,18 +185,35 @@ void ObjectSelector::HandleRaycastSelection()
 
     for (const auto& object : ObjectManager::GetInstance()->GetGameObjects())
     {
-        std::shared_ptr<Mesh> mesh;
         if (auto meshComponent = object->GetComponentOfType<MeshComponent>())
         {
-            mesh = meshComponent->GetMesh();
+            float distance = std::numeric_limits<float>::max();
+
+            if (CheckModelRayOverlap(meshComponent->GetMesh()->m_root, object->GetWorldMatrix(), rayOrigin, rayDirection, distance))
+            {
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    currentClosest = object.get();
+                }
+            }
+
         }
         else if (auto terrainComponent = object->GetComponentOfType<TerrainComponent>())
         {
-            mesh = terrainComponent->GetMesh();
+            float distance = std::numeric_limits<float>::max();
+            if (Intersection::MeshTriangles(terrainComponent->GetMesh().get(), object->GetWorldMatrix(), rayOrigin, rayDirection, distance))
+            {
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    currentClosest = object.get();
+                }
+            }
         }
         else if (object->GetComponentOfType<LightComponent>() || object->GetComponentOfType<AudioSourceComponent>())
         {
-            float distance = 0.0f;
+            float distance = std::numeric_limits<float>::max();
             if (Intersection::BoundingSphere(object->GetWorldMatrix(), 0.5f, rayOrigin, rayDirection, distance))
             {
                 if (distance < 300.0f)
@@ -206,17 +223,7 @@ void ObjectSelector::HandleRaycastSelection()
                 }
             }
         }
-        if (!mesh)
-            continue;
-        float distance = 0.0f;
-        if (Intersection::MeshTriangles(mesh.get(), object->GetWorldMatrix(), rayOrigin, rayDirection, distance))
-        {
-            if (distance < minDistance)
-            {
-                minDistance = distance;
-                currentClosest = object.get();
-            }
-        }
+
     }
 
     if (currentClosest == nullptr)
@@ -227,4 +234,29 @@ void ObjectSelector::HandleRaycastSelection()
 
     auto objectToSelect = Input::GetKeyHeld(InputId::LAlt) ? currentClosest : currentClosest->GetRootGameObject();
     AddSelectedGameObject(objectToSelect);
+}
+
+bool ObjectSelector::CheckModelRayOverlap(const SubMesh& subMesh, const Math::Matrix& matrix, const Math::Vector3& origin, const Math::Vector3& direction, float& distance)
+{
+    bool hit = false;
+    if (subMesh.m_mesh)
+    {
+        float d = FLT_MAX;
+
+        if (Intersection::MeshTriangles(subMesh.m_mesh.get(), subMesh.m_localMatrix * matrix, origin, direction, d))
+        {
+            distance = std::min(distance, d);
+            hit = true;
+        }
+    }
+
+    for (auto& child : subMesh.m_submeshes)
+    {
+        if (CheckModelRayOverlap(child, matrix, origin, direction, distance))
+        {
+            hit = true;
+        }
+    }
+
+    return hit;
 }

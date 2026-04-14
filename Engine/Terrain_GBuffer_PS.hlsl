@@ -124,7 +124,7 @@ uint4 main(PSInput input) : SV_Target
     float weightSum = splat.r + splat.g + splat.b + splat.a;
     splat /= max(weightSum, 0.0001);
     
-    input.texcoord *= 0.3;
+    input.texcoord *= 1.0f;
     
 
     float4 blendedAlbedo = BlendTextures4(

@@ -8,7 +8,6 @@
 #include "EditorCameraController.h"
 #include "ObjectSelector.h"
 #include "AssetBrowser.h"
-
 class LevelProperties;
 class GameObject;
 class ObjectManager;
@@ -34,7 +33,7 @@ public:
 	void Render();
 	void Update(float deltaTime);
 
-	void HandleDropFile(const std::filesystem::path& filename);
+	void HandleDropFile(const std::vector<std::filesystem::path>& filenames);
 
 	void GameObjectListItem(GameObject* gameObject, const ImGuiTextFilter& filter);
 
@@ -60,8 +59,40 @@ public:
 
 	void OpenTerrainEditor(TerrainComponent* terrainComponent);
 
+	void DeselectSelectedResource();
+
+	template<typename T>
+	bool GetDropResource(std::shared_ptr<T>& outResource)
+	{
+		static_assert(std::is_base_of<Resource, T>::value, "T must derive from Resource");
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("ASSETS_BROWSER_ITEMS"))
+			{
+				size_t size = payload->DataSize / sizeof(FileItem);
+				FileItem* payload_items = (FileItem*)payload->Data;
+
+				for (size_t i = 0; i < size; i++)
+				{
+					FileItem& item = payload_items[i];
+
+					if (item.m_type != T::StaticType() || !item.m_resource)
+						continue;
+					outResource = std::static_pointer_cast<T>(item.m_resource);
+					ImGui::EndDragDropTarget();
+					return true;
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		return false;
+	}
+
 private:
 	void PropertiesWindow();
+	void AssetSelectionEdit();
 	void TopMenu();
 	void GameObjectsWindow();
 	void GameObjectComponentWindow();
@@ -94,11 +125,12 @@ private:
 
 	ObjectSelector m_objectSelector;
 	AssetBrowser m_assetBrowser;
-
 	std::shared_ptr<PropertyWindow> m_propertyWindow;
 	std::shared_ptr<TerrainEditor> m_terrainEditor;
 
 	std::deque<std::shared_ptr<Undo>> m_undoStack;
+
+	std::shared_ptr<Resource> m_selectedResource;
 };
 
 #endif

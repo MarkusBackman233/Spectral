@@ -14,12 +14,13 @@
 #include "GameObject.h"
 #include "ScriptComponent.h"
 #include "AudioSourceComponent.h"
+#include "Model.h"
 
-void PropertyWindowFactory::SelectMesh(std::shared_ptr<Mesh>& selectMesh)
+void PropertyWindowFactory::SelectMesh(std::shared_ptr<Model>& selectMesh)
 {
     Editor::GetInstance()->SetPropertyWindow(
         std::make_shared<MeshPropertyWindow>(
-            [&selectMesh](std::shared_ptr<Mesh> mesh)
+            [&selectMesh](std::shared_ptr<Model> mesh)
         {
             selectMesh = mesh;
         }

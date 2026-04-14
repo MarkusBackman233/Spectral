@@ -30,6 +30,10 @@ cbuffer PixelConstantBuffer : register(b1)
     float4 data;
     float4 data2;
     float4 materialColor;
+    float texelDensity;
+    float unused1;
+    float unused2;
+    float unused3;
 };
 
 
@@ -42,9 +46,12 @@ float3 rnmBlendUnpacked(float3 n1, float3 n2)
 
 uint4 main(PSInput input) : SV_Target
 {
+    
+    float2 uv = input.texcoord * texelDensity;
+    
     float4 albedo;
 
-    albedo = data2.x > -1.0 ? float4(1, 1, 1, 1) : albedoMap.Sample(samplerState, input.texcoord);
+    albedo = data2.x > -1.0 ? float4(1, 1, 1, 1) : albedoMap.Sample(samplerState, uv);
     albedo *= materialColor;
     
     if (albedo.a < 0.1)
@@ -59,7 +66,7 @@ uint4 main(PSInput input) : SV_Target
 
     if (data2.y < 0.0)
     {
-        float3 normalSample = normalize((normalMap.Sample(samplerState, input.texcoord)).xyz * 2.0f - 1.0f);
+        float3 normalSample = normalize((normalMap.Sample(samplerState, uv)).xyz * 2.0f - 1.0f);
         
         normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
         
@@ -78,7 +85,7 @@ uint4 main(PSInput input) : SV_Target
     {
         if (data.x > -1.0)
         {
-            float4 materialProperties = roughnessMap.Sample(samplerState, input.texcoord);
+            float4 materialProperties = roughnessMap.Sample(samplerState, uv);
             
             metallic = 1.0f - materialProperties.r; // Metallic
             roughness = materialProperties.g; // roughness
@@ -94,9 +101,9 @@ uint4 main(PSInput input) : SV_Target
     }
     else
     {
-        ao = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, input.texcoord).r; // AO
-        metallic = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, input.texcoord).r); // Metallic
-        roughness = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, input.texcoord).r; // roughness
+        ao = data.x > -1.0 ? 1.0f : aoMap.Sample(samplerState, uv).r; // AO
+        metallic = 1.0f - (data.z > -1.0 ? data.z : metallicMap.Sample(samplerState, uv).r); // Metallic
+        roughness = data.y > -1.0 ? data.y : roughnessMap.Sample(samplerState, uv).r; // roughness
     }
 
 

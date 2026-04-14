@@ -118,7 +118,7 @@ void ShadowManager::SetupLightMatrix()
     Light* sun = scene.GetSun();
 
     auto s = sun->Direction;
-    Math::Vector3 cameraPos = Math::SnapToNearest(Render::GetCameraPosition().Swizzle("xoz"), scene.GetLightingSettings().ShadowCameraSize*0.5f);
+    Math::Vector3 cameraPos = Render::GetCameraPosition();
     Math::Vector3 lightPos = cameraPos - s * scene.GetLightingSettings().CameraDistance;
     Math::Vector3 lightTarget = lightPos - s;
     m_camera->SetFarClip(scene.GetLightingSettings().FarDepth);

@@ -234,7 +234,7 @@ PxShape* PhysXManager::CreateTriangleShape(const std::shared_ptr<Mesh>& mesh, co
 	return shape;
 }
 
-PxShape* PhysXManager::CreateConvexTriangleShape(const std::shared_ptr<Mesh>& mesh, const Math::Vector3& scale)
+PxShape* PhysXManager::CreateConvexTriangleShape(const std::shared_ptr<Model>& mesh, const Math::Vector3& scale)
 {
 	PxConvexMeshGeometry convexTriGeom;
 	convexTriGeom.convexMesh = CreateConvexShape(mesh.get());
@@ -340,18 +340,29 @@ PxTriangleMesh* PhysXManager::CreatePhysxTriangleMesh(Mesh* mesh) const
 
 }
 
-PxConvexMesh* PhysXManager::CreateConvexShape(Mesh* mesh)
+void PhysXManager::GatherVerticesFromModel(std::vector<PxVec3>& vertices, SubMesh& subMesh)
 {
-	std::vector<PxVec3> vertices(mesh->vertexes.size());
-
-	for (int i = 0; i < mesh->vertexes.size(); i++)
+	if (subMesh.m_mesh)
 	{
-		vertices[i].x = mesh->vertexes[i].position.x;
-		vertices[i].y = mesh->vertexes[i].position.y;
-		vertices[i].z = mesh->vertexes[i].position.z;
+		for (auto& vertex : subMesh.m_mesh->vertexes)
+		{
+			vertices.emplace_back(PxVec3{ vertex.position.x,vertex.position.y,vertex.position.z});
+		}
 	}
+
+	for (auto& child : subMesh.m_submeshes)
+	{
+		GatherVerticesFromModel(vertices, child);
+	}
+}
+
+PxConvexMesh* PhysXManager::CreateConvexShape(Model* model)
+{
+	std::vector<PxVec3> vertices;
+	GatherVerticesFromModel(vertices, model->m_root);
+
 	PxConvexMeshDesc convexMeshDesc;
-	convexMeshDesc.points.count = (PxU32)mesh->vertexes.size();
+	convexMeshDesc.points.count = (PxU32)vertices.size();
 	convexMeshDesc.points.stride = sizeof(PxVec3);
 	convexMeshDesc.points.data = vertices.data();
 
@@ -370,3 +381,4 @@ PxConvexMesh* PhysXManager::CreateConvexShape(Mesh* mesh)
 
 	return convexMesh;
 }
+

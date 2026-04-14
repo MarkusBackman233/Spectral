@@ -1,16 +1,15 @@
 #pragma once
 #include "pch.h"
-#include <PxPhysicsAPI.h>
+#include "PxPhysicsAPI.h"
 #include <foundation/PxFoundation.h>
 #include <extensions/PxDefaultErrorCallback.h>
 #include <extensions/PxDefaultAllocator.h>
-#include <vehicle2/PxVehicleAPI.h>
-
-#include <PxBaseMaterial.h>
 #include <cooking/PxCooking.h>
 #include "Vector3.h"
 #include "Matrix.h"
 class Mesh;
+class Model;
+struct SubMesh;
 using namespace physx;
 
 class PhysXManager : public PxSimulationEventCallback
@@ -59,10 +58,13 @@ public:
 	PxShape* CreateSphereShape(float radius);
 	PxShape* CreateTriangleShape(const std::shared_ptr<Mesh>& mesh, const Math::Vector3& scale = Math::Vector3());
 
-	PxShape* CreateConvexTriangleShape(const std::shared_ptr<Mesh>& mesh, const Math::Vector3& scale = Math::Vector3());
+	PxShape* CreateConvexTriangleShape(const std::shared_ptr<Model>& mesh, const Math::Vector3& scale = Math::Vector3());
 
 	PxTriangleMesh* CreatePhysxTriangleMesh(Mesh* mesh) const;
-	PxConvexMesh* CreateConvexShape(Mesh* mesh);
+	PxConvexMesh* CreateConvexShape(Model* model);
+
+	void GatherVerticesFromModel(std::vector<PxVec3>& vertices, SubMesh& subMesh);
+
 
 	void DetachShapesFromActor(PxRigidActor* actor);
 

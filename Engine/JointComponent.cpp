@@ -31,7 +31,7 @@ void JointComponent::Start()
 {
 	if (GetClosestActorInHierarchy(m_owner) == nullptr)
 	{
-		Logger::Error(std::string("joint object,") + m_owner->GetName() + " does not have a rigidbody component in its hierarchy!");
+		Logger::Error("joint object, {} does not have a rigidbody component in its hierarchy!", m_owner->GetName());
 	}
 }
 

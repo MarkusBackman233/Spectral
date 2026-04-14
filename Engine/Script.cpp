@@ -369,7 +369,7 @@ void Script::AddComponentToGameObject(GameObject* gameObject, const std::string&
     if (componentName == "Mesh")
     {
         component = ComponentFactory::CreateComponent(gameObject,Component::Type::Mesh);
-        std::dynamic_pointer_cast<MeshComponent>(component)->SetMesh(ResourceManager::GetInstance()->GetResource<Mesh>("DefaultCube"));
+        std::dynamic_pointer_cast<MeshComponent>(component)->SetMesh(ResourceManager::GetInstance()->GetResource<Model>("DefaultCube"));
         gameObject->AddComponent(component);
     }    
     else if (componentName == "Rigidbody")

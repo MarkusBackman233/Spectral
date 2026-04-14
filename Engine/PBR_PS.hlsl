@@ -153,20 +153,20 @@ float ShadowCalculation(float4 lpos)
 
     lpos.x = lpos.x * 0.5 + 0.5;
     lpos.y = lpos.y * -0.5 + 0.5;
-    lpos.z -= 0.001;
+    //lpos.z -= 0.0000001;
     
     const float texelSize = 0.000244140625;
+    const float halfSampleDistance = 1.5;
     
     float shadowLevel = 0.0;
     
-    float halfSampleDistance = 1.5;
     
     for (float y = -halfSampleDistance; y < halfSampleDistance; y += 1.0)
     {
         for (float x = -halfSampleDistance; x < halfSampleDistance; x += 1.0)
         {
-            shadowLevel += shadowDepthMap.SampleCmpLevelZero(cmpSampler, lpos.xy + float2(x, y) * texelSize, lpos.z );
-
+            shadowLevel += shadowDepthMap.SampleCmpLevelZero(cmpSampler, lpos.xy + float2(x, y) * texelSize, lpos.z);
+    
         }
     }
     return shadowLevel * 0.1111111111111111; // 1 / 9
@@ -239,6 +239,7 @@ float3 ReconstructWorldPosition(float2 uv, float depth)
 
     return viewPos.xyz;
 }
+
 
 float4 main(VVSOutput input) : SV_TARGET
 {
@@ -320,8 +321,7 @@ float4 main(VVSOutput input) : SV_TARGET
     float3 reflectionUnNormalized = reflect(-viewDir, normal);
     float3 F = FresnelSchlickRoughness(NdotV, F0, 1-roughness);
     
-    float3 specularSample = specularMap.SampleLevel(samplerState, -reflectionUnNormalized,roughness * 7.0).
-    rgb;
+    float3 specularSample = specularMap.SampleLevel(samplerState, -reflectionUnNormalized,roughness * 7.0).rgb;
     
 
     float4 brdfTerm = specularIntegrationMap.SampleLevel(clampSampler, float2(NdotV, 1-roughness), 0);

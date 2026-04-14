@@ -1,8 +1,17 @@
 #pragma once
 #include <vector>
 
+namespace Math
+{
+	class Matrix;
+	class Vector3;
+}
+
+
 class GameObject;
 class Editor;
+
+struct SubMesh;
 
 class ObjectSelector
 {
@@ -19,5 +28,9 @@ public:
 	void HandleRaycastSelection();
 private:
 	std::vector<GameObject*> m_selectedGameObjects;
+
+
+	bool CheckModelRayOverlap(const SubMesh& subMesh, const Math::Matrix& matrix, const Math::Vector3& origin, const Math::Vector3& direction, float& distance);
+
 };
 

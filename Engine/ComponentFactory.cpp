@@ -39,10 +39,11 @@
     COMPONENT_SELECT(canDuplicate)(componentClass, componentEnum, str)
 #undef COMPONENT
 // Component list
+//COMPONENT(RigidbodyComponent,           Component::Type::Rigidbody,             "Rigidbody Component",              1) 
+//COMPONENT(PhysicsShapeComponent,        Component::Type::PhysicsShape,          "Physics Shape Component",          1) 
+
 #define COMPONENT_LIST \
-    COMPONENT(RigidbodyComponent,           Component::Type::Rigidbody,             "Rigidbody Component",              1) \
     COMPONENT(LightComponent,               Component::Type::Light,                 "Light Component",                  1) \
-    COMPONENT(PhysicsShapeComponent,        Component::Type::PhysicsShape,          "Physics Shape Component",          1) \
     COMPONENT(MeshComponent,                Component::Type::Mesh,                  "Mesh Component",                   1) \
     COMPONENT(ParticleComponent,            Component::Type::Particle,              "Particle Component",               0) \
     COMPONENT(TerrainComponent,             Component::Type::Terrain,               "Terrain Component",                0) \

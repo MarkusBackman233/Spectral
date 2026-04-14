@@ -8,6 +8,7 @@
 #include "TerrainComponent.h"
 #include "JointComponent.h"
 #include "Mesh.h"
+#include "Model.h"
 RigidbodyComponent::RigidbodyComponent(GameObject* owner)
 	: Component(owner)
 	, m_actor(nullptr)
@@ -243,7 +244,7 @@ void RigidbodyComponent::CollectShapes(RigidbodyComponent* collector, GameObject
 			{
 				auto boundingBox = meshComp->GetMesh()->GetBoundingBoxMax() * 0.5f - meshComp->GetMesh()->GetBoundingBoxMin() * 0.5f;
 				auto scale = boundingBox * gameObject->GetWorldMatrix().GetScale();
-				shape = PhysXManager::GetInstance()->CreateSphereShape(std::max({ scale.x, scale.y, scale.z }));
+				shape = PhysXManager::GetInstance()->CreateSphereShape(std::max({ scale.x, scale.y, scale.z })); 
 			}
 			else
 			{
@@ -261,7 +262,7 @@ void RigidbodyComponent::CollectShapes(RigidbodyComponent* collector, GameObject
 			}
 			else if (auto meshComp = gameObject->GetComponentOfType<MeshComponent>())
 			{
-				shape = PhysXManager::GetInstance()->CreateTriangleShape(meshComp->GetMesh(), gameObject->GetWorldMatrix().GetScale());
+				//shape = PhysXManager::GetInstance()->CreateTriangleShape(meshComp->GetMesh(), gameObject->GetWorldMatrix().GetScale()); backm
 			}
 			break;
 		}
@@ -269,11 +270,11 @@ void RigidbodyComponent::CollectShapes(RigidbodyComponent* collector, GameObject
 		{
 			if (auto terrainComp = gameObject->GetComponentOfType<TerrainComponent>())
 			{
-				shape = PhysXManager::GetInstance()->CreateConvexTriangleShape(terrainComp->GetMesh(), gameObject->GetWorldMatrix().GetScale());
+				//shape = PhysXManager::GetInstance()->CreateConvexTriangleShape(terrainComp->GetMesh(), gameObject->GetWorldMatrix().GetScale());
 			}
 			else if (auto meshComp = gameObject->GetComponentOfType<MeshComponent>())
 			{
-				shape = PhysXManager::GetInstance()->CreateConvexTriangleShape(meshComp->GetMesh(), gameObject->GetWorldMatrix().GetScale());
+				shape = PhysXManager::GetInstance()->CreateConvexTriangleShape(meshComp->GetMesh(), gameObject->GetWorldMatrix().GetScale()); 
 			}
 			break;
 		}

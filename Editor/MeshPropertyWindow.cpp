@@ -8,7 +8,7 @@
 #include "GameObject.h"
 #include "Mesh.h"
 
-MeshPropertyWindow::MeshPropertyWindow(std::function<void(std::shared_ptr<Mesh>)> onSelectedMesh)
+MeshPropertyWindow::MeshPropertyWindow(std::function<void(std::shared_ptr<Model>)> onSelectedMesh)
 {
     m_onSelectedMesh = onSelectedMesh;
 }
@@ -17,7 +17,7 @@ void MeshPropertyWindow::PopulateWindow()
 {
     const ImVec2 buttonSize(ImGui::GetCurrentWindow()->Size.x, 30);
 
-    auto meshes = ResourceManager::GetInstance()->GetResources<Mesh>();
+    auto meshes = ResourceManager::GetInstance()->GetResources<Model>();
 
     for (const auto& mesh: meshes)
     {

@@ -11,7 +11,8 @@ class Prefab : public Resource
 {
 public:
 	Prefab() {};
-
+	ResourceType GetResourceType() override { return ResourceType::Prefab; }
+	static ResourceType StaticType() { return ResourceType::Prefab; }
 	virtual bool Load(const std::filesystem::path& file) override;
 
 	void Reload(const std::filesystem::path& file);

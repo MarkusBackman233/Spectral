@@ -9,6 +9,7 @@
 #include "Mesh.h"
 #include "DefaultMaterial.h"
 #include "Script.h"
+#include "Model.h"
 #include "IOManager.h"
 #include "Prefab.h"
 class ResourceManager
@@ -21,8 +22,11 @@ public:
 
     ResourceManager();
 
+    void SaveResources();
+
+
 	template<typename T>
-	std::shared_ptr<T> GetResource(const std::filesystem::path& file)
+	std::shared_ptr<T> GetResource(const std::filesystem::path& file, bool failSilently = false)
 	{
         static_assert(std::is_base_of<Resource, T>::value, "T must inherit from Resource");
 
@@ -60,7 +64,10 @@ public:
 
         if (foundPath.empty())
         {
-            Logger::Error("File not found: " + filename);
+            if (!failSilently)
+            {
+                Logger::Error("File not found: {}", filename);
+            }
             std::unique_lock lock(resourceData.Mutex); // Exclusive lock for writing
             resourceData.StoredResources.erase(filename);
             return nullptr;
