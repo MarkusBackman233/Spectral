@@ -12,6 +12,7 @@ struct GrassVertexV1
 	Math::Vector2 Direction;
 };
 
+class Texture;
 
 class GrassPatch
 {
@@ -36,6 +37,30 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11Buffer> GrassPositionBufferData = nullptr;
 };
 
+class Chunk
+{
+public:
+	Chunk(uint16_t x, uint16_t z, const std::vector<float>& heightField, Math::Vector2 heightFieldTextureSize, size_t maxTerrainSize);
+	Chunk() {};
+
+	void Build();
+
+	static constexpr size_t SizeInMeter = 128;
+	static constexpr size_t Steps = 128;
+
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_SRV;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> m_UAV;
+
+	float m_minHeightBound;
+	float m_maxHeightBound;
+
+
+	uint16_t m_x;
+	uint16_t m_z;
+	std::vector<float> m_heights;
+};
+
 class Mesh;
 class TerrainMaterial;
 
@@ -50,8 +75,6 @@ public:
 	Json::Object SaveComponent() override;
 	void LoadComponent(const rapidjson::Value& object) override;
 
-	std::shared_ptr<Mesh> GetMesh() const;
-
 
 #ifdef EDITOR
 	 void ComponentEditor() override;
@@ -62,27 +85,32 @@ public:
 
 	void GenerateGrass(GrassPatch& patch);
 
-	void CreatePlaneMesh();
-	void BuildTerrain();
+	void CreateTerrain();
 
-	size_t GetVertexRowCount() const;
 	float GetTerrainSize() const;
+
+	std::shared_ptr<TerrainMaterial> m_material;
+
+	std::shared_ptr<Texture> m_heightTexture;
+	std::shared_ptr<Texture> m_worldTexture;
+
+	float m_maxHight = 100.0f;
+
+	std::vector<Math::Vector2> m_instances;
+	Microsoft::WRL::ComPtr<ID3D11Buffer>      m_pInstanceBuffer;
+	std::vector<Chunk> m_chunks;
+
+	float m_terrainSize = 500.0f;
 
 private:
 
 
+	float m_terrainGenerationBlurRadius = 5.0f;
+	float m_terrainGenerationBlurSigma = 2.5f;
 
-	std::shared_ptr<Mesh> m_mesh;
-	std::shared_ptr<TerrainMaterial> m_material;
 
-	struct TerrainPointV1
-	{
-		float Height;
-		uint32_t Color;
-	};
+	bool m_created = false;
 
-	size_t m_vertexRowCount;
-	float m_terrainSize;
-	float m_uvScale;
+	int m_resolution = 0;
 };
 

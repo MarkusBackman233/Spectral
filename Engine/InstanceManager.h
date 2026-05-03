@@ -6,6 +6,7 @@
 
 class Mesh;
 class IMaterial;
+class TerrainComponent;
 
 struct DrawableInstance
 {
@@ -48,7 +49,11 @@ public:
 
 	void Map(ID3D11DeviceContext* context, ID3D11Device* device);
 	void AddInstance(DrawableInstance drawable, const Math::Matrix& matrix);
+	void AddInstance(TerrainComponent* terrain);
 	const std::unordered_map<DrawableInstance, InstanceData>& GetInstances() const;
+
+	std::vector<TerrainComponent*> m_terrainsToRender;
+
 private:
 
 	void CreateInstanceBuffer(

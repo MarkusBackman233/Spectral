@@ -258,7 +258,7 @@ void RigidbodyComponent::CollectShapes(RigidbodyComponent* collector, GameObject
 		{
 			if (auto terrainComp = gameObject->GetComponentOfType<TerrainComponent>())
 			{
-				shape = PhysXManager::GetInstance()->CreateTriangleShape(terrainComp->GetMesh(), gameObject->GetWorldMatrix().GetScale());
+				//shape = PhysXManager::GetInstance()->CreateTriangleShape(terrainComp->GetMesh(), gameObject->GetWorldMatrix().GetScale());
 			}
 			else if (auto meshComp = gameObject->GetComponentOfType<MeshComponent>())
 			{

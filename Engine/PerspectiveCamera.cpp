@@ -1,6 +1,7 @@
 #include "PerspectiveCamera.h"
 #include "MathFunctions.h"
-
+#include <DirectXCollision.h>
+#include "DxMathUtils.h"
 PerspectiveCamera::PerspectiveCamera(float fovDegrees, float nearClip, float farClip, Math::Vector2 size)
     : Camera()
     , m_fov(Math::ConvertToRadians(fovDegrees))
@@ -14,7 +15,12 @@ PerspectiveCamera::PerspectiveCamera(float fovDegrees, float nearClip, float far
 void PerspectiveCamera::CreateViewAndPerspective()
 {
     m_viewMatrix = m_matrix.GetInverse();
-    m_projectionMatrix = Math::Matrix::MakePerspective(m_fov, m_aspectRatio, m_nearClip, m_farClip);
+    auto proj = DirectX::XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_nearClip, m_farClip);
+    m_projectionMatrix = Spectral::DxMathUtils::ToSp(proj);
+    DirectX::BoundingFrustum::CreateFromMatrix(m_frustum, proj);
+    m_frustum.Transform(m_frustum, Spectral::DxMathUtils::ToDx(m_matrix));
+
+
     m_viewProjectionMatrix = m_viewMatrix * m_projectionMatrix;
     m_viewProjectionMatrix.Transpose();
 }

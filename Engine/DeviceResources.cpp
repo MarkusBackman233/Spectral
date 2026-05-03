@@ -271,5 +271,5 @@ LockedContext DeviceResources::GetLockedDeviceContext()
 
 void DeviceResources::Present()
 {
-    m_pDXGISwapChain->Present(0, 0);
+    m_pDXGISwapChain->Present(1, 0);
 }

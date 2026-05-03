@@ -51,7 +51,7 @@ std::array<IOManager::IOResourceData, static_cast<uint8_t>(ResourceType::Num)> I
     IOManager::IOResourceData{
         .Folder = "Textures",
         .SpectralExtension = {},
-        .SupportedExtensions = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga" }
+        .SupportedExtensions = { ".dds" ,".png" ,".jpg", ".jpeg", ".tga", ".hdr" }
     },
     IOManager::IOResourceData{
         .Folder = "Audio",

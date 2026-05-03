@@ -110,7 +110,7 @@ namespace Render
 	void	DrawGuizmo(const Math::Vector3& position, std::shared_ptr<Texture> texture, const Math::Vector4& color = Math::Vector4(1, 1, 1, 1));
 	void	DrawLight(const Light* light);
 
-	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture);
+	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture, int format);
 
 	Math::Vector2i	GetWindowSize();
 	Math::Vector2	GetViewportSizef();

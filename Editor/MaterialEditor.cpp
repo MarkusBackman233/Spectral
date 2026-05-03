@@ -81,14 +81,16 @@ bool MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
 
     for (const auto& [textureName, textureId] : *textures)
     {
-        if (material->GetTexture(textureId) && material->GetTexture(textureId)->GetResourceView().Get())
+        auto texture = material->GetTexture(textureId);
+        if (texture && texture->GetResourceView().Get())
         {
-            auto selectedTextureName = material->GetTexture(textureId)->GetFilename();
+            auto selectedTextureName = texture->GetFilename();
             ImGui::Text(std::string(textureName + ": " + selectedTextureName).c_str());
-            auto resource = material->GetTexture(textureId)->GetResourceView().Get();
+            auto resource = texture->GetResourceView().Get();
             if (ImGui::ImageButton(textureName.c_str(), resource, Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                PropertyWindowFactory::SelectTexture(material, textureId, selectedTextureName);
+
+                PropertyWindowFactory::SelectTexture(texture, selectedTextureName);
                 changed |= true;
 
             }
@@ -99,7 +101,7 @@ bool MaterialEditor::RenderGUI(std::shared_ptr<DefaultMaterial> material)
 
             if (ImGui::Button(std::string("##" + textureName).c_str(), Editor::GetInstance()->GetDefaultTextureSize()))
             {
-                PropertyWindowFactory::SelectTexture(material, textureId); 
+                PropertyWindowFactory::SelectTexture(texture);
                 changed |= true;
             }
         }

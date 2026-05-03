@@ -6,7 +6,6 @@
 #include "InputManager.h"
 #ifdef EDITOR
 #include "Editor.h"
-#include "EditorGUI.h"
 #endif // EDITOR
 
 #include <AudioManager.h>
@@ -25,11 +24,6 @@ int main(int argc, char* args[])
     GameStateManager stateManager;
     TimeManager timeManager;
 
-#ifdef EDITOR
-    //EditorGUI editor;
-#endif
-
-
     WindowsManager::CreateWindowsLoop(
         [&]
     {
@@ -40,7 +34,6 @@ int main(int argc, char* args[])
         RenderManager::GetInstance()->Render();
 #ifdef EDITOR
         Editor::GetInstance()->Update(timeManager.GetDeltaTime());
-        //editor.Update();
         Editor::GetInstance()->Render();
 #endif
         RenderManager::GetInstance()->Present();

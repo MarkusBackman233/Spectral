@@ -8,7 +8,8 @@
 #include "ShadowManager.h"
 #include "DefaultMaterial.h"
 #include "ProfilerManager.h"
-
+#include "TerrainComponent.h"
+#include "TerrainMaterial.h"
 DeferredPipeline::DeferredPipeline()
 {
 }
@@ -67,6 +68,15 @@ void DeferredPipeline::RenderGBuffer(
         if (instance.Material)
         {
             instance.Material->Render(context, deviceResources, instance.Mesh, matrixes);
+        }
+    }
+
+    const auto& terrains = instanceManager.m_terrainsToRender;
+    for (const auto& terrain : terrains)
+    {
+        if (terrain->m_material)
+        {
+            terrain->m_material->Render(context, deviceResources, terrain);
         }
     }
 }

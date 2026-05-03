@@ -8,6 +8,8 @@ public:
 	void Update(float deltaTime);
 	Math::Matrix& GetWorldMatrix();
 
+	float m_speed = 15.0f;
+
 private:
 	void HandleRotation();
 	void HandleTranslation(float deltaTime);

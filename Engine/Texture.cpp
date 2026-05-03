@@ -12,7 +12,7 @@
 bool Texture::LoadTexture(unsigned char* bytes, const Math::Vector2i& size)
 {
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-	Render::CreateTexture(bytes, size, texture);
+	Render::CreateTexture(bytes, size, texture, DXGI_FORMAT_R8G8B8A8_UNORM);
 	GenerateMips(texture.Get());
 	return true;
 }
@@ -27,28 +27,64 @@ bool Texture::Load(const std::filesystem::path& file)
 	Logger::Info("Loading Texture: " + stringFilename);
 	if (file.wstring().find(L".dds") != std::wstring::npos)
 	{
-		ID3D11Resource* resource;
+		Microsoft::WRL::ComPtr<ID3D11Resource> resource;
+
 		ThrowIfFailed(DirectX::CreateDDSTextureFromFile(
 			Render::GetDevice(),
 			Render::GetContext().GetContext(),
 			file.wstring().c_str(),
-			&resource,
-			&m_textureSRV));
-		resource->Release();
+			resource.GetAddressOf(),
+			m_textureSRV.GetAddressOf()));
+		ThrowIfFailed(resource.As(&m_texture));
 	}
 	else
 	{
 		int width, height, channels;
-		unsigned char* imageData = stbi_load(stringFilename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-		if (!imageData) {
-			Logger::Error("Could not not load texture: " + stringFilename);
-			return false;
-		}
-		Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-		Render::CreateTexture(imageData, Math::Vector2i(width, height), texture);
-		stbi_image_free(imageData);
-		GenerateMips(texture.Get());
 
+
+
+		if (file.extension().string() == ".hdr")
+		{
+			float* imageData = stbi_loadf(stringFilename.c_str(), &width, &height, &channels, 3);
+			if (!imageData)
+			{
+				Logger::Error("Could not load HDR texture: " + stringFilename);
+				return false;
+			}
+
+			D3D11_TEXTURE2D_DESC desc = {};
+			desc.Width = width;
+			desc.Height = height;
+			desc.MipLevels = 1;
+			desc.ArraySize = 1;
+			desc.Format = DXGI_FORMAT_R32G32B32_FLOAT; // or RGBA version
+			desc.SampleDesc.Count = 1;
+			desc.Usage = D3D11_USAGE_DEFAULT;
+			desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+			desc.MiscFlags = 0;
+
+			ThrowIfFailed(Render::GetDevice()->CreateTexture2D(&desc, nullptr, m_texture.GetAddressOf()));
+
+			UINT pitch = width * 12;
+
+			Render::GetContext().GetContext()->UpdateSubresource(m_texture.Get(), 0, nullptr, imageData, pitch, 0);
+
+			ThrowIfFailed(Render::GetDevice()->CreateShaderResourceView(m_texture.Get(), nullptr, m_textureSRV.GetAddressOf()));
+
+			stbi_image_free(imageData);
+		}
+		else
+		{
+			unsigned char* imageData = stbi_load(stringFilename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+			if (!imageData) {
+				Logger::Error("Could not not load texture: " + stringFilename);
+				return false;
+			}
+
+			Render::CreateTexture(imageData, Math::Vector2i(width, height), m_texture, DXGI_FORMAT_R8G8B8A8_UNORM);
+			GenerateMips(m_texture.Get());
+			stbi_image_free(imageData);
+		}
 	}
 	return true;
 }
@@ -63,7 +99,7 @@ bool Texture::LoadFromResource(unsigned char* bytes, size_t size)
 		&width, &height, &channels, 0
 	);
 	Microsoft::WRL::ComPtr<ID3D11Texture2D> texture;
-	Render::CreateTexture(image, Math::Vector2i(width, height), texture);
+	Render::CreateTexture(image, Math::Vector2i(width, height), texture, DXGI_FORMAT_R8G8B8A8_UNORM);
 	stbi_image_free(image);
 	GenerateMips(texture.Get());
 	return true;

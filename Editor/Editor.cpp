@@ -516,6 +516,8 @@ void Editor::TopMenu()
             {
                 m_currentGizmoOperation = ImGuizmo::SCALE;
             }
+            ImGui::SliderFloat("Camera Speed", &m_editorCameraController.m_speed, 1.0f, 400.0f);
+
             ImGui::Separator();
             if (ImGui::MenuItem("World", "", m_currentGizmoMode == ImGuizmo::WORLD))
             {
@@ -987,7 +989,7 @@ Math::Vector3 Editor::GetPositionInFontOfCamera(float distance)
         }
         else if (auto terrainComponent = object->GetComponentOfType<TerrainComponent>())
         {
-            mesh = terrainComponent->GetMesh();
+            //mesh = terrainComponent->GetMesh();
         }
         if (!mesh)
             continue;

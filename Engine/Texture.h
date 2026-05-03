@@ -10,9 +10,12 @@ class Texture : public Resource
 public:
 	Texture() {};
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> GetResourceView() { return m_textureSRV; }
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> GetTexture() { return m_texture; }
 
 	ResourceType GetResourceType() override { return ResourceType::Texture; }
 	static ResourceType StaticType() { return ResourceType::Texture; }
+
+
 
 	bool LoadTexture(unsigned char* bytes, const Math::Vector2i& size);
 	bool Load(const std::filesystem::path& file) override;
@@ -20,6 +23,7 @@ public:
 private:
 	void GenerateMips(ID3D11Texture2D* texture);
 
+	Microsoft::WRL::ComPtr<ID3D11Texture2D> m_texture;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> m_textureSRV;
 };
 

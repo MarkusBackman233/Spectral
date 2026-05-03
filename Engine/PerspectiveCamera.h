@@ -1,6 +1,7 @@
 #pragma once
 #include "Camera.h"
 #include "Vector2.h"
+#include <DirectXCollision.h>
 class PerspectiveCamera :
     public Camera
 {
@@ -14,6 +15,10 @@ public:
 	float m_nearClip;
 	float m_farClip;
 	float m_aspectRatio;
+
+
+	DirectX::BoundingFrustum m_frustum;
+
 private:
 
 };

@@ -11,6 +11,11 @@ void InstanceManager::AddInstance(DrawableInstance drawable, const Math::Matrix&
     m_pendingInstances[drawable].push_back(matrix);
 }
 
+void InstanceManager::AddInstance(TerrainComponent* terrain)
+{
+    m_terrainsToRender.push_back(terrain);
+}
+
 
 const std::unordered_map<DrawableInstance, InstanceManager::InstanceData>& InstanceManager::GetInstances() const
 {

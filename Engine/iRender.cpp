@@ -113,20 +113,34 @@ namespace Render
 
 	}
 
-	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture)
+	void CreateTexture(const void* textureData, Math::Vector2i size, Microsoft::WRL::ComPtr<ID3D11Texture2D>& texture, int format)
 	{
 		D3D11_TEXTURE2D_DESC texDesc = {};
 		texDesc.Width = size.x;
 		texDesc.Height = size.y;
 		texDesc.MipLevels = texDesc.ArraySize = 1;
-		texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		texDesc.Format = static_cast<DXGI_FORMAT>(format);
 		texDesc.SampleDesc.Count = 1;
 		texDesc.Usage = D3D11_USAGE_DEFAULT;
 		texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
 		D3D11_SUBRESOURCE_DATA initData = {};
 		initData.pSysMem = textureData;
-		initData.SysMemPitch = size.x * 4;
+
+		int bytesPerPixel = 4;
+
+		switch (format)
+		{
+		case DXGI_FORMAT_R8G8B8A8_UNORM: bytesPerPixel = 4; break;
+		case DXGI_FORMAT_R32_FLOAT: bytesPerPixel = 4; break;
+		case DXGI_FORMAT_R16G16_FLOAT: bytesPerPixel = 4; break;
+		case DXGI_FORMAT_R16G16B16A16_FLOAT: bytesPerPixel = 8; break;
+		case DXGI_FORMAT_R32G32B32A32_FLOAT: bytesPerPixel = 16; break;
+		case DXGI_FORMAT_R32G32B32_FLOAT: bytesPerPixel = 12; break;
+		default: bytesPerPixel = 4; break;
+		}
+
+		initData.SysMemPitch = size.x * bytesPerPixel;
 		ThrowIfFailed(Render::GetDevice()->CreateTexture2D(&texDesc, &initData, &texture));
 	}
 

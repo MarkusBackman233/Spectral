@@ -26,7 +26,7 @@ void EditorCameraController::HandleTranslation(float deltaTime)
         return;
     }
 
-    const float speed = Input::GetKeyHeld(InputId::Shift) ? 30.0f : 15.0f;
+    const float speed = Input::GetKeyHeld(InputId::Shift) ? m_speed * 2.0f : m_speed;
 
     const Vector3 up(0.0f, 1.0f, 0.0f);
     const Vector3 left = m_matrix.GetLeft();

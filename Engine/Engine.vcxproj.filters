@@ -802,6 +802,9 @@
     <FxCompile Include="Grass_GBuffer_PS.hlsl">
       <Filter>Source Files\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Terrain_GBuffer_VS.hlsl">
+      <Filter>Source Files\Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\icon.ico">

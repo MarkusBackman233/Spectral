@@ -87,35 +87,35 @@ void TerrainEditor::RaycastPaint()
     else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) 
         direction = -1.0f;
 
-    Mesh* terrainMesh = m_terrainComponent->GetMesh().get();
-    std::optional<Math::Vector3> optHit = RaycastTerrain(terrainMesh);
-
-    if (!optHit.has_value())
-    {
-        return;
-    }
-    Math::Vector3 localHit = optHit.value();
-
-    if (ImGui::IsKeyDown(ImGuiKey_MouseLeft))
-    {
-        switch (m_settings.BrushMode)
-        {
-        case BrushMode::Height:
-            EditHeight(terrainMesh, localHit, direction);
-            break;
-        case BrushMode::Color:
-            EditSplat(terrainMesh, localHit, direction);
-            break;
-        case BrushMode::Grass:
-            EditGrass(terrainMesh, localHit, direction);
-            break;
-        }
-    }
-    else if (m_terrainDirty)
-    {
-        m_terrainComponent->BuildTerrain();
-        //RebuildTerrain(terrainMesh);
-    }
+    //Mesh* terrainMesh = m_terrainComponent->GetMesh().get();
+    //std::optional<Math::Vector3> optHit = RaycastTerrain(terrainMesh);
+    //
+    //if (!optHit.has_value())
+    //{
+    //    return;
+    //}
+    //Math::Vector3 localHit = optHit.value();
+    //
+    //if (ImGui::IsKeyDown(ImGuiKey_MouseLeft))
+    //{
+    //    switch (m_settings.BrushMode)
+    //    {
+    //    case BrushMode::Height:
+    //        EditHeight(terrainMesh, localHit, direction);
+    //        break;
+    //    case BrushMode::Color:
+    //        EditSplat(terrainMesh, localHit, direction);
+    //        break;
+    //    case BrushMode::Grass:
+    //        EditGrass(terrainMesh, localHit, direction);
+    //        break;
+    //    }
+    //}
+    //else if (m_terrainDirty)
+    //{
+    //    m_terrainComponent->BuildTerrain();
+    //    //RebuildTerrain(terrainMesh);
+    //}
 }
 
 void TerrainEditor::EditHeight(Mesh* terrainMesh, const Math::Vector3& localHit, float direction)

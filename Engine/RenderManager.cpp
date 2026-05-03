@@ -44,7 +44,7 @@ RenderManager::RenderManager()
         m_deviceResources.GetPointSamplerState()
     };
     context->PSSetSamplers(0, 5, samplers);
-    m_camera = std::make_unique<PerspectiveCamera>(75.0f, 0.1f, 1000.0f, windowSize);
+    m_camera = std::make_unique<PerspectiveCamera>(90.0f, 0.1f, 13000.0f, windowSize);
     OnViewportResize(Math::Vector2(0.0f, 0.0f), windowSize);
 }
 
@@ -77,6 +77,7 @@ void RenderManager::Render()
     m_instanceManager.Map(context, m_deviceResources.GetDevice());
     m_shadowManager.DrawShadowDepth(context, m_instanceManager);
     m_deferredPipeline.RenderGBuffer(context, m_deviceResources, m_instanceManager, m_shadowManager, m_currentViewportSize);
+    m_instanceManager.m_terrainsToRender.clear();
     m_grassRenderer.Render(context, m_deviceResources);
     m_skyboxManager.RenderSkybox(context, m_deviceResources.GetRenderTarget());
     //m_cloudGenerator.Render(context, m_deviceResources, m_skyboxManager);

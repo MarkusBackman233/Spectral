@@ -16,7 +16,7 @@ class PropertyWindowFactory
 {
 public:
 	static void SelectMesh(std::shared_ptr<Model>& selectMesh);
-	static void SelectTexture(std::shared_ptr<DefaultMaterial>& selectMaterial, int selectTextureId, const std::string& currentSelectedTextureName = "");
+	static void SelectTexture(std::shared_ptr<Texture>& selectTexture, const std::string& currentSelectedTextureName = "");
 	static void SelectMaterial(std::shared_ptr<DefaultMaterial>& material);
 	static void SelectComponent(GameObject* gameObject);
 	static void SelectScript(ScriptComponent* selectScriptComponent);

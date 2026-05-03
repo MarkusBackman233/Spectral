@@ -1,230 +1,70 @@
 #include "common.hlsli"
 
-Texture2D albedo0Map : register(t0);
-Texture2D albedo1Map : register(t1);
-Texture2D albedo2Map : register(t2);
-Texture2D albedo3Map : register(t3);
-
-Texture2D normal0Map : register(t4);
-Texture2D normal1Map : register(t5);
-Texture2D normal2Map : register(t6);
-Texture2D normal3Map : register(t7);
-
-Texture2D roughness0Map : register(t8);
-Texture2D roughness1Map : register(t9);
-Texture2D roughness2Map : register(t10);
-Texture2D roughness3Map : register(t11);
-
+Texture2D worldColor : register(t0);
+Texture2D terrainTextures[8]; // albedo
+Texture2D normalTextures[8]; // normals
 SamplerState samplerState : register(s0);
 SamplerComparisonState cmpSampler : register(s1);
 SamplerState cubeSampler : register(s2);
 SamplerState clampSampler : register(s3);
 SamplerState pointSampler : register(s4);
 
-struct PSInput
+struct VS_OUTPUT
 {
     float4 position : SV_POSITION;
-    half4 color : COLOR;
     float3 worldPos : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 tangent : TEXCOORD2;
     float3 binormal : TEXCOORD3;
-    float2 texcoord : TEXCOORD4;
 };
+
 
 cbuffer PixelConstantBuffer : register(b1)
 {
     float3 CB_mouseRaycastHit;
     float CB_brushSize;
     unsigned int CB_materialData;
-    float unused1;
+    float WorldSize;
     float unused2;
     float unused3;
 };
 
-#define Albedo0  0
-#define Albedo1  1
-#define Albedo2  2
-#define Albedo3  3
-#define Normal0  4
-#define Normal1  5
-#define Normal2  6
-#define Normal3  7
-#define Roughness0 8
-#define Roughness1 9
-#define Roughness2 10
-#define Roughness3 11
-
-
-
-float4 BlendTextures4(float4 textures0, float4 textures1, float4 textures2, float4 textures3, float4 splat)
-{
-    return textures0 * splat.r +
-           textures1 * splat.g +
-           textures2 * splat.b +
-           textures3 * splat.a;
-}
-
-float3 BlendTextures3(float3 textures0, float3 textures1, float3 textures2, float3 textures3, float4 splat)
-{
-    return textures0.rgb * splat.r +
-           textures1.rgb * splat.g +
-           textures2.rgb * splat.b +
-           textures3.rgb * splat.a;
-}
-
-float BlendTextures1(float textures0, float textures1, float textures2, float textures3, float4 splat)
-{
-    return textures0 * splat.r +
-           textures1 * splat.g +
-           textures2 * splat.b +
-           textures3 * splat.a;
-}
-
-float4 GetTexture4(Texture2D textureMap, float2 texcoord, int bit)
-{
-    if (CB_materialData & (1 << bit))
-    {
-        return textureMap.Sample(samplerState, texcoord);
-    }
-    
-    return float4(0.0f, 0.0f, 0.0f, 0.0f);
-}
-
-float3 GetTexture3(Texture2D textureMap, float2 texcoord, int bit)
-{
-    if (CB_materialData & (1 << bit))
-    {
-        return textureMap.Sample(samplerState, texcoord).rgb;
-    }
-    
-    return float3(0.0f, 0.0f, 0.0f);
-}
-
-float GetTexture1(Texture2D textureMap, float2 texcoord, int bit)
-{
-    if (CB_materialData & (1 << bit))
-    {
-        return textureMap.Sample(samplerState, texcoord).r;
-    }
-    
-    return 0.0f;
-}
-
-
-uint4 main(PSInput input) : SV_Target
+uint4 main(VS_OUTPUT input) : SV_Target
 {
     
+    float2 tUV = input.worldPos.xz * 0.0025;
     
-    //float4 splat = splatMap.Sample(samplerState, input.texcoord);
-    float4 splat = input.color;
+    float3 t0 = terrainTextures[0].Sample(samplerState, tUV).rgb;
+    float3 t1 = terrainTextures[1].Sample(samplerState, tUV).rgb;
+    float3 t2 = terrainTextures[2].Sample(samplerState, tUV).rgb;
+    float3 t3 = terrainTextures[3].Sample(samplerState, tUV).rgb;
+    
+    
+    float2 uv = input.worldPos.xz / WorldSize;
+    
+    float3 wc = worldColor.Sample(samplerState, uv).rgb;
+    input.worldPos.y += length(wc) * 10.0f + terrainTextures[3].Sample(samplerState, input.worldPos.xz*0.01).r*0.1;
+    
+    float3 dx = ddx(input.worldPos);
+    float3 dy = ddy(input.worldPos);
+
+    float3 normal = -normalize(cross(dy, dx));
+
+    float slope = 1.0 - saturate(normal.y);
+
+    float rockFactor = smoothstep(0.0, 0.4, slope);
+
+
     
 
     
-    float weightSum = splat.r + splat.g + splat.b + splat.a;
-    splat /= max(weightSum, 0.0001);
-    
-    input.texcoord *= 1.0f;
-    
+    float3 base = lerp(t0, t1, rockFactor);
 
-    float4 blendedAlbedo = BlendTextures4(
-        GetTexture4(albedo0Map, input.texcoord, Albedo0),
-        GetTexture4(albedo1Map, input.texcoord, Albedo1),
-        GetTexture4(albedo2Map, input.texcoord, Albedo2),
-        GetTexture4(albedo3Map, input.texcoord, Albedo3),
-        splat
-    );
+    wc = pow(wc, 1 / 0.5);
     
-    float3 blendedNormal = BlendTextures3(
-        GetTexture3(normal0Map, input.texcoord, Normal0),
-        GetTexture3(normal1Map, input.texcoord, Normal1),
-        GetTexture3(normal2Map, input.texcoord, Normal2),
-        GetTexture3(normal3Map, input.texcoord, Normal3),
-        splat
-    );
-    
-    
-    float roughness0 = 0.0f;
-    float roughness1 = 0.0f;
-    float roughness2 = 0.0f;
-    float roughness3 = 0.0f;
-    
-    float metallic0 = 0.0f;
-    float metallic1 = 0.0f;
-    float metallic2 = 0.0f;
-    float metallic3 = 0.0f;
-    
-    float ao0 = 0.0f;
-    float ao1 = 0.0f;
-    float ao2 = 0.0f;
-    float ao3 = 0.0f;
-    
-    
+    float t2Factor = 1.0 - smoothstep(0.0, 0.05, slope);
+    base = lerp(base, t2, t2Factor);
+    base = lerp(base, wc, 0.5);
 
-    if (CB_materialData & (1 << Roughness0))
-    {
-        float3 multimaterialProperties = roughness0Map.Sample(samplerState, input.texcoord).rgb;
-        metallic0 = multimaterialProperties.r;
-        roughness0 = multimaterialProperties.g;
-        ao0 = multimaterialProperties.b;
-    }
-    if (CB_materialData & (1 << Roughness1))
-    {
-        float3 multimaterialProperties = roughness1Map.Sample(samplerState, input.texcoord).rgb;
-        metallic1 = multimaterialProperties.r;
-        roughness1 = multimaterialProperties.g;
-        ao1 = multimaterialProperties.b;
-    }
-    if (CB_materialData & (1 << Roughness2))
-    {
-        float3 multimaterialProperties = roughness2Map.Sample(samplerState, input.texcoord).rgb;
-        metallic2 = multimaterialProperties.r;
-        roughness2 = multimaterialProperties.g;
-        ao2 = multimaterialProperties.b;
-    }
-    if (CB_materialData & (1 << Roughness3))
-    {
-        float3 multimaterialProperties = roughness3Map.Sample(samplerState, input.texcoord).rgb;
-        metallic3 = multimaterialProperties.r;
-        roughness3 = multimaterialProperties.g;
-        ao3 = multimaterialProperties.b;
-    }
-
-    float metallic = 1.0 - BlendTextures1(metallic0, metallic1, metallic2, metallic3, splat); // Metallic
-    float ao = BlendTextures1(ao0, ao1, ao2, ao3, splat); // AO
-    float roughness = BlendTextures1(roughness0, roughness1, roughness2, roughness3, splat); // roughness
-    
-    
-    float4 albedo = float4(blendedAlbedo.rgb, 1.0f);
-
-    
-
-
-    //output.albedo.rgb = input.color.rgb;
-    float3 normal = normalize(input.normal);
-    float3 tangent = normalize(input.tangent);
-    float3 binormal = normalize(cross(normal.xyz, tangent));
-    float3x3 tangentSpaceMatrix = float3x3(tangent, binormal, normal.xyz);
-
-    uint normalMask = (1 << Normal0) | (1 << Normal1) | (1 << Normal2) | (1 << Normal3);
-    if (CB_materialData & normalMask)
-    {
-        float3 normalSample = normalize(blendedNormal.xyz * 2.0f - 1.0f);
-        normal.xyz = normalize(mul(normalSample, tangentSpaceMatrix));
-    }
-    
-    
-    float d = length(input.worldPos.xz - CB_mouseRaycastHit.xz);
-    
-    const float lineThickness = 0.4;
-    if (d > CB_brushSize && d < CB_brushSize + lineThickness)
-    {
-        albedo = float4(0, 0, 1, 1.0f);
-        metallic = 0.0; // Metallic
-        roughness = 0.05;
-        normal = normalize(input.normal);
-
-    }
-    
-    return CreateGBuffer(normal, albedo.xyz, roughness, metallic, ao, 0);
+    return CreateGBuffer(normal, base, 1.0f, 0.0, 1.0, 0);
 }

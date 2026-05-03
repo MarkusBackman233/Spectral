@@ -27,13 +27,13 @@ void PropertyWindowFactory::SelectMesh(std::shared_ptr<Model>& selectMesh)
     ));
 }
 
-void PropertyWindowFactory::SelectTexture(std::shared_ptr<DefaultMaterial>& selectMaterial, int selectTextureId, const std::string& currentSelectedTextureName /* = "" */)
+void PropertyWindowFactory::SelectTexture(std::shared_ptr<Texture>& selectTexture, const std::string& currentSelectedTextureName /* = "" */)
 {
     Editor::GetInstance()->SetPropertyWindow(
         std::make_shared<TexturePropertyWindow>(
-            [selectMaterial, selectTextureId](std::shared_ptr<Texture> texture)
+            [&selectTexture](std::shared_ptr<Texture> texture)
     {
-        selectMaterial->SetTexture(selectTextureId, texture);
+        selectTexture = texture;
     },
     currentSelectedTextureName
     ));

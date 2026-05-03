@@ -202,14 +202,14 @@ void ObjectSelector::HandleRaycastSelection()
         else if (auto terrainComponent = object->GetComponentOfType<TerrainComponent>())
         {
             float distance = std::numeric_limits<float>::max();
-            if (Intersection::MeshTriangles(terrainComponent->GetMesh().get(), object->GetWorldMatrix(), rayOrigin, rayDirection, distance))
-            {
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                    currentClosest = object.get();
-                }
-            }
+            //if (Intersection::MeshTriangles(terrainComponent->GetMesh().get(), object->GetWorldMatrix(), rayOrigin, rayDirection, distance))
+            //{
+            //    if (distance < minDistance)
+            //    {
+            //        minDistance = distance;
+            //        currentClosest = object.get();
+            //    }
+            //}
         }
         else if (object->GetComponentOfType<LightComponent>() || object->GetComponentOfType<AudioSourceComponent>())
         {
