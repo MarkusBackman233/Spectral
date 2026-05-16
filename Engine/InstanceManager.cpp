@@ -11,15 +11,41 @@ void InstanceManager::AddInstance(DrawableInstance drawable, const Math::Matrix&
     m_pendingInstances[drawable].push_back(matrix);
 }
 
+void InstanceManager::AddInstance(DrawableInstance drawable, const InstanceData& staticInstanceData)
+{
+    m_pendingStaticInstances.push_back(std::make_pair(drawable, staticInstanceData));
+}
+
+
 void InstanceManager::AddInstance(TerrainComponent* terrain)
 {
     m_terrainsToRender.push_back(terrain);
 }
 
 
-const std::unordered_map<DrawableInstance, InstanceManager::InstanceData>& InstanceManager::GetInstances() const
+std::vector<std::pair<DrawableInstance, InstanceManager::InstanceData>> InstanceManager::GetInstances() const
 {
-    return m_instanceBuffers;
+    std::vector<std::pair<DrawableInstance, InstanceManager::InstanceData>> buffers;
+
+    for (auto& [drawable, data] : m_instanceBuffers)
+    {
+        buffers.emplace_back(drawable, data);
+    }
+
+    for (auto& [drawable, data] : m_pendingStaticInstances)
+    {
+        buffers.emplace_back(drawable, data);
+    }
+
+
+    return buffers;
+}
+
+void InstanceManager::Clear()
+{
+    m_pendingStaticInstances.clear();
+    m_terrainsToRender.clear();
+
 }
 
 void InstanceManager::Map(ID3D11DeviceContext* context, ID3D11Device* device)
@@ -100,4 +126,28 @@ void InstanceManager::CreateInstanceBuffer(
     instanceData.CurrentInstanceCount = static_cast<uint32_t>(initialMatrices.size());
 
     m_instanceBuffers[drawable] = instanceData;
+}
+
+InstanceManager::InstanceData InstanceManager::CreateStaticInstanceBuffer(const std::vector<Math::Matrix>& matrices)
+{
+    D3D11_BUFFER_DESC bufferDesc{};
+    D3D11_SUBRESOURCE_DATA bufferData{};
+
+    bufferDesc.Usage = D3D11_USAGE_DEFAULT;
+    bufferDesc.ByteWidth = static_cast<UINT>(sizeof(Math::Matrix) * matrices.size());
+    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    bufferDesc.CPUAccessFlags = 0;
+    bufferDesc.MiscFlags = 0;
+    bufferDesc.StructureByteStride = sizeof(Math::Matrix);
+
+    bufferData.pSysMem = matrices.data();
+
+    InstanceData instanceData{};
+
+    ThrowIfFailed(Render::GetDevice()->CreateBuffer(&bufferDesc, &bufferData, &instanceData.Buffer));
+
+    instanceData.MaxInstanceCount = static_cast<uint32_t>(matrices.size());
+    instanceData.CurrentInstanceCount = static_cast<uint32_t>(matrices.size());
+
+    return instanceData;
 }

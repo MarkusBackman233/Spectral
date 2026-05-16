@@ -24,41 +24,78 @@
 #endif // EDITOR
 #include <Thumbnail.h>
 #include "RenderManager.h"
+#include <execution>
+#include "PhysXManager.h"
+#include "MathFunctions.h"
+#include "Model.h"
+
 
 TerrainComponent::TerrainComponent(GameObject* owner)
 	: Component(owner)
     , m_terrainSize(500.0f)
 {
     m_material = std::make_shared<TerrainMaterial>();
+    m_actor = PhysXManager::GetInstance()->CreateActor(PhysXManager::PhysicsType::StaticActor, m_owner->GetWorldMatrix());
+
 
     //CreatePlaneMesh();
 
 }
 
+TerrainComponent::~TerrainComponent()
+{
+    if (m_actor)
+    {
+        m_actor->release();
+        m_actor = nullptr;
+    }
+}
+
 void TerrainComponent::Render()
 {
     DirectX::BoundingBox boundingBox;
-
-
-
-    auto camera = static_cast<PerspectiveCamera*>(Render::GetCamera());
-
-    DirectX::XMMATRIX projMatrix = DirectX::XMMatrixPerspectiveFovLH(
-        camera->m_fov,
-        camera->m_aspectRatio,
-        camera->m_nearClip,
-        camera->m_farClip
-    );
-
-    DirectX::BoundingFrustum frustum;
-    DirectX::BoundingFrustum::CreateFromMatrix(frustum, projMatrix);
-
-    DirectX::XMMATRIX worldMatrix = Spectral::DxMathUtils::ToDx(camera->GetWorldMatrix());
-
-    DirectX::BoundingFrustum worldFrustum;
-    frustum.Transform(worldFrustum, worldMatrix);
-
     RenderManager::GetInstance()->GetInstanceManager()->AddInstance(this);
+    auto camera = RenderManager::GetInstance()->GetCamera();
+
+
+
+    for (const Chunk& chunk : m_chunks)
+    {
+        float x = chunk.SizeInMeter * chunk.m_x;
+        float z = chunk.SizeInMeter * chunk.m_z;
+
+
+
+        DirectX::BoundingBox boundingBox;
+        DirectX::BoundingBox::CreateFromPoints(boundingBox,
+            Spectral::DxMathUtils::ToDx(Math::Vector3(x, chunk.m_minHeightBound, z)),
+            Spectral::DxMathUtils::ToDx(Math::Vector3(x + chunk.SizeInMeter, chunk.m_maxHeightBound, z + chunk.SizeInMeter)
+            )
+        );
+        float distanceToCamera = (Math::Vector3(boundingBox.Center.x, boundingBox.Center.y, boundingBox.Center.z) - camera->GetWorldMatrix().GetPosition()).Length();
+
+        int lod = static_cast<int>(std::roundf(std::clamp(distanceToCamera / 500.0f, 0.0f, 3.0f)));
+
+
+        if (camera->m_frustum.Contains(boundingBox))
+        {
+            for (auto& [model, instance] : chunk.m_clutterInstances)
+            {
+                if (lod == 0)
+                {
+                    RenderManager::GetInstance()->GetInstanceManager()->AddInstance(DrawableInstance{ model->m_root.m_mesh, model->GetMaterials()[0] }, instance.m_instanceData);
+                }
+
+
+                if (!model->m_billboardVertices.empty())
+                {
+                    BillboardRenderer::AddBillboard(model->GetMaterials()[1], BillboardRenderData{ model->m_billboardBuffer, instance.m_instanceData });
+                }
+            }
+        }
+    }
+
+
 
     for (size_t i = 0; i < m_grassPatches.size(); i++)
     {
@@ -72,6 +109,7 @@ void TerrainComponent::Render()
 
 void TerrainComponent::Update(float deltaTime)
 {
+   
 }
 #ifdef EDITOR
 
@@ -101,12 +139,13 @@ void TerrainComponent::ComponentEditor()
             }
         }
     }
-    ImGui::InputFloat("Height", &m_maxHight);
 
     if (!m_created)
     {
         ImGui::InputFloat("Size", &m_terrainSize);
         ImGui::InputInt("Resolution", &m_resolution);
+        ImGui::InputFloat("Height", &m_maxHight);
+
         {
             ImGui::Text(std::string("Height Texture").c_str());
 
@@ -228,6 +267,16 @@ Json::Object TerrainComponent::SaveComponent()
 
 void TerrainComponent::LoadComponent(const rapidjson::Value& object)
 {
+    PxHeightFieldDesc hfDesc;
+    hfDesc.format = PxHeightFieldFormat::eS16_TM;
+    hfDesc.nbColumns = 128;
+    hfDesc.nbRows = 128;
+    hfDesc.samples.stride = sizeof(PxHeightFieldSample);
+
+
+
+
+
 
     std::filesystem::path p = IOManager::ProjectDirectory / IOManager::GetResourceData<ResourceType::Model>().Folder / "UserTerrain.terrain";
 
@@ -239,10 +288,12 @@ void TerrainComponent::LoadComponent(const rapidjson::Value& object)
         uint32_t version;
 
         in.Read(version);
-        if (version == 2)
+        if (version == 3)
         {
             in.Read(m_terrainSize);
             in.Read(m_resolution);
+            in.Read(m_terrainGenerationBlurRadius);
+            in.Read(m_terrainGenerationBlurSigma);
 
             size_t nbChunks = 0;
             in.Read(nbChunks);
@@ -254,8 +305,68 @@ void TerrainComponent::LoadComponent(const rapidjson::Value& object)
                 in.Read(chunk.m_x);
                 in.Read(chunk.m_z);
                 in.Read(chunk.m_heights);
-
+                in.Read(chunk.m_normals);
                 chunk.Build();
+
+
+                std::vector<PxHeightFieldSample> hs;
+                hs.reserve((Chunk::Steps+1) * (Chunk::Steps + 1));
+
+                float totalHeight = chunk.m_maxHeightBound - chunk.m_minHeightBound;
+
+                int size = Chunk::Steps + 1;
+                for (int x = 0; x < hfDesc.nbColumns; x++)
+                {
+                    for (int z = 0; z < hfDesc.nbRows; z++)
+                    {
+                            PxHeightFieldSample s{};
+                            float u = float(x) / float(hfDesc.nbColumns - 1);
+                            float v = float(z) / float(hfDesc.nbRows - 1);
+
+                            u = 1.0f - u;
+
+                            int stepX = int(u * (size - 1));
+                            int stepZ = int(v * (size - 1));
+
+                            float normalized = (chunk.m_heights[int(stepX) * size + int(stepZ)] - chunk.m_minHeightBound) / totalHeight;
+                            PxI16 physxHeight = PxI16(normalized * 32767);
+                            s.height = static_cast<PxI16>(physxHeight);
+
+                            s.materialIndex0 = 0;
+                            s.materialIndex1 = 0;
+                            s.clearTessFlag();
+
+                            hs.push_back(s);
+                    }
+                }
+
+                hfDesc.samples.data = hs.data();
+                PxHeightField* heightField = PxCreateHeightField(hfDesc, PhysXManager::GetInstance()->GetPhysics()->getPhysicsInsertionCallback());
+                float heightScale = totalHeight / 32767.0f;
+                float scale = 128.0f / (hfDesc.nbColumns - 1);
+                PxHeightFieldGeometry hfGeom(
+                    heightField,
+                    PxMeshGeometryFlags(),
+                    heightScale, // heightScale
+                    scale,
+                    scale
+                );
+
+
+                PxShape* hfShape = PxRigidActorExt::createExclusiveShape(
+                    *m_actor,
+                    hfGeom,
+                    *PhysXManager::GetInstance()->GetDefaultMaterial()
+                );
+
+
+                PxQuat q(Math::ConvertToRadians(90.0f),PxVec3(0.0f,1.0f,0.0f));
+
+
+                PxTransform t(PxVec3(128.0f * chunk.m_x, chunk.m_minHeightBound, 128.0f * chunk.m_z + 128.0f),q);
+
+                hfShape->setLocalPose(t);
+
             }
         }
     }
@@ -294,36 +405,6 @@ void TerrainComponent::GenerateGrass(GrassPatch& patch)
     if (patch.GrassPositionBufferData != nullptr)
         patch.GrassPositionBufferData.Reset();
 
-    auto GetPosTerrainSurfaceHeight = [&](float x, float z)
-    {
-        //float fx = x / m_terrainSize * m_vertexRowCount;
-        //float fz = z / m_terrainSize * m_vertexRowCount;
-        //
-        //int ix = static_cast<int>(floor(fx));
-        //int iz = static_cast<int>(floor(fz));
-        //
-        //float fracX = fx - ix;
-        //float fracZ = fz - iz;
-        //
-        //ix = std::clamp(ix, 0, static_cast<int>(m_vertexRowCount) - 1);
-        //iz = std::clamp(iz, 0, static_cast<int>(m_vertexRowCount) - 1);
-        //
-        //const int rowStride = m_vertexRowCount + 1;
-        //
-        //float h00 = m_vertices[iz * rowStride + ix].Height;
-        //float h10 = m_vertices[iz * rowStride + (ix + 1)].Height;
-        //float h01 = m_vertices[(iz + 1) * rowStride + ix].Height;
-        //float h11 = m_vertices[(iz + 1) * rowStride + (ix + 1)].Height;
-        //
-        //float height =
-        //    (1.0f - fracX) * (1.0f - fracZ) * h00 +
-        //    fracX * (1.0f - fracZ) * h10 +
-        //    (1.0f - fracX) * fracZ * h01 +
-        //    fracX * fracZ * h11;
-
-        return 0.0f;
-    };
-
     float tuftSize = 1.0f;
     int grassBladesPerTuft = 30;
 
@@ -350,7 +431,7 @@ void TerrainComponent::GenerateGrass(GrassPatch& patch)
          
             position.x = dist(gen) + tuftPosition.x;
             position.z = dist(gen) + tuftPosition.z;
-            position.y = GetPosTerrainSurfaceHeight(position.x, position.z);
+            //position.y = GetPosTerrainSurfaceHeight(position.x, position.z);
 
 
             Math::Vector3 dirToTuft = (
@@ -372,173 +453,37 @@ void TerrainComponent::GenerateGrass(GrassPatch& patch)
     }
     patch.NumGrassPositions = static_cast<unsigned int>(bladePositions.size());
 }
-void GaussianBlur(
-    const std::vector<float>& input,
-    std::vector<float>& result,
-    int width,
-    int height,
-    int radius,
-    float sigma)
-{
-    // --- Build kernel ---
-    int size = radius * 2 + 1;
-    std::vector<float> kernel(size);
-
-    float sum = 0.0f;
-    for (int i = 0; i < size; ++i)
-    {
-        int x = i - radius;
-        float v = std::exp(-(x * x) / (2.0f * sigma * sigma));
-        kernel[i] = v;
-        sum += v;
-    }
-
-    for (float& v : kernel)
-        v /= sum;
-
-    // --- Temp buffer for separable pass ---
-    std::vector<float> temp(width * height);
-
-    // --- Horizontal pass ---
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            float accum = 0.0f;
-
-            for (int k = -radius; k <= radius; ++k)
-            {
-                int sx = std::clamp(x + k, 0, width - 1);
-                accum += input[y * width + sx] * kernel[k + radius];
-            }
-
-            temp[y * width + x] = accum;
-        }
-    }
-
-    // --- Vertical pass ---
-    for (int y = 0; y < height; ++y)
-    {
-        for (int x = 0; x < width; ++x)
-        {
-            float accum = 0.0f;
-
-            for (int k = -radius; k <= radius; ++k)
-            {
-                int sy = std::clamp(y + k, 0, height - 1);
-                accum += temp[sy * width + x] * kernel[k + radius];
-            }
-
-            result[y * width + x] = accum;
-        }
-    }
-}
 void TerrainComponent::CreateTerrain()
 {
-
-    //Math::Vector3 pos = m_owner->GetPosition();
-    //int b = static_cast<int>(m_terrainSize / GrassPatch::PatchSize);
-    //for (int x = 0; x < b; x++)
-    //{
-    //    for (int z = 0; z < b; z++)
-    //    {
-    //        GrassPatch patch{};
-    //        patch.BoundingMin = Math::Vector3(static_cast<float>(x) * GrassPatch::PatchSize, 0.0f, static_cast<float>(z) * GrassPatch::PatchSize) + pos;
-    //        patch.BoundingMax = patch.BoundingMin + Math::Vector3(GrassPatch::PatchSize, 100.0f, GrassPatch::PatchSize) + pos;
-    //        m_grassPatches.push_back(patch);
-    //    }
-    //}
-
-
-    //D3D11_TEXTURE2D_DESC desc;
-    //m_heightTexture->GetTexture()->GetDesc(&desc);
-    //
-    //D3D11_TEXTURE2D_DESC stagingDesc = desc;
-    //stagingDesc.Usage = D3D11_USAGE_STAGING;
-    //stagingDesc.BindFlags = 0;
-    //stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    //stagingDesc.MiscFlags = 0;
-    //
-    //ID3D11Texture2D* staging = nullptr;
-    //Render::GetDevice()->CreateTexture2D(&stagingDesc, nullptr, &staging);
-    //
-    //Render::GetContext().GetContext()->CopyResource(staging, m_heightTexture->GetTexture().Get());
-    //
-    //D3D11_MAPPED_SUBRESOURCE mapped;
-    //Render::GetContext().GetContext()->Map(staging, 0, D3D11_MAP_READ, 0, &mapped);
-    //
-    //std::vector<uint8_t> buffer(desc.Height * mapped.RowPitch);
-    //memcpy(buffer.data(), mapped.pData, buffer.size());
-    //
-    //Render::GetContext().GetContext()->Unmap(staging, 0);
-    //staging->Release();
-    D3D11_TEXTURE2D_DESC desc;
-    m_heightTexture->GetTexture()->GetDesc(&desc);
-
-    if (desc.Format != DXGI_FORMAT_R32G32B32_FLOAT) {
-        // Wrong format
-        return;
-    }
-
-    // --- Create staging texture ---
-    D3D11_TEXTURE2D_DESC stagingDesc = desc;
-    stagingDesc.Usage = D3D11_USAGE_STAGING;
-    stagingDesc.BindFlags = 0;
-    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-    stagingDesc.MiscFlags = 0;
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
-    HRESULT hr = Render::GetDevice()->CreateTexture2D(&stagingDesc, nullptr, &staging);
-    if (FAILED(hr)) return;
-
-    // --- Copy GPU → CPU ---
-    Render::GetContext().GetContext()->CopyResource(staging.Get(), m_heightTexture->GetTexture().Get());
-
-    // (optional debug sync)
-    // context->Flush();
-
-    // --- Map ---
-    D3D11_MAPPED_SUBRESOURCE mapped;
-    hr = Render::GetContext().GetContext()->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
-    if (FAILED(hr)) return;
-
-    // --- Allocate output (tightly packed RGB floats) ---
-    std::vector<float> result(desc.Width * desc.Height);
-
-    for (UINT y = 0; y < desc.Height; ++y)
-    {
-        float* srcRow = (float*)((uint8_t*)mapped.pData + y * mapped.RowPitch);
-        float* dstRow = result.data() + y * desc.Width;
-
-        for (UINT x = 0; x < desc.Width; ++x)
-        {
-            dstRow[x] = srcRow[x * 3 + 0]; // R
-        }
-    }
-
-    
-    std::vector<float> blurred(desc.Width * desc.Height);
-    GaussianBlur(result, blurred, desc.Width, desc.Height, m_terrainGenerationBlurRadius, m_terrainGenerationBlurSigma);
-
-    Render::GetContext().GetContext()->Unmap(staging.Get(), 0);
-
-
-
     size_t width = static_cast<size_t>(m_terrainSize / Chunk::SizeInMeter);
     m_terrainSize = width * Chunk::Steps;
-    m_chunks.reserve(width * width);
-    Math::Vector2 textureSize(static_cast<float>(desc.Width), static_cast<float>(desc.Height));
-    for (size_t x = 0; x < width; x++)
+
+    HeightmapProcessor::Settings settings;
+    settings.blurRadius = m_terrainGenerationBlurRadius;
+    settings.blurSigma = m_terrainGenerationBlurSigma;
+    settings.useGaussianBlur = true;
+    HeightmapProcessor hp(Render::GetDevice(),Render::GetContext().GetContext(), m_heightTexture->GetTexture().Get(), m_terrainSize, settings);
+    settings.useGaussianBlur = false;
+    HeightmapProcessor hp2(Render::GetDevice(),Render::GetContext().GetContext(), m_worldTexture->GetTexture().Get(), m_terrainSize, settings);
+
+
+    m_chunks.resize(width * width);
+
+    std::vector<size_t> indices(width* width);
+    for (size_t i = 0; i < indices.size(); ++i)
+        indices[i] = i;
+
+    std::for_each(std::execution::par, indices.begin(), indices.end(),
+        [&](size_t i)
     {
-        for (size_t z = 0; z < width; z++)
-        {
-            m_chunks.emplace_back(Chunk(static_cast<uint16_t>(x), static_cast<uint16_t>(z), blurred, textureSize, m_terrainSize));
+        size_t x = i % width;
+        size_t z = i / width;
 
-            Math::Vector2 pos((float)x * Chunk::Steps, (float)z * Chunk::Steps);
-            m_instances.push_back(pos);
-
-        }
-    }
+        m_chunks[i].Feed(
+            static_cast<uint16_t>(x),
+            static_cast<uint16_t>(z),
+            hp, hp2, m_maxHight);
+    });
 
     {
         D3D11_BUFFER_DESC ibDesc = {};
@@ -550,7 +495,6 @@ void TerrainComponent::CreateTerrain()
 
         Render::GetDevice()->CreateBuffer(&ibDesc, &ibData, m_pInstanceBuffer.GetAddressOf());
     }
-    m_material->m_materials[0] = ResourceManager::GetInstance()->GetResource<DefaultMaterial>("Default.material");
     for (Chunk& chunk : m_chunks)
     {
         chunk.Build();
@@ -559,17 +503,20 @@ void TerrainComponent::CreateTerrain()
     auto path = IOManager::ProjectDirectory / IOManager::GetResourceData<ResourceType::Model>().Folder / "UserTerrain.terrain";
     WriteObject out(path);
 
-    uint32_t version = 2;
+    uint32_t version = 3;
 
     out.Write(version);
     out.Write(m_terrainSize);
     out.Write(m_resolution);
+    out.Write(m_terrainGenerationBlurRadius);
+    out.Write(m_terrainGenerationBlurSigma);
     out.Write(m_chunks.size());
     for (const Chunk& chunk : m_chunks)
     {
         out.Write(chunk.m_x);
         out.Write(chunk.m_z);
         out.Write(chunk.m_heights);
+        out.Write(chunk.m_normals);
     }
 
 
@@ -585,18 +532,56 @@ float TerrainComponent::GetTerrainSize() const
     return m_terrainSize;
 }
 
-Chunk::Chunk(uint16_t x, uint16_t z,
-    const std::vector<float>& heightField,
-    Math::Vector2 heightFieldTextureSize,
-    size_t maxTerrainSize)
+float TerrainComponent::GetHeightAtPosition(const Math::Vector3& Position) const
 {
+    int xChunk = static_cast<int>(Position.x / Chunk::SizeInMeter);
+    int zChunk = static_cast<int>(Position.z / Chunk::SizeInMeter);
+
+    size_t width = static_cast<size_t>(m_terrainSize / Chunk::SizeInMeter);
+
+    if (xChunk < 0 || zChunk < 0 || xChunk >= width || zChunk >= width)
+        return 0.0f;
+
+    const Chunk& chunk = m_chunks[zChunk * width + xChunk];
+
+    float localX = Position.x - (xChunk * Chunk::SizeInMeter);
+    float localZ = Position.z - (zChunk * Chunk::SizeInMeter);
+
+    float stepSize = Chunk::SizeInMeter / (Chunk::Steps );
+
+    int xHeight = static_cast<int>(localX / stepSize);
+    int zHeight = static_cast<int>(localZ / stepSize);
+
+    xHeight = std::clamp(xHeight, 0, static_cast<int>(Chunk::Steps));
+    zHeight = std::clamp(zHeight, 0, static_cast<int>(Chunk::Steps));
+
+    return chunk.m_heights[zHeight * (Chunk::Steps+1) + xHeight];
+}
+
+physx::PxRigidActor* TerrainComponent::GetActor()
+{
+    return m_actor;
+}
+
+uint32_t PackNormal(const Math::Vector3& n)
+{
+    uint8_t r = (uint8_t)((n.x * 0.5f + 0.5f) * 255.0f);
+    uint8_t g = (uint8_t)((n.y * 0.5f + 0.5f) * 255.0f);
+    uint8_t b = (uint8_t)((n.z * 0.5f + 0.5f) * 255.0f);
+    uint8_t a = 255;
+
+    return (a << 24) | (b << 16) | (g << 8) | r;
+}
+
+
+void Chunk::Feed(uint16_t x, uint16_t z, const HeightmapProcessor& heightField, const HeightmapProcessor& heightField2, float maxTerrainHeight)
+{
+
 
     UINT steps = Steps + 1;
 
     m_heights.resize(steps * steps);
-
-    size_t width = static_cast<size_t>(heightFieldTextureSize.x);
-    size_t height = static_cast<size_t>(heightFieldTextureSize.y);
+    m_normals.resize(steps * steps);
 
     for (size_t dx = 0; dx < steps; dx++)
     {
@@ -605,43 +590,33 @@ Chunk::Chunk(uint16_t x, uint16_t z,
             size_t originX = x * Steps + dx;
             size_t originZ = z * Steps + dz;
 
-            float u = static_cast<float>(originX) / static_cast<float>(maxTerrainSize);
-            float v = static_cast<float>(originZ) / static_cast<float>(maxTerrainSize);
+            auto GetCombinedHeight = [&](int x, int z)
+            {
+                return heightField.GetHeight(x, z) * maxTerrainHeight + heightField2.GetHeight(x, z) * 10.0f;
+            };
 
-            // Scale to texture space
-            float fx = u * (width - 1);
-            float fy = v * (height - 1);
+            m_heights[dz * steps + dx] = GetCombinedHeight(originX, originZ);
 
-            // Integer coords
-            size_t x0 = static_cast<size_t>(fx);
-            size_t y0 = static_cast<size_t>(fy);
+            float hL = GetCombinedHeight(originX > 0 ? originX - 1 : originX, originZ);
+            float hR = GetCombinedHeight(originX + 1, originZ);
+            float hD = GetCombinedHeight(originX, originZ > 0 ? originZ - 1 : originZ);
+            float hU = GetCombinedHeight(originX, originZ + 1);
 
-            size_t x1 = std::min(x0 + 1, width - 1);
-            size_t y1 = std::min(y0 + 1, height - 1);
+            float scale = 1.0f;
 
-            // Fractional part
-            float tx = fx - static_cast<float>(x0);
-            float ty = fy - static_cast<float>(y0);
+            // Build tangent vectors
+            Math::Vector3 dxVec(2.0f * scale, hR - hL, 0.0f);
+            Math::Vector3 dzVec(0.0f, hU - hD, 2.0f * scale);
 
-            // Sample 4 neighbors
-            float h00 = heightField[y0 * width + x0];
-            float h10 = heightField[y0 * width + x1];
-            float h01 = heightField[y1 * width + x0];
-            float h11 = heightField[y1 * width + x1];
-
-            // Interpolate
-            float hx0 = h00 + (h10 - h00) * tx;
-            float hx1 = h01 + (h11 - h01) * tx;
-            float h = hx0 + (hx1 - hx0) * ty;
-
-            m_heights[dz * steps + dx] = h;
+            // Cross to get normal
+            Math::Vector3 normal = dzVec.Cross(dxVec).GetNormal();
+            m_normals[dz * steps + dx] = PackNormal(normal);
         }
     }
 
 
     m_x = x;
     m_z = z;
-
 }
 
 void Chunk::Build()
@@ -658,24 +633,224 @@ void Chunk::Build()
 
 
     UINT steps = Steps + 1;
+    {
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = steps;
+        desc.Height = steps;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R32_FLOAT;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
-    D3D11_TEXTURE2D_DESC desc = {};
-    desc.Width = steps;
-    desc.Height = steps;
-    desc.MipLevels = 1;
-    desc.ArraySize = 1;
-    desc.Format = DXGI_FORMAT_R32_FLOAT;
-    desc.SampleDesc.Count = 1;
-    desc.Usage = D3D11_USAGE_DEFAULT;
-    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
 
+        D3D11_SUBRESOURCE_DATA subresource = {};
+        subresource.pSysMem = m_heights.data();
+        subresource.SysMemPitch = steps * sizeof(float);
+        subresource.SysMemSlicePitch = 0;
 
-    D3D11_SUBRESOURCE_DATA subresource = {};
-    subresource.pSysMem = m_heights.data();
-    subresource.SysMemPitch = steps * sizeof(float);
-    subresource.SysMemSlicePitch = 0;
+        Render::GetDevice()->CreateTexture2D(&desc,&subresource, m_heightTexture.GetAddressOf());
+        Render::GetDevice()->CreateShaderResourceView(m_heightTexture.Get(), nullptr, m_heightSRV.GetAddressOf());
+        Render::GetDevice()->CreateUnorderedAccessView(m_heightTexture.Get(), nullptr, m_heightUAV.GetAddressOf());
+    }
+    {
+        D3D11_TEXTURE2D_DESC desc = {};
+        desc.Width = steps;
+        desc.Height = steps;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
-    Render::GetDevice()->CreateTexture2D(&desc,&subresource,m_texture.GetAddressOf());
-    Render::GetDevice()->CreateShaderResourceView(m_texture.Get(), nullptr, m_SRV.GetAddressOf());
-    Render::GetDevice()->CreateUnorderedAccessView(m_texture.Get(), nullptr, m_UAV.GetAddressOf());
+        D3D11_SUBRESOURCE_DATA data = {};
+        data.pSysMem = m_normals.data();
+        data.SysMemPitch = steps * sizeof(uint32_t);
+
+        Render::GetDevice()->CreateTexture2D(&desc, &data, m_normalTexture.GetAddressOf());
+        Render::GetDevice()->CreateShaderResourceView(m_normalTexture.Get(), nullptr, m_normalSRV.GetAddressOf());
+        Render::GetDevice()->CreateUnorderedAccessView(m_normalTexture.Get(), nullptr, m_normalUAV.GetAddressOf());
+    }
+}
+
+float HeightmapProcessor::GetHeight(size_t x, size_t z) const
+{
+    float u = static_cast<float>(x) / m_maxTerrainSize;
+    float v = static_cast<float>(z) / m_maxTerrainSize;
+
+    // Scale to texture space
+    float fx = u * (m_width - 1);
+    float fy = v * (m_height - 1);
+
+    // Integer coords
+    size_t x0 = static_cast<size_t>(fx);
+    size_t y0 = static_cast<size_t>(fy);
+
+    size_t x1 = std::min(x0 + 1, static_cast<size_t>(m_width) - 1);
+    size_t y1 = std::min(y0 + 1, static_cast<size_t>(m_height) - 1);
+
+    // Fractional part
+    float tx = fx - static_cast<float>(x0);
+    float ty = fy - static_cast<float>(y0);
+
+    // Sample 4 neighbors
+    float h00 = m_heights[y0 * m_width + x0];
+    float h10 = m_heights[y0 * m_width + x1];
+    float h01 = m_heights[y1 * m_width + x0];
+    float h11 = m_heights[y1 * m_width + x1];
+
+    // Interpolate
+    float hx0 = h00 + (h10 - h00) * tx;
+    float hx1 = h01 + (h11 - h01) * tx;
+    return hx0 + (hx1 - hx0) * ty;
+}
+
+HeightmapProcessor::HeightmapProcessor(ID3D11Device* device, ID3D11DeviceContext* context, ID3D11Texture2D* source, size_t maxTerrainSize, const Settings& settings)
+    : m_maxTerrainSize(static_cast<float>(maxTerrainSize))
+{
+
+    if (!device || !context || !source)
+        return;
+
+    D3D11_TEXTURE2D_DESC desc;
+    source->GetDesc(&desc);
+
+    // --- Create staging texture ---
+    D3D11_TEXTURE2D_DESC stagingDesc = desc;
+    stagingDesc.Usage = D3D11_USAGE_STAGING;
+    stagingDesc.BindFlags = 0;
+    stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    stagingDesc.MiscFlags = 0;
+
+    Microsoft::WRL::ComPtr<ID3D11Texture2D> staging;
+
+    HRESULT hr = device->CreateTexture2D(&stagingDesc, nullptr, &staging);
+    if (FAILED(hr)) return ;
+
+    // --- Copy GPU → CPU ---
+    context->CopyResource(staging.Get(), source);
+
+    D3D11_MAPPED_SUBRESOURCE mapped;
+    hr = context->Map(staging.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+    if (FAILED(hr)) return ;
+
+    m_width = desc.Width;
+    m_height = desc.Height;
+
+    m_heights.resize(desc.Width * desc.Height);
+
+    // --- Read pixels ---
+    for (UINT y = 0; y < desc.Height; ++y)
+    {
+        uint8_t* row = (uint8_t*)mapped.pData + y * mapped.RowPitch;
+        float* dst = m_heights.data() + y * desc.Width;
+
+        for (UINT x = 0; x < desc.Width; ++x)
+        {
+            dst[x] = ReadHeightPixel(row, x, desc.Format, settings);
+        }
+    }
+
+    context->Unmap(staging.Get(), 0);
+
+    if (settings.useGaussianBlur)
+    {
+        std::vector<float> temp;
+        GaussianBlur(m_heights, temp, desc.Width, desc.Height,settings.blurRadius, settings.blurSigma);
+        m_heights.swap(temp);
+    }
+}
+
+float HeightmapProcessor::ReadHeightPixel(uint8_t* row, UINT x, DXGI_FORMAT format, const Settings& settings)
+{
+
+    switch (format)
+    {
+    case DXGI_FORMAT_R32G32B32_FLOAT:
+    {
+        float* src = (float*)row;
+        return src[x * 3 + 0];
+    }
+
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    {
+        return Math::Vector3(static_cast<float>(row[x * 4 + 0]) / 255.0f, static_cast<float>(row[x * 4 + 1]) / 255.0f, static_cast<float>(row[x * 4 + 2]) / 255.0f).Length();
+    }
+
+    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+    {
+        uint8_t r = row[x * 4 + 0];
+        float srgb = r / 255.0f;
+
+        // Convert sRGB → linear
+        return powf(srgb, 2.2f);
+    }
+
+    default:
+        return 0.0f;
+    }
+}
+
+void HeightmapProcessor::GaussianBlur(const std::vector<float>& input, std::vector<float>& output, int width, int height, int radius, float sigma)
+{
+    std::vector<float> kernel = CreateKernel(radius, sigma);
+
+    std::vector<float> temp(width * height);
+    output.resize(width * height);
+
+    // --- Horizontal pass ---
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            float sum = 0.0f;
+
+            for (int k = -radius; k <= radius; ++k)
+            {
+                int sx = std::clamp(x + k, 0, width - 1);
+                sum += input[y * width + sx] * kernel[k + radius];
+            }
+
+            temp[y * width + x] = sum;
+        }
+    }
+
+    // --- Vertical pass ---
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            float sum = 0.0f;
+
+            for (int k = -radius; k <= radius; ++k)
+            {
+                int sy = std::clamp(y + k, 0, height - 1);
+                sum += temp[sy * width + x] * kernel[k + radius];
+            }
+
+            output[y * width + x] = sum;
+        }
+    }
+}
+
+std::vector<float> HeightmapProcessor::CreateKernel(int radius, float sigma)
+{
+    std::vector<float> kernel(radius * 2 + 1);
+
+    float sum = 0.0f;
+
+    for (int i = -radius; i <= radius; ++i)
+    {
+        float value = expf(-(i * i) / (2.0f * sigma * sigma));
+        kernel[i + radius] = value;
+        sum += value;
+    }
+
+    // Normalize
+    for (float& v : kernel)
+        v /= sum;
+
+    return kernel;
 }

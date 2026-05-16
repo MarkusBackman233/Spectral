@@ -55,7 +55,7 @@ Editor::Editor()
     , m_defaultImageSize{100,100}
     , m_propertyWindow(nullptr)
 {
-    ImGuizmo::AllowAxisFlip(false);
+    //ImGuizmo::AllowAxisFlip(false);
     m_defaultWindowFlags = ImGuiWindowFlags_None;
 
 
@@ -106,6 +106,8 @@ void Editor::Update(float deltaTime)
             m_terrainEditor = nullptr;
         };
         m_editorCameraController.Update(deltaTime);
+        m_assetBrowser.Update();
+
         Viewport(false);
         return;
     }
@@ -288,7 +290,7 @@ bool Editor::EditTransform(Math::Matrix& matrix)
         if (Input::GetKeyHeld(InputId::W))
             m_currentGizmoOperation = ImGuizmo::TRANSLATE;
         if (Input::GetKeyHeld(InputId::E))
-            m_currentGizmoOperation = ImGuizmo::ROTATE;
+            m_currentGizmoOperation = ImGuizmo::ROTATE_X | ImGuizmo::ROTATE_Y | ImGuizmo::ROTATE_Z;
         if (Input::GetKeyHeld(InputId::R))
             m_currentGizmoOperation = ImGuizmo::SCALE;        
     }

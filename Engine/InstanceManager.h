@@ -49,10 +49,18 @@ public:
 
 	void Map(ID3D11DeviceContext* context, ID3D11Device* device);
 	void AddInstance(DrawableInstance drawable, const Math::Matrix& matrix);
+	void AddInstance(DrawableInstance drawable, const InstanceData& staticInstanceData);
+
+
+	InstanceData CreateStaticInstanceBuffer(const std::vector<Math::Matrix>& matrices);
+
+
 	void AddInstance(TerrainComponent* terrain);
-	const std::unordered_map<DrawableInstance, InstanceData>& GetInstances() const;
+	std::vector<std::pair<DrawableInstance, InstanceData>> GetInstances() const;
 
 	std::vector<TerrainComponent*> m_terrainsToRender;
+
+	void Clear();
 
 private:
 
@@ -63,6 +71,7 @@ private:
 		uint32_t maxInstances
 	);
 
+	std::vector<std::pair<DrawableInstance, InstanceData>> m_pendingStaticInstances;
 	std::unordered_map<DrawableInstance, std::vector<Math::Matrix>> m_pendingInstances;
 	std::unordered_map<DrawableInstance, InstanceData> m_instanceBuffers;
 };

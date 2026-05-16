@@ -214,27 +214,42 @@ void DeviceResources::ConfigureViewport(const Math::Vector2& windowSize)
     depthStencilDesc.Height = static_cast<UINT>(windowSize.y);
     depthStencilDesc.MipLevels = 1;
     depthStencilDesc.ArraySize = 1;
-    depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS; // Support for both depth and shader resource
+    depthStencilDesc.Format = DXGI_FORMAT_R32_TYPELESS;
     depthStencilDesc.SampleDesc.Count = 1;
     depthStencilDesc.SampleDesc.Quality = 0;
     depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
-    depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-    depthStencilDesc.CPUAccessFlags = 0;
-    depthStencilDesc.MiscFlags = 0;
+    depthStencilDesc.BindFlags =
+        D3D11_BIND_DEPTH_STENCIL |
+        D3D11_BIND_SHADER_RESOURCE;
 
-    D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc{};
-    depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    depthStencilViewDesc.Texture2D.MipSlice = 0;
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+    dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Texture2D.MipSlice = 0;
 
-    D3D11_SHADER_RESOURCE_VIEW_DESC depthSRVDesc{};
-    depthSRVDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-    depthSRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-    depthSRVDesc.Texture2D.MipLevels = 1;
-    depthSRVDesc.Texture2D.MostDetailedMip = 0;
-    ThrowIfFailed(m_pd3dDevice->CreateTexture2D(&depthStencilDesc, nullptr, &m_pDepthStencil));
-    ThrowIfFailed(m_pd3dDevice->CreateDepthStencilView(m_pDepthStencil.Get(), &depthStencilViewDesc, &m_pDepthStencilView));
-    ThrowIfFailed(m_pd3dDevice->CreateShaderResourceView(m_pDepthStencil.Get(), &depthSRVDesc, &m_pDepthSRV));
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+    srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MostDetailedMip = 0;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    ThrowIfFailed(
+        m_pd3dDevice->CreateTexture2D(
+            &depthStencilDesc,
+            nullptr,
+            &m_pDepthStencil));
+
+    ThrowIfFailed(
+        m_pd3dDevice->CreateDepthStencilView(
+            m_pDepthStencil.Get(),
+            &dsvDesc,
+            &m_pDepthStencilView));
+
+    ThrowIfFailed(
+        m_pd3dDevice->CreateShaderResourceView(
+            m_pDepthStencil.Get(),
+            &srvDesc,
+            &m_pDepthSRV));
 }
 
 void DeviceResources::ReleaseBackBuffer()

@@ -14,6 +14,7 @@
 #include "GuiManager.h"
 #include "CloudGenerator.h"
 #include "GrassRenderer.h"
+#include "BillboardRenderer.h"
 #include "Vector2.h"
 class RenderManager
 {
@@ -53,6 +54,7 @@ private:
 	GuiManager m_guiManager;
 	CloudGenerator m_cloudGenerator;
 	GrassRenderer m_grassRenderer;
+	BillboardRenderer m_billboardRenderer;
     FXAA m_FXAA;
 	std::unique_ptr<PerspectiveCamera> m_camera;
 

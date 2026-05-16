@@ -12,7 +12,7 @@
 #include "AudioSourceComponent.h"
 #include "NavmeshActorComponent.h"
 #include "ObjectManager.h"
-
+#include "VegetationComponent.h"
 
 // Macros to create components
 #define CREATE_OR_DUPLICATE_COMPONENT(component, componentType, componentClass) \
@@ -47,6 +47,7 @@
     COMPONENT(MeshComponent,                Component::Type::Mesh,                  "Mesh Component",                   1) \
     COMPONENT(ParticleComponent,            Component::Type::Particle,              "Particle Component",               0) \
     COMPONENT(TerrainComponent,             Component::Type::Terrain,               "Terrain Component",                0) \
+    COMPONENT(VegetationComponent,          Component::Type::Vegetation,            "Vegetation Component",             1) \
     COMPONENT(CameraComponent,              Component::Type::Camera,                "Camera Component",                 0) \
     COMPONENT(ScriptComponent,              Component::Type::Script,                "Script Component",                 1) \
     COMPONENT(CharacterControllerComponent, Component::Type::CharacterController,   "Character Controller Component",   1) \

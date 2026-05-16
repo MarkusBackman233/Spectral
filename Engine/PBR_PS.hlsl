@@ -340,7 +340,7 @@ float4 main(VVSOutput input) : SV_TARGET
     
     float fogHeightMultiplier = clamp(smoothstep(0.0, 1.0, (50.0f - worldPosition.y) * 0.02), 0.0f, 1.0f);
     float fogFactor = (1.0 - exp(-pow(fogColor.a * ComputeViewDepth(depth), 2.0)));
-    float3 fog = iradianceMap.SampleLevel(samplerState, -viewDir, 0).rgb * fogFactor * fogHeightMultiplier * fogColor.xyz;
+    float3 fog = iradianceMap.SampleLevel(samplerState, -viewDir, 0).rgb * fogFactor/* * fogHeightMultiplier*/ * fogColor.xyz;
     
     
 

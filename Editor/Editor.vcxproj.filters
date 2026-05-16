@@ -90,6 +90,9 @@
     <ClInclude Include="MaterialEditor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VegetationEditor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -165,6 +168,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MaterialEditor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VegetationEditor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

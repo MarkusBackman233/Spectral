@@ -6,6 +6,7 @@
 #ifdef EDITOR
 #include "Editor.h"
 #endif
+#include "iRender.h"
 
 std::unordered_map<PhysXManager::PhysicsShape, std::string> PhysXManager::PhysicsShapeToString = {
 	{PhysicsShape::Box, "Box" },
@@ -41,8 +42,8 @@ PhysXManager::PhysXManager()
 	sceneDesc.cpuDispatcher = m_dispatcher;
 	sceneDesc.filterShader = CustomFilterShader;
 	m_scene = m_physics->createScene(sceneDesc);
-	m_scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
-	m_scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 1.0f);
+	//m_scene->setVisualizationParameter(PxVisualizationParameter::eSCALE, 1.0f);
+	//m_scene->setVisualizationParameter(PxVisualizationParameter::eCOLLISION_SHAPES, 1.0f);
 	m_scene->setSimulationEventCallback(this);
 	PxCookingParams cookingParams = PxCookingParams(physx::PxTolerancesScale());
 	cookingParams.meshWeldTolerance = 0.01f;
@@ -54,7 +55,7 @@ PhysXManager::PhysXManager()
 
 	m_defaultMaterial = m_physics->createMaterial(0.8f, 0.5f, 0.1f);
 #ifdef EDITOR
-	m_defaultShapeFlag = PxShapeFlag::eVISUALIZATION | PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE;
+	m_defaultShapeFlag = /*PxShapeFlag::eVISUALIZATION | */PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE;
 #else
 	m_defaultShapeFlag = PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eSIMULATION_SHAPE;
 #endif // EDITOR
@@ -162,19 +163,6 @@ void PhysXManager::TickSimulation(float deltaTime)
 		accumulatedTime -= fixedTimeStep;
 		m_lastSimulationTick = m_accumulatedTime;
 	}
-/*
-#ifdef EDITOR
-	if (Editor::GetInstance()->IsStarted() == false)
-	{
-		const PxRenderBuffer& rb = PhysXManager::GetInstance()->GetScene()->getRenderBuffer();
-		Math::Vector4 color(0.27f, 0.69f, 0.2f,1.0f);
-		for (PxU32 i = 0; i < rb.getNbLines(); i++)
-		{
-			Render::DrawLine(PhysXManager::PxVector3ToVector3(rb.getLines()[i].pos0), PhysXManager::PxVector3ToVector3(rb.getLines()[i].pos1), color);
-		}
-	}
-#endif
-*/
 }
 
 PxRigidActor* PhysXManager::CreateActor(PhysicsType type, const Math::Matrix& transform)

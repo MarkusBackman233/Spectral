@@ -49,8 +49,6 @@ public:
 
 	MaterialSettings& GetMaterialSettings() { return m_settings; }
 
-private:
-
 	struct PixelConstantBuffer
 	{
 		Math::Vector4 data; // x = Shininess,  w = num lights
@@ -61,7 +59,6 @@ private:
 		float unused2;
 		float unused3;
 	};
-
 	static struct MaterialGlobals
 	{
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>       m_pInputLayout;
@@ -73,6 +70,11 @@ private:
 
 		PixelConstantBuffer m_pixelConstantBuffer;
 	} m_materialGlobals;
+private:
+
+
+
+
 
 	std::array<std::shared_ptr<Texture>, TextureType::NumTextures> m_textures{};
 

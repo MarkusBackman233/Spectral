@@ -2,9 +2,10 @@
 #include "Vector3.h"
 #include <optional>
 #include <random>
-
+#include "InstanceManager.h"
 class TerrainComponent;
 class Mesh;
+class Model;
 class GrassPatch;
 
 class TerrainEditor
@@ -23,6 +24,10 @@ private:
 	void EditSplat(Mesh* terrainMesh, const Math::Vector3& localHit, float direction);
 	void EditHeight(Mesh* terrainMesh, const Math::Vector3& localHit, float direction);
 	void EditGrass(Mesh* terrainMesh, const Math::Vector3& localHit, float direction);
+
+
+	void PaintMesh(const Math::Vector3& localHit, std::shared_ptr<Model> model);
+
 
 
 	void AddGrass(const Math::Vector3& localHit);

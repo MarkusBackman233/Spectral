@@ -8,10 +8,18 @@
 #include <Mesh.h>
 #include <TimeManager.h>
 #include <iRender.h>
-#include <RenderManager.h>
 #include <TerrainMaterial.h>
 #include <MathFunctions.h>
 #include <set>
+
+#include "iInput.h"
+#include "iPhysics.h"
+#include <ResourceManager.h>
+#include <RenderManager.h>
+#include "Editor.h"
+
+
+
 TerrainEditor::TerrainEditor(TerrainComponent* terrainComponent)
 	: m_terrainComponent(terrainComponent)
 	, m_terrainDirty(false)
@@ -27,10 +35,46 @@ bool TerrainEditor::Update()
 
     bool stayOpen = true;
 
+
+    static auto m_clutterModel = ResourceManager::GetInstance()->GetResource<Model>("Default Cube");
+
+
+
+
+
+    Math::Vector3 rayOrigin, rayDirection;
+    if (Input::GetKeyHeld(InputId::Mouse1) && EditorUtils::IsCursorInViewport() && EditorUtils::CursorToWorldDirection(rayOrigin, rayDirection))
+    {
+        auto hit = Physics::RaycastComponent(rayOrigin, rayDirection,1000.0f, m_terrainComponent);
+
+        if (hit.hasHit)
+        {
+            PaintMesh(hit.position, m_clutterModel);
+        }
+    }
+
 	RaycastPaint();
 	if (ImGui::Begin("Terrain Editor", &stayOpen))
 	{
+        std::string meshName = m_clutterModel ? m_clutterModel->GetFilename() : "Null";
 
+        ImGui::Text(std::string("Mesh: " + meshName).c_str());
+
+
+        if (m_clutterModel)
+        {
+            ImGui::Text(m_clutterModel->GetFilename().c_str());
+            ImGui::Image(ThumbnailManager::GetThumbnail(m_clutterModel.get())->GetSRV(), Editor::GetInstance()->GetDefaultTextureSize());
+        }
+        else
+        {
+            ImGui::Text("Null Mesh");
+            //ImGui::Image(ResourceManager::GetInstance()->GetResource<Texture>("TemplateGrid_albedo.bmp").get(), Editor::GetInstance()->GetDefaultTextureSize());
+        }
+
+        if (Editor::GetInstance()->GetDropResource(m_clutterModel))
+        {
+        }
         constexpr const char* BrushModeNames[] = { "Height", "Color", "Grass"};
 
         int currentBrushMode = static_cast<int>(m_settings.BrushMode);
@@ -185,6 +229,127 @@ void TerrainEditor::EditGrass(Mesh* terrainMesh, const Math::Vector3& localHit, 
         RemoveGrass(localHit);
         return;
     }
+}
+
+void TerrainEditor::PaintMesh(const Math::Vector3& localHit, std::shared_ptr<Model> model)
+{
+
+    int xChunk = static_cast<int>(localHit.x / Chunk::SizeInMeter);
+    int zChunk = static_cast<int>(localHit.z / Chunk::SizeInMeter);
+
+    size_t width = static_cast<size_t>(m_terrainComponent->GetTerrainSize() / Chunk::SizeInMeter);
+
+    if (xChunk < 0 || zChunk < 0 || xChunk >= width || zChunk >= width)
+        return;
+
+    Chunk& chunk = m_terrainComponent->m_chunks[zChunk * width + xChunk];
+
+
+
+    bool changed = false;
+    std::vector<Math::Matrix>& tufts = chunk.m_clutterInstances[model].m_poses;
+    tufts.erase(std::remove_if(tufts.begin(), tufts.end(),
+        [&](const Math::Matrix& tuft)
+    {
+        for (const Math::Matrix& tuft2 : tufts)
+        {
+            if (tuft.GetPosition().HorizontalLength(tuft2.GetPosition()) < m_settings.BrushGrassRadius &&
+                localHit.HorizontalLength(tuft2.GetPosition()) < m_settings.BrushSize &&
+                tuft2.GetPosition() != tuft.GetPosition())
+            {
+                changed = true;
+                return true;
+            }
+        }
+        return false;
+    }),
+    tufts.end());
+
+    std::vector<Math::Matrix> nearbyTufts;
+
+    for (const Math::Matrix& tuft : tufts)
+    {
+        if (tuft.GetPosition().HorizontalLength(localHit) < m_settings.BrushSize)
+        {
+            nearbyTufts.push_back(tuft);
+        }
+    }
+    
+
+
+    if (nearbyTufts.empty())
+    {
+        Math::Matrix m;
+        m.SetPosition(localHit);
+        nearbyTufts.push_back(m);
+        tufts.push_back(m);
+        changed = true;
+    }
+
+    std::deque<uint32_t> activeList;
+    uint32_t nbNearbyTufts = static_cast<uint32_t>(nearbyTufts.size());
+    for (uint32_t i = 0; i < nbNearbyTufts; i++)
+    {
+        activeList.push_back(i);
+    }
+
+    std::uniform_real_distribution<float> rDist(m_settings.BrushGrassRadius, m_settings.BrushGrassRadius * 2.0f);
+
+    while (!activeList.empty())
+    {
+        const auto& activeTuft = nearbyTufts[activeList.front()];
+
+        for (uint8_t k = 0; k < 30; k++)
+        {
+            float angle = m_randomAngleDist(m_gen);
+            Math::Vector3 dir(std::cos(angle), 0.0f, std::sin(angle));
+            Math::Vector3 p = dir * rDist(m_gen) + activeTuft.GetPosition();
+
+            bool good = true;
+
+            for (const auto& tuft : nearbyTufts)
+            {
+                if (tuft.GetPosition().HorizontalLength(p) < m_settings.BrushGrassRadius ||
+                    p.HorizontalLength(localHit) > m_settings.BrushSize)
+                {
+                    good = false;
+                    break;
+                }
+            }
+
+            if (good)
+            {
+                //if (patch)
+                {
+                    activeList.push_back(static_cast<uint32_t>(nearbyTufts.size()));
+                    Math::Matrix m = Math::Matrix::MakeRotationY(Math::Random(0.0f,Math::TwoPI));
+                    m = m * Math::Matrix::MakeScale(Math::Vector3(Math::Random(0.7f, 1.3f), Math::Random(0.7f, 1.3f), Math::Random(0.7f, 1.3f)));
+                    p.y = m_terrainComponent->GetHeightAtPosition(p);
+                    m.SetPosition(p);
+                    
+                    
+
+                    nearbyTufts.push_back(m);
+                    tufts.push_back(m);
+                    changed = true;
+                    break;
+                }
+            }
+
+        }
+        activeList.pop_front();
+    }
+
+    if (changed)
+    {
+        auto& clutter = chunk.m_clutterInstances[model];
+        if (clutter.m_instanceData.Buffer)
+        {
+            clutter.m_instanceData.Buffer.Reset();
+        }
+        clutter.m_instanceData = RenderManager::GetInstance()->GetInstanceManager()->CreateStaticInstanceBuffer(tufts);
+    }
+
 }
 
 GrassPatch* TerrainEditor::GetGrassPatchFromWorldSpace(const Math::Vector3& pos)

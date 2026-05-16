@@ -113,13 +113,12 @@ void MeshComponent::RenderSubMesh(const SubMesh& subMesh)
     {
         RenderSubMesh(subMesh);
     }
+
 }
 
 bool MeshComponent::EditMaterial(SubMesh& subMesh)
 {
     bool changed = false;
-
-
     for (auto& material : m_mesh->GetMaterials())
     {
         if (material)

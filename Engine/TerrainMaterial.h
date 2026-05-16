@@ -63,8 +63,10 @@ private:
 		float BrushSize;
 		std::bitset<32> MaterialData;
 		float WorldSize;
-		float Unused2;
-		float Unused3;
+		float unused2;
+		float unused3;
+		Math::Vector3 CameraPos;
+		float unused4;
 	};
 
 	struct TerrainVertexConstantBuffer

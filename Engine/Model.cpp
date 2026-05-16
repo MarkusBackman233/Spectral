@@ -30,7 +30,11 @@ bool Model::Load(const std::filesystem::path& file)
 
 	LoadSubmesh(readObject, m_root);
 	CalculateBoundingBox();
-
+	if (!m_billboardVertices.empty())
+	{
+		m_billboardBuffer.Buffer = Render::CreateVertexBuffer(Render::GetDevice(), m_billboardVertices);
+		m_billboardBuffer.NbVertices = static_cast<uint32_t>(m_billboardVertices.size());
+	}
 	return true;
 }
 
@@ -46,6 +50,10 @@ void Model::Save()
 	}
 
 	SaveSubmesh(writeObject, m_root);
+
+
+	writeObject.Write(m_billboardVertices);
+
 }
 
 void Model::LoadSubmesh(ReadObject& readObject, SubMesh& subMesh)
@@ -80,6 +88,9 @@ void Model::LoadSubmesh(ReadObject& readObject, SubMesh& subMesh)
 		subMesh.m_mesh->CalculateBoundingBox();
 		subMesh.m_mesh->CreateVertexAndIndexBuffer(Render::GetDevice());
 	}
+
+
+	readObject.Read(m_billboardVertices);
 }
 
 void Model::AddSubMeshBound(SubMesh& subMesh)

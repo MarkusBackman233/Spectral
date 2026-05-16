@@ -27,44 +27,49 @@ cbuffer PixelConstantBuffer : register(b1)
     float WorldSize;
     float unused2;
     float unused3;
+    float3 CameraPos;
+    float unused4;
 };
 
-uint4 main(VS_OUTPUT input) : SV_Target
+
+float3 SampleColor(float2 inputPos, float normaly, float uvScale)
 {
-    
-    float2 tUV = input.worldPos.xz * 0.0025;
-    
+    float2 tUV = inputPos * uvScale;
+        
     float3 t0 = terrainTextures[0].Sample(samplerState, tUV).rgb;
     float3 t1 = terrainTextures[1].Sample(samplerState, tUV).rgb;
     float3 t2 = terrainTextures[2].Sample(samplerState, tUV).rgb;
     float3 t3 = terrainTextures[3].Sample(samplerState, tUV).rgb;
-    
-    
-    float2 uv = input.worldPos.xz / WorldSize;
-    
-    float3 wc = worldColor.Sample(samplerState, uv).rgb;
-    input.worldPos.y += length(wc) * 10.0f + terrainTextures[3].Sample(samplerState, input.worldPos.xz*0.01).r*0.1;
-    
-    float3 dx = ddx(input.worldPos);
-    float3 dy = ddy(input.worldPos);
+        
+        
 
-    float3 normal = -normalize(cross(dy, dx));
-
-    float slope = 1.0 - saturate(normal.y);
-
+    
+    float slope = 1.0 - saturate(normaly);
     float rockFactor = smoothstep(0.0, 0.4, slope);
-
-
-    
-
-    
     float3 base = lerp(t0, t1, rockFactor);
 
-    wc = pow(wc, 1 / 0.5);
-    
     float t2Factor = 1.0 - smoothstep(0.0, 0.05, slope);
     base = lerp(base, t2, t2Factor);
-    base = lerp(base, wc, 0.5);
+    return base;
+}
 
-    return CreateGBuffer(normal, base, 1.0f, 0.0, 1.0, 0);
+uint4 main(VS_OUTPUT input) : SV_Target
+{
+    
+    float d = saturate(length((input.worldPos - CameraPos)) / 100.0f);
+    
+    
+    float3 farAway = SampleColor(input.worldPos.xz, input.normal.y, 0.0025);
+    float2 uv = input.worldPos.xz / WorldSize;
+    float3 wc = worldColor.Sample(samplerState, uv).rgb;
+    wc = pow(wc, 1 / 0.5);
+    farAway = lerp(farAway, wc, 0.5);
+    
+    
+    
+    float3 base = lerp(SampleColor(input.worldPos.xz, input.normal.y, 0.1), farAway, d);
+    
+
+    
+    return CreateGBuffer(input.normal, base, 1.0f, 0.0, 1.0, 0);
 }

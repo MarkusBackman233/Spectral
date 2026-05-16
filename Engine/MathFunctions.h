@@ -14,5 +14,8 @@ namespace Math
 	inline Vector3 SnapToNearest(Vector3 value, float step) noexcept {
 		return Vector3(SnapToNearest(value.x,step), SnapToNearest(value.y, step), SnapToNearest(value.z, step));
 	}
+
+	float Random(float min,float max);
+
 };
 

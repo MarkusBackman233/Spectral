@@ -4,6 +4,8 @@
 #include "Component.h"
 #include "CameraComponent.h"
 #include "ScriptComponent.h"
+#include "PhysXManager.h"
+#include "iRender.h"
 
 ObjectManager::ObjectManager() : m_currentlyReserved(1000)
 {
@@ -171,6 +173,12 @@ void ObjectManager::Update(float deltaTime)
 
 void ObjectManager::Render()
 {
+    const PxRenderBuffer& rb = PhysXManager::GetInstance()->GetScene()->getRenderBuffer();
+    Math::Vector4 color(0.27f, 0.69f, 0.2f, 1.0f);
+    for (PxU32 i = 0; i < rb.getNbLines(); i++)
+    {
+        Render::DrawLine(PhysXManager::PxVector3ToVector3(rb.getLines()[i].pos0), PhysXManager::PxVector3ToVector3(rb.getLines()[i].pos1), color);
+    }
     for (const auto& object : m_gameObjects)
     {
         for (const auto& component : object->GetComponents())

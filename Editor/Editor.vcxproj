@@ -178,6 +178,7 @@
     <ClInclude Include="UndoDeleteGameObject.h" />
     <ClInclude Include="UndoSetParent.h" />
     <ClInclude Include="UndoTransform.h" />
+    <ClInclude Include="VegetationEditor.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AssetBrowser.cpp" />
@@ -210,6 +211,7 @@
     <ClCompile Include="UndoDeleteGameObject.cpp" />
     <ClCompile Include="UndoSetParent.cpp" />
     <ClCompile Include="UndoTransform.cpp" />
+    <ClCompile Include="VegetationEditor.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -20,6 +20,7 @@ public:
 		CharacterController,
 		AudioSource,
 		NavmeshActor,
+		Vegetation,
 
 		Num,
 

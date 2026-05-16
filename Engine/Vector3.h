@@ -81,12 +81,9 @@ namespace Math
 		} friend Vector3 operator /(const Vector3& other, const Vector3& vec) {
 			return Vector3(vec.x / other.x, vec.y / other.y, vec.z / other.z);
 		};
-		inline Vector3 operator -()
-		{				
-			x = -x;
-			y = -y;
-			z = -z;
-			return *this;	
+		inline Vector3 operator-() const
+		{
+			return Vector3(-x, -y, -z);
 		}
 		inline bool operator == (const Vector3& A) const
 		{

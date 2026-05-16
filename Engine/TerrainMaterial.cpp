@@ -112,6 +112,7 @@ bool TerrainMaterial::Load(const std::filesystem::path& file)
 
 void TerrainMaterial::Render(ID3D11DeviceContext* context, const DeviceResources& deviceResources, TerrainComponent* terrain)
 {
+    auto camera = RenderManager::GetInstance()->GetCamera();
 
     Render::SetShaders(m_materialGlobals.m_pPixelShader, m_materialGlobals.m_pVertexShader, m_materialGlobals.m_pInputLayout, context);
     context->RSSetState(deviceResources.GetBackfaceCullingRasterizer());
@@ -121,6 +122,7 @@ void TerrainMaterial::Render(ID3D11DeviceContext* context, const DeviceResources
     m_materialGlobals.m_pixelConstantBuffer.RaycastHitPos.z = g_mouseRayHit.z;
     m_materialGlobals.m_pixelConstantBuffer.BrushSize = g_brushSize;
     m_materialGlobals.m_pixelConstantBuffer.WorldSize = terrain->m_terrainSize;
+    m_materialGlobals.m_pixelConstantBuffer.CameraPos = camera->GetWorldMatrix().GetPosition();
 
     m_materialGlobals.m_terrainVertexConstantBuffer.WorldMaxHeight = terrain->m_maxHight;
     m_materialGlobals.m_terrainVertexConstantBuffer.WorldSize = m_materialGlobals.m_pixelConstantBuffer.WorldSize;
@@ -201,7 +203,6 @@ void TerrainMaterial::Render(ID3D11DeviceContext* context, const DeviceResources
 
 
 
-    auto camera = RenderManager::GetInstance()->GetCamera();
 
 
     for (const Chunk& chunk : terrain->m_chunks)
@@ -213,8 +214,8 @@ void TerrainMaterial::Render(ID3D11DeviceContext* context, const DeviceResources
 
         DirectX::BoundingBox boundingBox;
         DirectX::BoundingBox::CreateFromPoints(boundingBox, 
-            Spectral::DxMathUtils::ToDx(Math::Vector3(x, chunk.m_minHeightBound * terrain->m_maxHight - (terrain->m_maxHight*0.5f), z)), 
-            Spectral::DxMathUtils::ToDx(Math::Vector3(x + chunk.SizeInMeter, chunk.m_maxHeightBound * terrain->m_maxHight - (terrain->m_maxHight * 0.5f), z + chunk.SizeInMeter)
+            Spectral::DxMathUtils::ToDx(Math::Vector3(x, chunk.m_minHeightBound, z)), 
+            Spectral::DxMathUtils::ToDx(Math::Vector3(x + chunk.SizeInMeter, chunk.m_maxHeightBound, z + chunk.SizeInMeter)
             )
         );
         float distanceToCamera = (Math::Vector3(boundingBox.Center.x, boundingBox.Center.y, boundingBox.Center.z) - camera->GetWorldMatrix().GetPosition()).Length();
@@ -227,9 +228,13 @@ void TerrainMaterial::Render(ID3D11DeviceContext* context, const DeviceResources
             m_materialGlobals.m_terrainVertexConstantBuffer.StartX = static_cast<float>(chunk.m_x) * Chunk::Steps;
             m_materialGlobals.m_terrainVertexConstantBuffer.StartZ = static_cast<float>(chunk.m_z) * Chunk::Steps;
             Render::UpdateConstantBuffer(Render::SHADER_TYPE_VERTEX, 1, m_materialGlobals.m_pTerrainVertexConstantBufferData, &m_materialGlobals.m_terrainVertexConstantBuffer, context);
-            if (chunk.m_SRV)
+            if (chunk.m_heightSRV)
             {
-                context->VSSetShaderResources(0, 1, chunk.m_SRV.GetAddressOf());
+                context->VSSetShaderResources(0, 1, chunk.m_heightSRV.GetAddressOf());
+            }
+            if (chunk.m_normalSRV)
+            {
+                context->VSSetShaderResources(2, 1, chunk.m_normalSRV.GetAddressOf());
             }
             
 

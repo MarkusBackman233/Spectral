@@ -3,6 +3,7 @@
 #include <memory>
 #include "LoadableResource.h"
 #include "Matrix.h"
+#include "BillboardRenderer.h"
 class Mesh;
 class WriteObject;
 class ReadObject;
@@ -26,7 +27,8 @@ public:
 	ResourceType GetResourceType() override { return ResourceType::Model; }
 	static ResourceType StaticType() { return ResourceType::Model; }
 	SubMesh m_root;
-
+	std::vector<BillboardVertex> m_billboardVertices;
+	BillboardVertexData m_billboardBuffer;
 
 	Math::Vector3 GetBoundingBoxMin() const { return m_minBounds; }
 	Math::Vector3 GetBoundingBoxMax() const { return m_maxBounds; }
@@ -35,6 +37,8 @@ public:
 	std::vector<std::shared_ptr<DefaultMaterial>>& GetMaterials();
 
 private:
+
+
 
 	void AddSubMeshBound(SubMesh& subMesh);
 

@@ -1,5 +1,6 @@
 Texture2D HeightMap : register(t0);
 Texture2D HeightMap2 : register(t1);
+Texture2D NormalMap : register(t2);
 
 SamplerState samplerState : register(s0);
 
@@ -34,20 +35,27 @@ struct VS_OUTPUT
     float3 binormal : TEXCOORD3;
 };
 
+
+
 VS_OUTPUT main(VS_INPUT input)
 {
     VS_OUTPUT output;
 
     float3 pos = float3(input.localPosition.x + StartX, 0.0f, input.localPosition.y + StartZ);
     int2 coord = int2(input.localPosition);
-    float h = HeightMap.Load(int3(coord, 0)).r;
-    pos.y = h * WorldMaxHeight - WorldMaxHeight * 0.5f;
-    pos.y += length(HeightMap2.SampleLevel(samplerState, pos.xz / WorldSize,0).r)*20.0f;
+    pos.y = HeightMap.Load(int3(coord, 0)).r;
+    //pos.y += length(HeightMap2.SampleLevel(samplerState, pos.xz / WorldSize,0).r)*20.0f;
+
+
     
     output.worldPos = pos;
     output.position = mul(float4(pos,1.0), ViewProjection);
     
-    output.normal = float3(0, 1, 0);
+    float3 normal = NormalMap.Load(int3(coord, 0)).rgb;
+    normal = normal * 2.0f - 1.0f;
+    normal = normalize(normal);
+
+    output.normal = normal;
     output.tangent = float3(1, 0, 0);
     output.binormal = normalize(cross(output.normal, output.tangent));
     return output;
